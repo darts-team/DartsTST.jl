@@ -50,8 +50,12 @@ function sch_to_xyz(sch,peg,a,e)
     M_ENU_to_xyz=[-sind(lon0) -sind(lat0)*cosd(lon0) cosd(lat0)*cosd(lon0);cosd(lon0) -sind(lat0)*sind(lon0) cosd(lat0)*sind(lon0);0 cosd(lat0) sind(lat0)]
     M_xyzp_to_ENU=[0 sind(heading) -cosd(heading);0 cosd(heading) sind(heading);1 0 0]
     P=[re*cosd(lat0)*cosd(lon0),re*cosd(lat0)*sind(lon0),re*(1-e^2)*sind(lat0)]
-    O=P.-ra*xp
-    xyz=M_ENU_to_xyz*M_xyzp_to_ENU*xyzp+O
+    ENU=M_xyzp_to_ENU*xyzp
+    E=ENU[1]
+    N=ENU[2]
+    U=ENU[3]
+    O=P.-ra*U
+    xyz=M_ENU_to_xyz*ENU+O
     return xyz
 end
 
