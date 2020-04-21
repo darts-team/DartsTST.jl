@@ -1,4 +1,9 @@
 module Geometry
+using ReferenceFrameRotations
+
+quat(rot_angle, rot_ax) = Quaternion(cosd(rot_angle/2.0), rot_ax* sind(rot_angle/2.0))
+rotate_frame(v,q) = vect(inv(q)*v*q)
+rotate_vec(v,q) = vect(q*v*inv(q))
 
 function geo_to_xyz(geo,a,e)
     xyz=zeros(3)
