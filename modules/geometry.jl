@@ -48,9 +48,9 @@ function sch_to_xyz(sch,peg,a,e)
     re=a/(1-e^2*sind(lat0)^2)^0.5
     rn=a*(1-e^2)/(1-e^2*sind(lat0)^2)^1.5
     ra=re*rn/(re*cosd(heading)^2+rn*sind(heading)^2)
-    xp=(ra+h)*cosd(c/ra)*cosd(s/ra)
-    yp=(ra+h)*cosd(c/ra)*sind(s/ra)
-    zp=(ra+h)*sind(c/ra)
+    xp=(ra+h)*cos(c/ra)*cos(s/ra)
+    yp=(ra+h)*cos(c/ra)*sin(s/ra)
+    zp=(ra+h)*sin(c/ra)
     xyzp=[xp,yp,zp]
     M_ENU_to_xyz=[-sind(lon0) -sind(lat0)*cosd(lon0) cosd(lat0)*cosd(lon0);cosd(lon0) -sind(lat0)*sind(lon0) cosd(lat0)*sind(lon0);0 cosd(lat0) sind(lat0)]
     M_xyzp_to_ENU=[0 sind(heading) -cosd(heading);0 cosd(heading) sind(heading);1 0 0]

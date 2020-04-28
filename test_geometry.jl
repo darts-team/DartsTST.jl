@@ -29,9 +29,11 @@ println("\nProjected Vector: ", projected_vec)
 
 # combine rotations
 q1 = Geometry.quat(35, [0,1,0]) #create a quaternion to rotate a vector by 10 degrees about yaxis [0,1,0]
-q2 = Geometry.quat(10, [0,1,0]) #create a quaternion to rotate a vector by 35 degrees about yaxis [0,1,0]
+q2 = Geometry.quat(8, [0,1,0]) #create a quaternion to rotate a vector by 35 degrees about yaxis [0,1,0]
+q3 = Geometry.quat(2, [0,1,0]) #create a quaternion to rotate a vector by 35 degrees about yaxis [0,1,0]
 rotated_vec = Geometry.rotate_vec([1,0,0], q1) #rotate a vector aligned with the x-axis, by q1
 rotated_vec = Geometry.rotate_vec(rotated_vec, q2) #rotate a vector aligned with the x-axis, by q2
+rotated_vec = Geometry.rotate_vec(rotated_vec, q3) #rotate a vector aligned with the x-axis, by q2
 println("\nCombined Rotated Vector: ", rotated_vec)
-rotated_vec = Geometry.rotate_vec([1,0,0], q2*q1) #rotate a vector aligned with the x-axis, by q1 and q2
-println("Combined Rotated Vector, : ", rotated_vec)
+rotated_vec = Geometry.rotate_vec([1,0,0], q1*q2*q3) #rotate a vector aligned with the x-axis, by q1 and q2
+println("Combined Rotated Vector, qmult: ", rotated_vec)
