@@ -1,7 +1,7 @@
 include("modules/geometry.jl")
 
 a=6378.137e3
-e=0.00669437999015^0.5
+e=sqrt(0.00669437999015)
 geo=[35.38987,-111.8116,9748.89523]
 xyz=Geometry.geo_to_xyz(geo,a,e)
 geo2=Geometry.xyz_to_geo(xyz,a,e)

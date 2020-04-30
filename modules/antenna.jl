@@ -1,7 +1,7 @@
-module Antenna
+module AntennaPattern
 
-function antennaPattern(sidelobe_dB,theta, hpbw)
-   #     % From: Nino Majurec, May 23, 2019
+function pattern_sinc(sidelobe_dB,theta, hpbw)
+   #     % Nino Majurec, May 23, 2019
    # % Function simulates radiation pattern for a conical horn antenna.
    # % Function does not include gain, only the angular variation of the gain.
    # % Standard spherical coordinate system is assumed:
@@ -137,7 +137,7 @@ end
 function compute_gain(v, hpbw, slb_dB )
    v_sphr = xyz_to_sphr.(v)
    th = [v_sphr[i][2] for i in 1:size(v_sphr,1)]
-   res = antennaPattern_V3(slb_dB,th, hpbw)
+   res = pattern_sinc(slb_dB,th, hpbw)
    return res
 end
 
@@ -149,5 +149,3 @@ function interpolate_gain(v, gain_in, th_in )
    gain =  itp(th)
    return gain
 end
-
-end #Module

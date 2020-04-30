@@ -38,29 +38,47 @@ function xyz_to_geo(xyz,a,e)
 end
 
 function sch_to_xyz(sch,peg,a,e)
-    xyz=zeros(3)
-    s=sch[1]
-    c=sch[2]
-    h=sch[3]
-    lat0=peg[1]
-    lon0=peg[2]
-    heading=peg[3]
-    re=a/(1-e^2*sind(lat0)^2)^0.5
-    rn=a*(1-e^2)/(1-e^2*sind(lat0)^2)^1.5
-    ra=re*rn/(re*cosd(heading)^2+rn*sind(heading)^2)
-    xp=(ra+h)*cos(c/ra)*cos(s/ra)
-    yp=(ra+h)*cos(c/ra)*sin(s/ra)
-    zp=(ra+h)*sin(c/ra)
-    xyzp=[xp,yp,zp]
-    M_ENU_to_xyz=[-sind(lon0) -sind(lat0)*cosd(lon0) cosd(lat0)*cosd(lon0);cosd(lon0) -sind(lat0)*sind(lon0) cosd(lat0)*sind(lon0);0 cosd(lat0) sind(lat0)]
-    M_xyzp_to_ENU=[0 sind(heading) -cosd(heading);0 cosd(heading) sind(heading);1 0 0]
-    P=[re*cosd(lat0)*cosd(lon0),re*cosd(lat0)*sind(lon0),re*(1-e^2)*sind(lat0)]
-    ENU=M_xyzp_to_ENU*xyzp
-    E=ENU[1]
-    N=ENU[2]
-    U=ENU[3]
-    O=P.-ra*U
-    xyz=M_ENU_to_xyz*ENU+O
+    xyz = zeros(3)
+    e2  = e^2 #eccentricity squared
+    #break out SCH vectors
+    s   = sch[1]
+    c   = sch[2]
+    h   = sch[3]
+    #break out peg parameters
+    peglat  = peg[1]*π/180
+    peglon  = peg[2]*π/180
+    peghed  = peg[3]*π/180
+    repeg = a/sqrt(1-e2*sin(peglat)^2)
+    rnpeg = a*(1-e2)/sqrt((1-e2*sin(peglat)^2)^3)
+    ra = repeg*rnpeg/(repeg*cos(peghed)^2+rnpeg*sin(peghed)^2)
+
+    #conversion from S,C,H to Stheta, Ctheta, H coordinates
+    Stheta=s/ra
+    Clamda=c/ra
+
+    #convert [Stheta, Clamda, h] vector to [X',Y',Z'] vector
+    XYZPrime=[(ra+h)*cos(Clamda)*cos(Stheta), (ra+h)*cos(Clamda)*sin(Stheta),(ra+h)*sin(Clamda)]
+
+    #ENU to XYZ transformation matrix
+    Menu_xyz = [-sin(peglon) -sin(peglat)*cos(peglon) cos(peglat)*cos(peglon);
+                 cos(peglon) -sin(peglat)*sin(peglon) cos(peglat)*sin(peglon);
+                  0            cos(peglat)             sin(peglat)]
+
+    #X'Y'Z' to ENU transformation matrix
+    Mxyzprime_enu = [0 sin(peghed) -cos(peghed);
+                     0 cos(peghed) sin(peghed);
+                     1    0           0]
+    #Up vector in XYZ
+    Uxyz = Menu_xyz*[0 0 1]';
+
+    #vector from center of ellipsoid to pegpoint
+    P = [repeg*cos(peglat)*cos(peglon), repeg*cos(peglat)*sin(peglon), repeg*(1-e2)*sin(peglat)]
+
+    #translation vector
+    O = P-ra*Uxyz
+
+    #compute the xyz value
+    xyz=Menu_xyz*Mxyzprime_enu*XYZPrime+O;
     return xyz
 end
 
