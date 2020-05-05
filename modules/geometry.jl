@@ -82,4 +82,55 @@ function sch_to_xyz(sch,peg,a,e)
     return xyz
 end
 
+abstract type AbstractFrame end
+abstract type AbstractPlanetFrame <: AbstractFrame end
+abstract type AbstractSpaceCraftFrame <: AbstractPlanetFrame end
+abstract type AbstractAntennaFrame <: AbstractSpaceCraftFrame end
+
+
+mutable struct Planet_frame <:AbstractFrame
+    org
+    qtrn::Quaternion
+    a
+    e_sqr
+end
+
+mutable struct  SpaceCraft_frame <:AbstractSpaceCraftFrame
+    org #origin relative to planet frame
+    qtrn::Quaternion# with respect to the planet
+    antenna::AbstractAntennaFrame # antenna frame defined relative to sc frame
+end
+
+mutable struct Antenna_frame <:AbstractAntennaFrame
+    org #origin relative to spacecraft frame
+    qtrn::Quaternion # with respect to the SpaceCraft
+end
+
+function rotate_spacecraft(sc_frame, rot_angle, rot_ax )
+    sc_quat = quat(rot_angle, rot_ax)
+    sc_frame.qtrn =  sc_quat * sc_frame.qtrn
+    sc_frame.antenna.qtrn =  sc_frame.qtrn * sc_frame.antenna.qtrn
+    return sc_frame
+end
+
+function rotate_spacecraft(sc_frame, quat::Quaternion )
+    sc_frame.qtrn =  quat * sc_frame.qtrn
+    sc_frame.antenna.qtrn =  sc_frame.qtrn * sc_frame.antenna.qtrn
+    return sc_frame
+end
+
+function rotate_antenna(ant_frame, rot_angle, rot_ax )
+    ant_quat = quat(rot_angle, rot_ax)
+    ant_frame.qtrn =  ant_quat * ant_frame.qtrn
+    return ant_frame
+end
+
+function rotate_antenna(ant_frame, quat::Quaternion )
+    ant_frame.qtrn =  quat * ant_frame.qtrn
+    return ant_frame
+end
+
+
+
+
 end
