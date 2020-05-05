@@ -37,6 +37,54 @@ function xyz_to_geo(xyz,a,e)
     return geo
 end
 
+function peg_calculations(peg,a,e)
+    e2  = e^2 #eccentricity squared
+    #break out peg parameters
+    peglat  = peg[1]*π/180
+    peglon  = peg[2]*π/180
+    peghed  = peg[3]*π/180
+    repeg = a/sqrt(1-e2*sin(peglat)^2)
+    rnpeg = a*(1-e2)/sqrt((1-e2*sin(peglat)^2)^3)
+    ra = repeg*rnpeg/(repeg*cos(peghed)^2+rnpeg*sin(peghed)^2)
+
+    #ENU to XYZ transformation matrix
+    Menu_xyz = [-sin(peglon) -sin(peglat)*cos(peglon) cos(peglat)*cos(peglon);
+                 cos(peglon) -sin(peglat)*sin(peglon) cos(peglat)*sin(peglon);
+                  0            cos(peglat)             sin(peglat)]
+
+
+    #X'Y'Z' to ENU transformation matrix
+    Mxyzprime_enu = [0 sin(peghed) -cos(peghed);
+                     0 cos(peghed) sin(peghed);
+                     1    0           0]
+    #Up vector in XYZ
+    Uxyz = Menu_xyz*[0 0 1]';
+
+    #vector from center of ellipsoid to pegpoint
+    P = [repeg*cos(peglat)*cos(peglon), repeg*cos(peglat)*sin(peglon), repeg*(1-e2)*sin(peglat)]
+
+    #translation vector
+    O = P-ra*Uxyz
+    return Menu_xyz,Mxyzprime_enu,O,ra
+end
+
+function sch_to_xyz_2(sch,a,e,Menu_xyz,Mxyzprime_enu,O,ra)
+    xyz = zeros(3)
+    e2  = e^2 #eccentricity squared
+    #break out SCH vectors
+    s   = sch[1]
+    c   = sch[2]
+    h   = sch[3]
+    #conversion from S,C,H to Stheta, Ctheta, H coordinates
+    Stheta=s/ra
+    Clamda=c/ra
+    #convert [Stheta, Clamda, h] vector to [X',Y',Z'] vector
+    XYZPrime=[(ra+h)*cos(Clamda)*cos(Stheta), (ra+h)*cos(Clamda)*sin(Stheta),(ra+h)*sin(Clamda)]
+    #compute the xyz value
+    xyz=Menu_xyz*Mxyzprime_enu*XYZPrime+O;
+    return xyz
+end
+
 function sch_to_xyz(sch,peg,a,e)
     xyz = zeros(3)
     e2  = e^2 #eccentricity squared
@@ -64,7 +112,7 @@ function sch_to_xyz(sch,peg,a,e)
                  cos(peglon) -sin(peglat)*sin(peglon) cos(peglat)*sin(peglon);
                   0            cos(peglat)             sin(peglat)]
 
-    #X'Y'Z' to ENU transformation matrix
+    # X'Y'Z' to ENU transformation matrix
     Mxyzprime_enu = [0 sin(peghed) -cos(peghed);
                      0 cos(peghed) sin(peghed);
                      1    0           0]

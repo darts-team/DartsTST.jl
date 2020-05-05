@@ -16,7 +16,9 @@ peg=[35.2117072245,-111.8112805579,179.8535529463]
 xyz2=Geometry.sch_to_xyz(sch,peg,a,e)
 println("SCH to XYZ: ", xyz2)
 
-
+Menu_xyz,Mxyzprime_enu,O,ra=Geometry.peg_calculations(peg,a,e)
+xyz3=Geometry.sch_to_xyz_2(sch,a,e,Menu_xyz,Mxyzprime_enu,O,ra)
+println("SCH to XYZ: ", xyz3)
 
 # rotating vector with quaternion
 q = Geometry.quat(45, [0,1,0]) #create a quaternion to rotate a vector by 45 degrees about yaxis [0,1,0]
