@@ -1,5 +1,5 @@
 include("modules/geometry.jl")
-
+using Plots
 
 a=6378.137e3
 e=sqrt(0.00669437999015)
@@ -69,3 +69,26 @@ projected_vec = Geometry.rotate_frame([1,0,0], qy*qz) #project a vector aligned 
 println("\nIntrinsic projected vector: ", projected_vec)
 projected_vec = Geometry.rotate_frame([1,0,0], qz*qy) #project a vector aligned with the x-axis, to a rotated frame described by q
 println("Extrinsic projected vector: ", projected_vec)
+
+# target area on surface defined in lat-lon-h and displayed in xyz
+#t_lat=-90:5:90
+#t_lon=-180:10:180
+#t_h=0:100000:3600000
+t_lat=30:1:60
+t_lon=0:2:60
+t_h=0:100:3000
+xyz_t_all=zeros(3,size(t_lat)[1]*size(t_lon)[1]*size(t_h)[1])
+m=0
+for i=1:size(t_lat)[1]
+        for j=1:size(t_lon)[1]
+                for k=1:size(t_h)[1]
+                        global m=m+1
+                        geo_t=[t_lat[i],t_lon[j],t_h[k]]
+                        xyz_t=Geometry.geo_to_xyz(geo_t,a,e)
+                        xyz_t_all[1,m]=xyz_t[1]
+                        xyz_t_all[2,m]=xyz_t[2]
+                        xyz_t_all[3,m]=xyz_t[3]
+                end
+        end
+end
+scatter(xyz_t_all[1,:],xyz_t_all[2,:],xyz_t_all[3,:],markersize=1)
