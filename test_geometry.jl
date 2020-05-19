@@ -25,7 +25,7 @@ q = Geometry.quat(45, [0,1,0]) #create a quaternion to rotate a vector by 45 deg
 rotated_vec = Geometry.rotate_vec([1,0,0], q) #rotate a vector aligned with the x-axis, by q
 println("\nRotated Vector: ", rotated_vec)
 
-# combine rotations
+# combine rotations q3*q2*q1 means first q1 then q2 then q3
 q1 = Geometry.quat(90, [1,0,0]) #create a quaternion to rotate a vector by 90 degrees about xaxis
 q2 = Geometry.quat(90, [0,1,0]) #create a quaternion to rotate a vector by 90 degrees about yaxis
 q3 = Geometry.quat(90, [0,0,1]) #create a quaternion to rotate a vector by 90 degrees about zaxis
