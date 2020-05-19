@@ -25,38 +25,47 @@ q = Geometry.quat(45, [0,1,0]) #create a quaternion to rotate a vector by 45 deg
 rotated_vec = Geometry.rotate_vec([1,0,0], q) #rotate a vector aligned with the x-axis, by q
 println("\nRotated Vector: ", rotated_vec)
 
-# rotate a frame, then describe vector in the rotated frame
-q = Geometry.quat(45, [0,1,0]) #create a quaternion to rotate a frame by 45 degrees about yaxis [0,1,0]
-projected_vec = Geometry.rotate_frame([1,0,0], q) #project a vector aligned with the x-axis, to a rotated frame described by q
-println("\nProjected Vector: ", projected_vec)
-
-
 # combine rotations
-q1 = Geometry.quat(35, [0,1,0]) #create a quaternion to rotate a vector by 10 degrees about yaxis [0,1,0]
-q2 = Geometry.quat(8, [0,0,1]) #create a quaternion to rotate a vector by 35 degrees about yaxis [0,1,0]
-q3 = Geometry.quat(2, [0,1,0]) #create a quaternion to rotate a vector by 35 degrees about yaxis [0,1,0]
+q1 = Geometry.quat(90, [1,0,0]) #create a quaternion to rotate a vector by 90 degrees about xaxis
+q2 = Geometry.quat(90, [0,1,0]) #create a quaternion to rotate a vector by 90 degrees about yaxis
+q3 = Geometry.quat(90, [0,0,1]) #create a quaternion to rotate a vector by 90 degrees about zaxis
 rotated_vec = Geometry.rotate_vec([1,0,0], q1) #rotate a vector aligned with the x-axis, by q1
 println("\nRotated Vector: ", rotated_vec)
-rotated_vec = Geometry.rotate_vec([1,0,0], q2*q1) #rotate a vector aligned with the x-axis, by q2
-println("\nRotated Vector (q2*q1): ", rotated_vec)
-rotated_vec = Geometry.rotate_vec([1,0,0], q1*q2) #rotate a vector aligned with the x-axis, by q2
-println("\nRotated Vector (q1*q2): ", rotated_vec)
+rotated_vec = Geometry.rotate_vec([1,0,0], q2) #rotate a vector aligned with the x-axis, by q2
+println("Rotated Vector: ", rotated_vec)
+rotated_vec = Geometry.rotate_vec([1,0,0], q3) #rotate a vector aligned with the x-axis, by q3
+println("Rotated Vector: ", rotated_vec)
+rotated_vec = Geometry.rotate_vec([1,0,0], q2*q1) #rotate a vector aligned with the x-axis, by q2*q1
+println("Rotated Vector (q2*q1): ", rotated_vec)
+rotated_vec = Geometry.rotate_vec([1,0,0], q1*q2) #rotate a vector aligned with the x-axis, by q1*q2
+println("Rotated Vector (q1*q2): ", rotated_vec)
+rotated_vec = Geometry.rotate_vec([1,0,0], q1*q2*q3) #rotate a vector aligned with the x-axis, by q1*q2*q3
+println("Combined Rotated Vector, q1*q2*q3: ", rotated_vec)
+rotated_vec = Geometry.rotate_vec([1,0,0], q1*q3*q2) #rotate a vector aligned with the x-axis, by q1*q3*q2
+println("Combined Rotated Vector, q1*q3*q2: ", rotated_vec)
+rotated_vec = Geometry.rotate_vec([1,0,0], q2*q1*q3) #rotate a vector aligned with the x-axis, by q2*q1*q3
+println("Combined Rotated Vector, q2*q1*q3: ", rotated_vec)
+rotated_vec = Geometry.rotate_vec([1,0,0], q2*q3*q1) #rotate a vector aligned with the x-axis, by q2*q3*q1
+println("Combined Rotated Vector, q2*q3*q1: ", rotated_vec)
+rotated_vec = Geometry.rotate_vec([1,0,0], q3*q2*q1) #rotate a vector aligned with the x-axis, by q3*q2*q1
+println("Combined Rotated Vector, q3*q2*q1: ", rotated_vec)
+rotated_vec = Geometry.rotate_vec([1,0,0], q3*q1*q2) #rotate a vector aligned with the x-axis, by q3*q1*q2
+println("Combined Rotated Vector, q3*q1*q2: ", rotated_vec)
 
-rotated_vec = Geometry.rotate_vec(rotated_vec, q3) #rotate a vector aligned with the x-axis, by q2
-println("\nCombined Rotated Vector: ", rotated_vec)
-rotated_vec = Geometry.rotate_vec([1,0,0], q1*q2*q3) #rotate a vector aligned with the x-axis, by q1 and q2
-println("Combined Rotated Vector, qmult: ", rotated_vec)
-
-
-
-# EXtrinsic vs. intrinsic rotations
-qy = Geometry.quat(90, [0,1,0]) #create a quaternion to rotate a frame by 45 degrees about yaxis [0,1,0]
+# rotate a frame, then describe vector in the rotated frame
+qy = Geometry.quat(90, [0,1,0]) #create a quaternion to rotate a frame by 90 degrees about yaxis [0,1,0]
 qz= Geometry.quat(90, [0,0,1]) #create a quaternion to rotate a frame by 90deg about z-axis
-
-#intrinsic rotation: second rotation is about rotated frame
+projected_vec = Geometry.rotate_frame([1,0,0], qy) #project a vector aligned with the x-axis, to a rotated frame described by q
+println("\nProjected Vector: ", projected_vec)
+projected_vec = Geometry.rotate_frame([1,0,0], qz) #project a vector aligned with the x-axis, to a rotated frame described by q
+println("Projected Vector: ", projected_vec)
+# EXtrinsic vs. intrinsic rotations:
+# intrinsic rotation: second rotation is about rotated frame
+# extrinsic rotation: second rotation is about the original frmae
+# q1*q2 can be thought of in two ways:
+# (A) rotate q1 and then rotate q2 about rotated frame (intrinsic)
+# (B) rotate q2 first and then rotate q1 about original frame (extrinsic)
 projected_vec = Geometry.rotate_frame([1,0,0], qy*qz) #project a vector aligned with the x-axis, to a rotated frame described by q
 println("\nIntrinsic projected vector: ", projected_vec)
-
-#extrinsic rotation: second rotation is about the original frmae
 projected_vec = Geometry.rotate_frame([1,0,0], qz*qy) #project a vector aligned with the x-axis, to a rotated frame described by q
-println("\nExtrinsic projected vector: ", projected_vec)
+println("Extrinsic projected vector: ", projected_vec)
