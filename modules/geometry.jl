@@ -65,12 +65,12 @@ function peg_calculations(peg,a,e)
 
     #translation vector
     O = P-ra*Uxyz
-    return Menu_xyz,Mxyzprime_enu,O,ra
+    Mxyzprime_xyz=Menu_xyz*Mxyzprime_enu
+    return Mxyzprime_xyz,O,ra
 end
 
-function sch_to_xyz_2(sch,a,e,Menu_xyz,Mxyzprime_enu,O,ra)
+function sch_to_xyz_2(sch,Mxyzprime_xyz,O,ra)
     xyz = zeros(3)
-    e2  = e^2 #eccentricity squared
     #break out SCH vectors
     s   = sch[1]
     c   = sch[2]
@@ -81,7 +81,7 @@ function sch_to_xyz_2(sch,a,e,Menu_xyz,Mxyzprime_enu,O,ra)
     #convert [Stheta, Clamda, h] vector to [X',Y',Z'] vector
     XYZPrime=[(ra+h)*cos(Clamda)*cos(Stheta), (ra+h)*cos(Clamda)*sin(Stheta),(ra+h)*sin(Clamda)]
     #compute the xyz value
-    xyz=Menu_xyz*Mxyzprime_enu*XYZPrime+O;
+    xyz=Mxyzprime_xyz*XYZPrime+O;
     return xyz
 end
 
