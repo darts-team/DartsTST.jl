@@ -72,13 +72,13 @@ projected_vec = Geometry.rotate_frame([1,0,0], qz*qy) #project a vector aligned 
 println("Extrinsic projected vector: ", projected_vec)
 ## target scene
 # target volume grid on surface defined in geo (θϕh)
-t_θ=30:0.1:60
-t_ϕ=0:0.5:60
-t_h=0:30:3000
+t_θ=30:1:60
+t_ϕ=0:2:60
+t_h=0:100:3000
 #t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops (took 50 sec)
 t_geo_grid=Scene.form3Dgrid_array(t_θ,t_ϕ,t_h) # using array repeat and array processing (took 33 sec)
 
 # convert target volume from geo to xyz
-t_xyz_grid=Geometry.geo_to_xyz_grid(t_geo_grid,a,e)
+t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,a,e)
 #display grid in 3D
 scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],markersize=1)
