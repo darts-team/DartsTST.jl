@@ -71,39 +71,14 @@ println("\nIntrinsic projected vector: ", projected_vec)
 projected_vec = Geometry.rotate_frame([1,0,0], qz*qy) #project a vector aligned with the x-axis, to a rotated frame described by q
 println("Extrinsic projected vector: ", projected_vec)
 ## target scene
-# target volume grid on surface defined in θϕh and displayed in xyz
-t_θ=30:1:60
-t_ϕ=0:2:60
-t_h=0:100:3000
+# target volume grid on surface defined in geo (θϕh)
+t_θ=30:0.1:60
+t_ϕ=0:0.5:60
+t_h=0:30:3000
+#t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops (took 50 sec)
+t_geo_grid=Scene.form3Dgrid_array(t_θ,t_ϕ,t_h) # using array repeat and array processing (took 33 sec)
 
-# convert target volume from θ-lon-h to xyz (for loops method)
-xyz_t_all=zeros(3,length(t_θ)*length(t_ϕ)*length(t_h))
-m=0
-for i=1:length(t_θ)
-        for j=1:length(t_ϕ)
-                for k=1:length(t_h)
-                        global m=m+1
-                        geo_t=[t_θ[i],t_ϕ[j],t_h[k]]
-                        xyz_t=Geometry.geo_to_xyz(geo_t,a,e)
-                        xyz_t_all[1,m]=xyz_t[1]
-                        xyz_t_all[2,m]=xyz_t[2]
-                        xyz_t_all[3,m]=xyz_t[3]
-                end
-        end
-end
-
-# convert target volume from θϕh to xyz (array method)
-t_θ1=Array{Float64}(undef,1,length(t_lat))
-t_ϕ1=Array{Float64}(undef,1,length(t_ϕ))
-t_h1=Array{Float64}(undef,1,length(t_h))
-t_θ1[:]=t_θ
-t_ϕ1[:]=t_ϕ
-t_h1[:]=t_h
-t_θ_all=repeat(t_θ1,inner=[1,1],outer=[1,length(t_ϕ)*length(t_h)])
-t_ϕ_all=repeat(t_ϕ1,inner=[1,length(t_θ)],outer=[1,length(t_h)])
-t_h_all=repeat(t_h1,inner=[1,length(t_θ)*length(t_ϕ)],outer=[1,1])
-geo_t=[t_θ_all;t_ϕ_all;t_h_all]
-xyz_t_all=Geometry.geo_to_xyz_grid(geo_t,a,e)
-
-#display grip in 3D
-scatter(xyz_t_all[1,:],xyz_t_all[2,:],xyz_t_all[3,:],markersize=1)
+# convert target volume from geo to xyz
+t_xyz_grid=Geometry.geo_to_xyz_grid(t_geo_grid,a,e)
+#display grid in 3D
+scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],markersize=1)
