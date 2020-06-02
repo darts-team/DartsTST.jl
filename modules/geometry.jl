@@ -5,18 +5,6 @@ quat(rot_angle, rot_ax) = Quaternion(cosd(rot_angle/2.0), rot_ax* sind(rot_angle
 rotate_frame(v,q) = vect(inv(q)*v*q)
 rotate_vec(v,q) = vect(q*v*inv(q))
 
-#=function geo_to_xyz(geo,a,e) # if geo (θϕh) is a vector of 3 points
-    xyz=zeros(3)
-    θ=geo[1]
-    ϕ=geo[2]
-    h=geo[3]
-    re=a/(1-e^2*sind(θ)^2)^0.5
-    xyz[1]=(re+h)*cosd(θ)*cosd(ϕ)
-    xyz[2]=(re+h)*cosd(θ)*sind(ϕ)
-    xyz[3]=(re*(1-e^2)+h)*sind(θ)
-    return xyz
-end=#
-
 function geo_to_xyz(geo,a,e) # geo (θϕh) is a 3xN array for N  points
     xyz=zeros(size(geo))
     θ=geo[1,:] # latitude
