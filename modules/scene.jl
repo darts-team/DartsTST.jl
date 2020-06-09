@@ -1,5 +1,7 @@
 module Scene
 
+include("geometry.jl")
+
 function form3Dgrid_for(t_θ,t_ϕ,t_h) # for loop method
   t_geo_grid=zeros(3,length(t_θ)*length(t_ϕ)*length(t_h))
   m=0
@@ -28,50 +30,58 @@ function form3Dgrid_array(t_θ,t_ϕ,t_h) # array method
   return t_geo_grid
 end
 
-function lookangle_to_range(a,el,p_h) # look angle to slant/ground range,  p_h is platform height, spherical planet
-    inc=asind(sind(el)*(a+p_h)/a); # incidence angle
-    alpha=inc-el; # deg planet-central angle
-    rg=a*alpha*pi/180; # ground range
-    rs=(((a+h_p)*sind(alpha)).^2+((a+h_p).*cosd(alpha)-a).^2).^0.5; # slant range
+function lookangle_to_range(a,θ_l,p_h) # look angle to slant/ground range,  p_h is platform height, spherical planet
+    inc=asind.(sind.(θ_l)*(a+p_h)/a) # deg incidence angle
+    α=inc-θ_l # deg planet-central angle
+    rg=a*α*pi/180 # ground range
+    rs=(((a+p_h)*sind.(α)).^2+((a+p_h).*cosd.(α).-a).^2).^0.5 # slant range
     return rs, rg
 end
 
 function slantrange_to_lookangle(a,rs,p_h) # slant range to look angle and ground range,  p_h is platform height, spherical planet
-  el=acos((rs.^2+(a+p_h).^2-a^2)./(2*rs.*(a+p_h))); # rad look angle
-  inc=asin((a+p_h)./a.*sin(el)); # rad incidence angle
-  alpha=inc-el; # rad planet-central angle
-  rg=a*alpha; # ground range
-  return rg,el*180/pi
+  θ_l=acos.((rs.^2+(a+p_h).^2-a^2)./(2*rs.*(a+p_h))) # rad look angle
+  inc=asin.((a+p_h)./a.*sin.(θ_l)) # rad incidence angle
+  α=inc-θ_l # rad planet-central anglesin
+  rg=a*α # ground range
+  return rg,θ_l*180/pi
 end
 
 function groundrange_to_lookangle(a,rg,p_h) # ground range to look angle and slant range,  p_h is platform height, spherical planet
-  alpha=rg/a # rad planet-central angle
-  rs=(((a+h_p)*sind(alpha)).^2+((a+h_p).*cosd(alpha)-a).^2).^0.5; # slant range
-  el=acos((rs.^2+(a+p_h).^2-a^2)./(2*rs.*(a+p_h))); # rad look angle
-  return rs,el*180/pi
+  α=rg/a # rad planet-central angle
+  rs=(((a+p_h)*sind.(α)).^2+((a+p_h).*cosd.(α)-a).^2).^0.5 # slant range
+  θ_l=acos.((rs.^2+(a+p_h).^2-a^2)./(2*rs.*(a+p_h))) # rad look angle
+  return rs,θ_l*180/pi
 end
 
-function azelh_to_xyz(azelh,p_geo,a,e)  # azelh is a 3xN array for N  points, p_h is platform height
+function azelh_to_xyz(azelh,p_geo,peg,a,e)  # azelh is a 3xN array for N  points, p_h is platform height
 
-    az=azelh[1,:] #  azimuth angles
-    el=azelh[2,:] # elevation angles
+    ϕ_l=azelh[1,:] # deg  azimuth angles
+    θ_l=azelh[2,:] # deg elevation angles
     h=azelh[3,:] # heights
 
+    θ_l=θ_l[1]
+    ϕ_l=ϕ_l[1]
+    h=h[1]
+
     p_h=p_geo[3] # platform height
+    p_xyz=Geometry.geo_to_xyz(p_geo,a,e) # platform position in xyz
 
-    rs,rg=lookangle_to_range(a,el,p_h) # slant range between target and platform, assumes spherical planet
+    rs,rg=lookangle_to_range(a,θ_l,p_h) # slant range between target and platform, assumes spherical planet
 
-    vL_sch=rs*[sin(el)*sin(az),sin(el)*cos(az),-cos(el)] # look vectors in geo (for each target at each look angle
-    peg=[p_geo[1],p_geo[2],0] # peg point in geo
-    vL_xyz=sch_to_xyz(vL_sch,peg,a,e) # look vectors in xyz (for each target at each look angle)
+    vL2_sch=[sind.(θ_l).*sind.(ϕ_l),sind.(θ_l).*cosd.(ϕ_l),-cosd.(θ_l)] # look vectors in geo (for each target at each look angle
+    vL2_xyz=Geometry.sch_to_xyz(vL2_sch,peg,a,e) # look vectors in xyz (for each target at each look angle)
+    peg_geo=[peg[1],peg[2],0]
+    peg_xyz=Geometry.geo_to_xyz(peg_geo,a,e)
+    vL_xyz=rs.*(vL2_xyz-peg_xyz)
 
-    vP=geo_to_xyz(p_geo,a,e) # platform vector in xyz
-
-    vT=vL+vP # target vectors in xyz
+    vT=vL_xyz+p_xyz # target vectors in xyz (for azimuth angle of 0 deg)
+    vT=[vT[1,1],vT[2,1],vT[3,1]]
 
     # rotate look vector around platform vector by azimuth degrees
+  #  q = Geometry.quat(ϕ_l, vP) #create a quaternion to rotate a vector by ϕ_l degrees about zaxis
+  #  vT_rotated = Geometry.rotate_vec(vT, q) #rotate a vector aligned with the x-axis, by q1
 
-    return vT
+    return vT#_rotated
 end
 
 end
