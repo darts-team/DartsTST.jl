@@ -85,13 +85,14 @@ function sch_to_xyz_2(sch,Mxyzprime_xyz,O,ra)
     return xyz
 end
 
-function sch_to_xyz(sch,peg,a,e)
-    xyz = zeros(3)
+function sch_to_xyz(sch,peg,a,e) # works with multiple points (array inputs)
+    xyz=zeros(size(sch))
+    XYZPrime=zeros(size(sch))
     e2  = e^2 #eccentricity squared
     #break out SCH vectors
-    s   = sch[1]
-    c   = sch[2]
-    h   = sch[3]
+    s   = sch[1,:]
+    c   = sch[2,:]
+    h   = sch[3,:]
     #break out peg parameters
     pegθ  = peg[1]*π/180
     pegϕ  = peg[2]*π/180
@@ -105,7 +106,9 @@ function sch_to_xyz(sch,peg,a,e)
     Clamda=c/ra
 
     #convert [Stheta, Clamda, h] vector to [X',Y',Z'] vector
-    XYZPrime=[(ra+h)*cos(Clamda)*cos(Stheta), (ra+h)*cos(Clamda)*sin(Stheta),(ra+h)*sin(Clamda)]
+    XYZPrime[1,:]=(ra.+h).*cos.(Clamda).*cos.(Stheta)
+    XYZPrime[2,:]=(ra.+h).*cos.(Clamda).*sin.(Stheta)
+    XYZPrime[3,:]=(ra.+h).*sin.(Clamda)
 
     #ENU to XYZ transformation matrix
     Menu_xyz = [-sin(pegϕ) -sin(pegθ)*cos(pegϕ) cos(pegθ)*cos(pegϕ);
@@ -126,7 +129,9 @@ function sch_to_xyz(sch,peg,a,e)
     O = P-ra*Uxyz
 
     #compute the xyz value
-    xyz=Menu_xyz*Mxyzprime_enu*XYZPrime+O;
+    for i=1:size(sch)[2]
+        xyz[:,i]=Menu_xyz*Mxyzprime_enu*XYZPrime[:,i]+O;
+    end
     return xyz
 end
 

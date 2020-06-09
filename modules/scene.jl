@@ -53,29 +53,30 @@ function groundrange_to_lookangle(a,rg,p_h) # ground range to look angle and sla
   return rs,θ_l*180/pi
 end
 
-function azelh_to_xyz(azelh,p_geo,peg,a,e)  # azelh is a 3xN array for N  points, p_h is platform height
-
-    ϕ_l=azelh[1,:] # deg  azimuth angles
-    θ_l=azelh[2,:] # deg elevation angles
-    h=azelh[3,:] # heights
-
-    θ_l=θ_l[1]
-    ϕ_l=ϕ_l[1]
-    h=h[1]
+function lookh_to_xyz(lookh,p_geo,peg,a,e)  # look is a 3xN array for N  points, p_h is platform height
+    vL2_sch=zeros(size(lookh))
+    peg_xyz_grid=zeros(size(lookh))
+    vL_xyz=zeros(size(lookh))
+    vT=zeros(size(lookh))
+    ϕ_l=lookh[1,:] # deg  azimuth angles
+    θ_l=lookh[2,:] # deg elevation angles
+    h=lookh[3,:] # heights
 
     p_h=p_geo[3] # platform height
     p_xyz=Geometry.geo_to_xyz(p_geo,a,e) # platform position in xyz
 
     rs,rg=lookangle_to_range(a,θ_l,p_h) # slant range between target and platform, assumes spherical planet
 
-    vL2_sch=[sind.(θ_l).*sind.(ϕ_l),sind.(θ_l).*cosd.(ϕ_l),-cosd.(θ_l)] # look vectors in geo (for each target at each look angle
+    vL2_sch[1,:]=sind.(θ_l).*sind.(ϕ_l)
+    vL2_sch[2,:]=sind.(θ_l).*cosd.(ϕ_l)
+    vL2_sch[3,:]=-cosd.(θ_l) # look vectors in geo (for each target at each look angle
     vL2_xyz=Geometry.sch_to_xyz(vL2_sch,peg,a,e) # look vectors in xyz (for each target at each look angle)
     peg_geo=[peg[1],peg[2],0]
     peg_xyz=Geometry.geo_to_xyz(peg_geo,a,e)
-    vL_xyz=rs.*(vL2_xyz-peg_xyz)
-
-    vT=vL_xyz+p_xyz # target vectors in xyz (for azimuth angle of 0 deg)
-    vT=[vT[1,1],vT[2,1],vT[3,1]]
+    peg_xyz_grid=repeat(peg_xyz,1,size(lookh)[2])
+    vL_xyz=rs.*(vL2_xyz.-peg_xyz_grid)
+    vT=vL_xyz.+p_xyz # target vectors in xyz (for azimuth angle of 0 deg)
+    #vT=[vT[1,1],vT[2,1],vT[3,1]]
 
     # rotate look vector around platform vector by azimuth degrees
   #  q = Geometry.quat(ϕ_l, vP) #create a quaternion to rotate a vector by ϕ_l degrees about zaxis
