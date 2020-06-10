@@ -4,6 +4,7 @@ using Plots
 ## planetary shape constants
 a=6378.137e3
 e=sqrt(0.00669437999015)
+# TODO calculate ra
 ## coordinate transformations
 geo=[35.38987,-111.8116,9748.89523]
 #geo=[0,0,0]
@@ -84,18 +85,18 @@ t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops (took 
 t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,a,e)
 #display grid in 3D
 scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],markersize=1)
-
+##
 # target volume grid on surface defined in azimuth-elevation-height (az-el is for the look angle)
-θ_l=60:1:61 # deg look vector look angle
-ϕ_l=0:1:1 # deg look vector azimuth angle
-t_h=0:1e3:1e3 # m target height
+θ_l=-0:1:65#-60:1:60 # deg look vector look angle
+ϕ_l=-90:1:90 # deg look vector azimuth angle
+t_h=0 # m target height
 p_h=500e3 # m platform altitude
 p_θ=0 # deg platform latitude
 p_ϕ=0 # deg platform longitude
 γ=0 # deg track angle (heading), 0 deg is north, 90 deg is east
 peg=[p_θ,p_ϕ,γ] # deg peg point is the nadir point of platform at the center of SAR aperture
-p_geo=[p_θ,p_ϕ,p_h]
+p_geo=[p_θ,p_ϕ,p_h] #TODO peg as structure of 4 points
 t_lookh_grid=Scene.form3Dgrid_for(ϕ_l,θ_l,t_h) # using 3 nested for loops
 #t_azelh_grid=Scene.form3Dgrid_array(ϕ_l,θ_l,t_h) # using array processing
 t_xyz_grid=Scene.lookh_to_xyz(t_lookh_grid,p_geo,peg,a,e)
-scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],markersize=1)
+scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],markersize=1,xlim=(-a-1e6,a+1e6),ylim=(-a-1e6,a+1e6),zlim=(-a-1e6,a+1e6))
