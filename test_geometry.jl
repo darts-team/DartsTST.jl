@@ -1,6 +1,10 @@
 include("modules/geometry.jl")
 include("modules/scene.jl")
 using Plots
+#gr()
+pyplot()
+#plotly()
+#plotlyjs()
 ## planetary shape constants
 a=6378.137e3
 e=sqrt(0.00669437999015)
@@ -87,11 +91,26 @@ t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,a,e)
 scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],markersize=1)
 ##
 # target volume grid on surface defined in azimuth-elevation-height (az-el is for the look angle)
-θ_l=-0:1:65#-60:1:60 # deg look vector look angle
-ϕ_l=-90:1:90 # deg look vector azimuth angle
+θ_l=-0:3:30#-60:1:60 # deg look vector look angle
+ϕ_l=-180:10:180 # deg look vector azimuth angle
+t_h=0:2e6:2e6 # m target height
+p_h=6000e3 # m platform altitude
+p_θ=30 # deg platform latitude
+p_ϕ=170 # deg platform longitude
+γ=0 # deg track angle (heading), 0 deg is north, 90 deg is east
+peg=[p_θ,p_ϕ,γ] # deg peg point is the nadir point of platform at the center of SAR aperture
+p_geo=[p_θ,p_ϕ,p_h] #TODO peg as structure of 4 points
+t_lookh_grid=Scene.form3Dgrid_for(ϕ_l,θ_l,t_h) # using 3 nested for loops
+#t_azelh_grid=Scene.form3Dgrid_array(ϕ_l,θ_l,t_h) # using array processing
+t_xyz_grid=Scene.lookh_to_xyz(t_lookh_grid,p_geo,peg,a,e)
+scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],camera=(20,20),markersize=1
+,xlim=(-a-1e5,a+1e5),ylim=(-a-1e5,a+1e5),zlim=(-a-1e5,a+1e5))
+
+θ_l=-0:1:30#-60:1:60 # deg look vector look angle
+ϕ_l=-180:10:180 # deg look vector azimuth angle
 t_h=0 # m target height
-p_h=500e3 # m platform altitude
-p_θ=0 # deg platform latitude
+p_h=6000e3 # m platform altitude
+p_θ=90 # deg platform latitude
 p_ϕ=0 # deg platform longitude
 γ=0 # deg track angle (heading), 0 deg is north, 90 deg is east
 peg=[p_θ,p_ϕ,γ] # deg peg point is the nadir point of platform at the center of SAR aperture
@@ -99,4 +118,5 @@ p_geo=[p_θ,p_ϕ,p_h] #TODO peg as structure of 4 points
 t_lookh_grid=Scene.form3Dgrid_for(ϕ_l,θ_l,t_h) # using 3 nested for loops
 #t_azelh_grid=Scene.form3Dgrid_array(ϕ_l,θ_l,t_h) # using array processing
 t_xyz_grid=Scene.lookh_to_xyz(t_lookh_grid,p_geo,peg,a,e)
-scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],markersize=1,xlim=(-a-1e6,a+1e6),ylim=(-a-1e6,a+1e6),zlim=(-a-1e6,a+1e6))
+plot(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],st=:surface,camera=(30,-20)
+,xlim=(-a-1e5,a+1e5),ylim=(-a-1e5,a+1e5),zlim=(-a-1e5,a+1e5))
