@@ -80,43 +80,47 @@ println("Extrinsic projected vector: ", projected_vec)
 ## target scene
 
 # target volume grid on surface defined in geo (θϕh)
-t_θ=30:1:60 # deg
-t_ϕ=0:2:60 # deg
-t_h=0:100:3000 # m
+t_θ=-90:2:90 # deg
+t_ϕ=-180:4:180 # deg
+t_h=0:100:9000 # m target heights
 t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops (took 50 sec)
 #t_geo_grid=Scene.form3Dgrid_array(t_θ,t_ϕ,t_h) # using array processing (took 33 sec)
-# convert target volume from geo to xyz
-t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,a,e)
-#display grid in 3D
-scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],markersize=1)
-##
-# target volume grid on surface defined in azimuth-elevation-height (az-el is for the look angle)
+t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,a,e) # convert target volume from geo to xyz
+scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],camera=(0,0),markersize=0.1,xlim=(-a-1e5,a+1e5),ylim=(-a-1e5,a+1e5),zlim=(-a-1e5,a+1e5)) #display grid in 3D
+
+# target volume grid on surface defined in geo (θϕh)
+t_θ=30:1:60 # deg
+t_ϕ=0:2:60 # deg
+t_h=0:100:3000 # m target heights
+t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops 
+#t_geo_grid=Scene.form3Dgrid_array(t_θ,t_ϕ,t_h) # using array processing
+t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,a,e) # convert target volume from geo to xyz
+scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],camera=(30,50),markersize=0.1,xlim=(0,a+1e5),ylim=(0,a+1e5),zlim=(0,a+1e5)) #display grid in 3D
+
+# target volume grid on surface defined in azimuth-look angle-height (azimuth and look angle are for the look angle, target height)
 θ_l=-0:3:30#-60:1:60 # deg look vector look angle
 ϕ_l=-180:10:180 # deg look vector azimuth angle
-t_h=0:2e6:2e6 # m target height
+t_h=0:2e6:2e6 # m target heights
 p_h=6000e3 # m platform altitude
-p_θ=30 # deg platform latitude
+p_θ=0 # deg platform latitude
 p_ϕ=170 # deg platform longitude
 γ=0 # deg track angle (heading), 0 deg is north, 90 deg is east
 peg=[p_θ,p_ϕ,γ] # deg peg point is the nadir point of platform at the center of SAR aperture
-p_geo=[p_θ,p_ϕ,p_h] #TODO peg as structure of 4 points
+p_θϕh=[p_θ,p_ϕ,p_h] #platform position in θϕh
 t_lookh_grid=Scene.form3Dgrid_for(ϕ_l,θ_l,t_h) # using 3 nested for loops
 #t_azelh_grid=Scene.form3Dgrid_array(ϕ_l,θ_l,t_h) # using array processing
-t_xyz_grid=Scene.lookh_to_xyz(t_lookh_grid,p_geo,peg,a,e)
-scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],camera=(20,20),markersize=1
-,xlim=(-a-1e5,a+1e5),ylim=(-a-1e5,a+1e5),zlim=(-a-1e5,a+1e5))
+t_xyz_grid=Scene.lookh_to_xyz(t_lookh_grid,p_θϕh,peg,a,e) # convert target volume from lookh to xyz
+scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],camera=(20,20),markersize=0.5,xlim=(-a-1e5,a+1e5),ylim=(-a-1e5,a+1e5),zlim=(-a-1e5,a+1e5)) #display grid in 3D
 
-θ_l=-0:1:30#-60:1:60 # deg look vector look angle
-ϕ_l=-180:10:180 # deg look vector azimuth angle
-t_h=0 # m target height
+# target volume grid on surface defined in ch (of sch) and azimuth rotation angles (rotated around platform position vector)
+t_c=0:2e6:2e6 # m target positions in c of sch
+t_h=0:100:9000 # m target heights
+rot_P=-10:1:10 # deg rotation angles around platform position vector
 p_h=6000e3 # m platform altitude
-p_θ=90 # deg platform latitude
-p_ϕ=0 # deg platform longitude
+p_θ=0 # deg platform latitude
+p_ϕ=170 # deg platform longitude
 γ=0 # deg track angle (heading), 0 deg is north, 90 deg is east
 peg=[p_θ,p_ϕ,γ] # deg peg point is the nadir point of platform at the center of SAR aperture
-p_geo=[p_θ,p_ϕ,p_h] #TODO peg as structure of 4 points
-t_lookh_grid=Scene.form3Dgrid_for(ϕ_l,θ_l,t_h) # using 3 nested for loops
-#t_azelh_grid=Scene.form3Dgrid_array(ϕ_l,θ_l,t_h) # using array processing
-t_xyz_grid=Scene.lookh_to_xyz(t_lookh_grid,p_geo,peg,a,e)
-plot(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],st=:surface,camera=(30,-20)
-,xlim=(-a-1e5,a+1e5),ylim=(-a-1e5,a+1e5),zlim=(-a-1e5,a+1e5))
+p_θϕh=[p_θ,p_ϕ,p_h] #platform position in θϕh
+t_xyz_grid=Geometry.chP_to_xyz(t_c,t_h,rot_P,p_θϕh,peg,a,e)# convert target volume from geo to xyz
+scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],camera=(30,30),markersize=0.1,xlim=(-a-1e5,a+1e5),ylim=(-a-1e5,a+1e5),zlim=(-a-1e5,a+1e5))#display grid in 3D
