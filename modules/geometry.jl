@@ -1,7 +1,7 @@
 module Geometry
 using ReferenceFrameRotations
 
-quat(rot_angle, rot_ax) = Quaternion(cosd(rot_angle/2.0), rot_ax* sind(rot_angle/2.0))
+quat(rot_angle, rot_ax) = Quaternion(cosd(rot_angle/2.0), rot_ax*sind(rot_angle/2.0))
 rotate_frame(v,q) = vect(inv(q)*v*q)
 rotate_vec(v,q) = vect(q*v*inv(q))
 
@@ -82,10 +82,11 @@ function sch_to_xyz_2(sch,Mxyzprime_xyz,O,ra)
     XYZPrime=[(ra+h)*cos(Clamda)*cos(Stheta), (ra+h)*cos(Clamda)*sin(Stheta),(ra+h)*sin(Clamda)]
     #compute the xyz value
     xyz=Mxyzprime_xyz*XYZPrime+O;
+    xyz=[xyz[1],xyz[2],xyz[3]]
     return xyz
 end
 
-function sch_to_xyz(sch,peg,a,e) # works with multiple points (array inputs)
+function sch_to_xyz(sch,peg,a,e) # works with multiple points (array inputs) #TODO works only for grid
     xyz=zeros(size(sch))
     XYZPrime=zeros(size(sch))
     e2  = e^2 #eccentricity squared

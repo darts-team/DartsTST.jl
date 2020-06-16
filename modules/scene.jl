@@ -1,6 +1,7 @@
 module Scene
 
 include("geometry.jl")
+using LinearAlgebra
 
 function form3Dgrid_for(t_θ,t_ϕ,t_h) # for loop method
   t_geo_grid=zeros(3,length(t_θ)*length(t_ϕ)*length(t_h))
@@ -67,7 +68,7 @@ function lookh_to_xyz(lookh,p_θϕh,peg,a,e)  # look is a 3xN array for N  point
     p_xyz=Geometry.geo_to_xyz(p_θϕh,a,e) # platform position in xyz
     rs,rg=lookangle_to_range(a,θ_l,p_h,t_h) # slant range between target and platform, assumes spherical planet #TODO change a to ra TODO t_h can be a smaller vector and then repeat
     vL2_sch[1,:]=sind.(θ_l).*sind.(ϕ_l)
-    vL2_sch[2,:]=sind.(θ_l).*cosd.(ϕ_l)
+    vL2_sch[2,:]=sind.(θ_l).*cosd.(ϕ_l) #TODO add d for left/right looking
     vL2_sch[3,:]=-cosd.(θ_l) # look vectors in geo (for each target at each look angle
     vL2_xyz=Geometry.sch_to_xyz(vL2_sch,peg,a,e) # look vectors in xyz (for each target at each look angle)
     peg_geo=[peg[1],peg[2],0]
@@ -79,18 +80,33 @@ function lookh_to_xyz(lookh,p_θϕh,peg,a,e)  # look is a 3xN array for N  point
     return vT
 end
 
-function chP_to_xyz(t_c,t_h,rot_P,p_θϕh,peg,a,e)
+function chP_to_xyz_grid(t_c,t_h,rot_P,p_θϕh,peg,a,e)
   t_s=0 # before rotation around P, targets are at the same along-track position with platform
   p_xyz=Geometry.geo_to_xyz(p_θϕh,a,e) # platform position in xyz
+  p_xyz=p_xyz/norm(p_xyz)
   t_sch_grid=Scene.form3Dgrid_for(t_s,t_c,t_h) # using 3 nested for loops
   #t_geo_grid=Scene.form3Dgrid_array(t_s,t_c,t_h) # using array processing
   t_xyz_grid=Geometry.sch_to_xyz(t_sch_grid,peg,a,e)
+  t_xyz_grid_rot=zeros(3,size(t_c)[1]*size(t_h)[1]*size(rot_P)[1])
   # rotate look vector around platform vector by azimuth degrees
-  for i=1:size(rotP)
-    q = Geometry.quat(rot_P, p_xyz) #create a quaternion to rotate a vector by rot_P degrees about platform position vector
-    t_xyz_grid_rot[:,i] = Geometry.rotate_vec(t_xyz_grid, q) #rotate target position vectors around platform position vector
+  for i=1:size(rot_P)[1]
+    q = Geometry.quat(rot_P[i], p_xyz) #create a quaternion to rotate a vector by rot_P degrees about platform position vector
+    for j=1:size(t_xyz_grid)[2]
+      n=(i-1)*size(t_xyz_grid)[2]+j
+      t_xyz_grid_rot[:,n] = Geometry.rotate_vec(t_xyz_grid[:,j], q) #rotate target position vectors around platform position vector
+    end
   end
   return t_xyz_grid_rot
+end
+
+function chP_to_xyz_single(t_sch,rot_P,p_θϕh,peg,a,e)
+  p_xyz=Geometry.geo_to_xyz(p_θϕh,a,e) # platform position in xyz
+  p_xyz=p_xyz/norm(p_xyz)
+  Mxyzprime_xyz,O,ra=Geometry.peg_calculations(peg,a,e)
+  t_xyz=Geometry.sch_to_xyz_2(t_sch,Mxyzprime_xyz,O,ra)
+  # rotate look vector around platform vector by azimuth degrees
+  q = Geometry.quat(rot_P, p_xyz) #create a quaternion to rotate a vector by rot_P degrees about platform position vector
+  t_xyz_rot = Geometry.rotate_vec(t_xyz, q) #rotate target position vectors around platform position vector
 end
 
 end
