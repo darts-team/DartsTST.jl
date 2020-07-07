@@ -1,9 +1,14 @@
 include("modules/geometry.jl")
-using Plots
 
+using Plots
+#gr()
+pyplot()
+#plotly()
+#plotlyjs()
 ## planetary shape constants
 a=6378.137e3
 e=sqrt(0.00669437999015)
+# TODO calculate ra
 ## coordinate transformations
 geo=[35.38987,-111.8116,9748.89523]
 #geo=[0,0,0]
@@ -72,4 +77,3 @@ projected_vec = Geometry.rotate_frame([1,0,0], qy*qz) #project a vector aligned 
 println("\nIntrinsic projected vector: ", projected_vec)
 projected_vec = Geometry.rotate_frame([1,0,0], qz*qy) #project a vector aligned with the x-axis, to a rotated frame described by q
 println("Extrinsic projected vector: ", projected_vec)
-
