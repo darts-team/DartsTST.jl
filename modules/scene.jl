@@ -21,9 +21,9 @@ function form3Dgrid_array(t_θ,t_ϕ,t_h) # array method
   t_θ1=Array{Float64}(undef,1,length(t_θ))
   t_ϕ1=Array{Float64}(undef,1,length(t_ϕ))
   t_h1=Array{Float64}(undef,1,length(t_h))
-  t_θ1[:]=t_θ
-  t_ϕ1[:]=t_ϕ
-  t_h1[:]=t_h
+  t_θ1[:].=t_θ
+  t_ϕ1[:].=t_ϕ
+  t_h1[:].=t_h
   t_θ_all=repeat(t_θ1,inner=[1,1],outer=[1,length(t_ϕ)*length(t_h)])
   t_ϕ_all=repeat(t_ϕ1,inner=[1,length(t_θ)],outer=[1,length(t_h)])
   t_h_all=repeat(t_h1,inner=[1,length(t_θ)*length(t_ϕ)],outer=[1,1])
