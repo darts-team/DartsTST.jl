@@ -16,27 +16,33 @@ function main(t_θ,t_ϕ,t_h,p_θ,p_ϕ,p_h,mode,tx_el,fc,a,e)
     t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,a,e)
     p_xyz_grid=Geometry.geo_to_xyz(p_geo_grid,a,e)
     if mode==1 # SAR (ping-pong)
-        ranges_tx=zeros(Float64,Np,Nt)
         rawdata=zeros(ComplexF64,Np)
-        for i=1:Np
+        for i=1:Np # TX-RX platform
             for j=1:Nt
                 range_tx=distance(t_xyz_grid[:,j],p_xyz_grid[:,i])
                 rawdata[i]=rawdata[i]+exp(-im*4*pi/λ*range_tx)
             end
         end
     elseif mode==2 # SIMO
-
-        for i=1:Np
-
-        end
-    elseif mode==3 # MIMO
-        for i=1:Np
-
-            for j=1:Np
-                #exp(-im*2*pi/λ*(range_tx(i,:)+ranges_rx(i,:))))
+        rawdata=zeros(ComplexF64,Np)
+        for i=1:Np # RX platform
+            for j=1:Nt
+                range_tx=distance(t_xyz_grid[:,j],p_xyz_grid[:,tx_el])
+                range_rx=distance(t_xyz_grid[:,j],p_xyz_grid[:,i])
+                rawdata[i]=rawdata[i]+exp(-im*2*pi/λ*(range_tx+range_rx))
             end
         end
-
+    elseif mode==3 # MIMO
+        rawdata=zeros(ComplexF64,Np,Np)
+        for i=1:Np # TX platform
+            for k=1:Np # RX platform
+                for j=1:Nt
+                    range_tx=distance(t_xyz_grid[:,j],p_xyz_grid[:,i])
+                    range_rx=distance(t_xyz_grid[:,j],p_xyz_grid[:,k])
+                    rawdata[i,k]=rawdata[i,k]+exp(-im*2*pi/λ*(range_tx+range_rx))
+                end
+            end
+        end
     end
     return rawdata
 end
