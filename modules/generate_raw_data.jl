@@ -1,21 +1,13 @@
-module Raw_Data
-
-include("geometry.jl")
-include("scene.jl")
+module Generate_Raw_Data
 
 c=299792458 # speed of light (m/s)
 
-function main(t_θ,t_ϕ,t_h,p_θ,p_ϕ,p_h,mode,tx_el,fc,a,e)
+function main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e)
     λ=c/fc # wavelength (m)
-    Nt=length(t_θ)*length(t_ϕ)*length(t_h) # number of targets
-    Np=length(p_θ)*length(p_ϕ)*length(p_h) # number of platforms
-    t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops
-    p_geo_grid=Scene.form3Dgrid_for(p_θ,p_ϕ,p_h) # using 3 nested for loops
-    #t_geo_grid=Scene.form3Dgrid_array(t_θ,t_ϕ,t_h) # using array processing
-    #p_geo_grid=Scene.form3Dgrid_array(p_θ,p_ϕ,p_h) # using array processing
-    t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,a,e)
-    p_xyz_grid=Geometry.geo_to_xyz(p_geo_grid,a,e)
-    if mode==1 # SAR (ping-pong)
+    Nt=size(t_xyz_grid)[2] # number of targets
+    Np=size(p_xyz_grid)[2] # number of platforms
+
+#=    if mode==1 # SAR (ping-pong)
         rawdata=zeros(ComplexF64,Np)
         for i=1:Np # TX-RX platform
             for j=1:Nt
@@ -44,6 +36,29 @@ function main(t_θ,t_ϕ,t_h,p_θ,p_ϕ,p_h,mode,tx_el,fc,a,e)
             end
         end
     end
+=#
+    if mode==1 || mode==2 # SAR (ping-pong) or SIMO
+        rawdata=zeros(ComplexF64,Np)
+    elseif mode==3
+        rawdata=zeros(ComplexF64,Np,Np)
+    end
+        for j=1:Nt # targets
+            for i=1:Np # TX or RX platform for SAR, RX platform for SIMO, RX platform for MIMO
+                range_rx=distance(t_xyz_grid[:,j],p_xyz_grid[:,i])
+                if mode==1 # SAR (ping-pong)
+                    range_tx=distance(t_xyz_grid[:,j],p_xyz_grid[:,i])
+                    rawdata[i]=rawdata[i]+exp(-im*4*pi/λ*range_tx)
+                elseif mode==2 # SIMO
+                    range_tx=distance(t_xyz_grid[:,j],p_xyz_grid[:,tx_el])
+                    rawdata[i]=rawdata[i]+exp(-im*2*pi/λ*(range_tx+range_rx))
+                elseif mode==3 # MIMO
+                    for k=1:Np # TX platform
+                        range_tx=distance(t_xyz_grid[:,j],p_xyz_grid[:,k])
+                        rawdata[i,k]=rawdata[i,k]+exp(-im*2*pi/λ*(range_tx+range_rx))
+                    end
+                end
+            end
+        end
     return rawdata
 end
 
