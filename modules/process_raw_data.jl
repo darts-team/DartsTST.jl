@@ -10,7 +10,7 @@ function main(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e)
     λ=c/fc # wavelength (m)
 
         for j=1:Ns # for each pixel
-            if mode==2;range_tx=distance(t_xyz_grid[:,j],p_xyz_grid[:,tx_el]);end
+            if mode==2;range_tx=distance(s_xyz_grid[:,j],p_xyz_grid[:,tx_el]);end
             for i=1:Np # TX or RX platform for SAR, RX platform for SIMO, RX platform for MIMO
                 range_rx=distance(s_xyz_grid[:,j],p_xyz_grid[:,i])
                 if mode==1 # SAR (ping-pong)

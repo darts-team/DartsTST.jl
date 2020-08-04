@@ -65,6 +65,18 @@ display(scatter(s_xyz_grid[1,:],s_xyz_grid[2,:],s_xyz_grid[3,:],leg=false,camera
 ## PROCESS RAW DATA TO GENERATE IMAGE
 processed_image=Process_Raw_Data.main(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e)
 # display and save image
-#display(heatmap(abs.(processed_image),c=cgrad([:black,:white]),xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Processed 3D Image"))
-display(scatter(s_xyz_grid[1,:],s_xyz_grid[2,:],s_xyz_grid[3,:],marker_z=abs.(processed_image),leg=false,camera=(20,40),markersize=0.3,xlim=(6377100,6380100),ylim=(-1500,1500),zlim=(9000,12000),xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Processed Image")) #display grid in 3D
+display(scatter(s_xyz_grid[1,:],s_xyz_grid[2,:],s_xyz_grid[3,:],marker_z=abs.(processed_image)/maximum(abs.(processed_image)),leg=false,camera=(20,40),markersize=1,markerstrokewidth=0,xlim=(6377100,6380100),ylim=(-1500,1500),zlim=(9000,12000),xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Processed Image")) #display grid in 3D
+Ns_θ=length(s_θ)
+Ns_ϕ=length(s_ϕ)
+Ns_h=length(s_h)
+img=zeros(Ns_θ,Ns_ϕ)
+for k=1:Ns_h # height slices from the scene
+    for i=1:Ns_θ
+        for j=1:Ns_ϕ
+            indx=(i-1)*Ns_ϕ*Ns_h+(j-1)*Ns_h+k
+            img[i,j]=abs(processed_image[indx]) # square for power?
+        end
+    end
+    heatmap(abs.(img),c=cgrad([:black,:white]))
+end
 #savefig("image.png")
