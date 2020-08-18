@@ -27,7 +27,7 @@ function main(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e)
             end
         end
 
-    return processed_image
+    return abs.(processed_image) # square for power?
 end
 
 function distance(xyz1,xyz2)

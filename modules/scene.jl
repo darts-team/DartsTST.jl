@@ -109,4 +109,17 @@ function chP_to_xyz_single(t_sch,rot_P,p_θϕh,peg,a,e)
   t_xyz_rot = Geometry.rotate_vec(t_xyz, q) #rotate target position vectors around platform position vector
 end
 
+function convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
+  image_3D=zeros(Ns_θ,Ns_ϕ,Ns_h)
+  for i=1:Ns_θ
+    for j=1:Ns_ϕ
+      for k=1:Ns_h
+        indx=(i-1)*Ns_ϕ*Ns_h+(j-1)*Ns_h+k
+        image_3D[i,j,k]=image_3xN[indx] # square for power?
+      end
+    end
+  end
+  return image_3D
+end
+
 end
