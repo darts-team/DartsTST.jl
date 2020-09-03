@@ -42,13 +42,22 @@ function main_RSF(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e,Srx,t_rx,ref_range) # 
     elseif mode==3
         rawdata=zeros(ComplexF64,Np,Np,Nft)
     end
+    ref_delay=2*ref_range/c # reference delay
     for j=1:Nt # targets
         if mode==2;range_tx=distance(t_xyz_grid[:,j],p_xyz_grid[:,tx_el]);end
         for i=1:Np # RX platform
             range_rx=distance(t_xyz_grid[:,j],p_xyz_grid[:,i])
             if mode==1 # SAR (ping-pong)
                 range_tx=range_rx
-                ref_delay=2*ref_range/c # reference delay
+                rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
+                rel_delay_ind=Int(round(rel_delay/Δt))
+                if rel_delay_ind>=0 #TODO if rel_delay_ind>=Nft Srx_shifted becomes a larger array which causes issues (also for SIMO and MIMO)
+                    Srx_shifted=[zeros(1,rel_delay_ind) Srx[1:Nft-rel_delay_ind]']
+                elseif rel_delay_ind<0
+                    Srx_shifted=[Srx[1+abs(rel_delay_ind):Nft]' zeros(1,abs(rel_delay_ind))]
+                end
+                rawdata[i,:]=rawdata[i,:]'+exp(-im*4*pi/λ*range_tx)*Srx_shifted
+            elseif mode==2 # SIMO
                 rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
                 rel_delay_ind=Int(round(rel_delay/Δt))
                 if rel_delay_ind>=0
@@ -56,13 +65,18 @@ function main_RSF(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e,Srx,t_rx,ref_range) # 
                 elseif rel_delay_ind<0
                     Srx_shifted=[Srx[1+abs(rel_delay_ind):Nft]' zeros(1,abs(rel_delay_ind))]
                 end
-                rawdata[i,:]=rawdata[i,:]'+exp(-im*4*pi/λ*range_tx)*Srx_shifted
-            elseif mode==2 # SIMO TODO
-                rawdata[i]=rawdata[i]+exp(-im*2*pi/λ*(range_tx+range_rx))
-            elseif mode==3 # MIMO TODO
+                rawdata[i,:]=rawdata[i,:]'+exp(-im*2*pi/λ*(range_tx+range_rx))*Srx_shifted
+            elseif mode==3 # MIMO
                 for k=1:Np # TX platform for MIMO
                     range_tx=distance(t_xyz_grid[:,j],p_xyz_grid[:,k])
-                    rawdata[i,k]=rawdata[i,k]+exp(-im*2*pi/λ*(range_tx+range_rx))
+                    rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
+                    rel_delay_ind=Int(round(rel_delay/Δt))
+                    if rel_delay_ind>=0
+                        Srx_shifted=[zeros(1,rel_delay_ind) Srx[1:Nft-rel_delay_ind]']
+                    elseif rel_delay_ind<0
+                        Srx_shifted=[Srx[1+abs(rel_delay_ind):Nft]' zeros(1,abs(rel_delay_ind))]
+                    end
+                    rawdata[i,k,:]=rawdata[i,k,:]'+exp(-im*2*pi/λ*(range_tx+range_rx))*Srx_shifted
                 end
             end
         end
