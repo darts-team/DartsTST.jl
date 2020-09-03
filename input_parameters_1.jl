@@ -3,7 +3,7 @@ c=299792458 # speed of light (m/s)
 a=6378.137e3
 e=sqrt(0.00669437999015)
 # radar parameters
-mode=2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
+mode=1 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
 tx_el=1 # which element transmits for SIMO (max value N)
 fc=1e9 # center frequency (Hz)
 # platform locations (volumetric grid) defined in geo (θϕh)
