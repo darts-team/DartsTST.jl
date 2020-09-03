@@ -9,8 +9,8 @@ pyplot()
 ## RANGE SPREAD FUNCTION (matched filter output)
 Srx,MF,ft,t_rx=RSF.ideal_RSF(τ,Δt,B,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
 # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(τ,Δt,B,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
-display(plot(ft,20*log10.(abs.(MF)),ylims=(-100+20*log10(B*τ),20*log10(B*τ)),leg=false,xlabel="fast time (μs)",ylabel="amplitude (dB)",title="Matched Filter Output (Range Spread Function)"))
-display(plot(t_rx,20*log10.(abs.(Srx')),ylims=(-100+20*log10(B*τ),20*log10(B*τ)),leg=false,xlabel="fast time (μs)",ylabel="amplitude (dB)",title="Receive Window/Signal"))
+display(plot(ft*1e6,20*log10.(abs.(MF)),ylims=(-100+20*log10(B*τ),20*log10(B*τ)),leg=false,xlabel="fast time (μs)",ylabel="amplitude (dB)",title="Matched Filter Output (Range Spread Function)"))
+display(plot(t_rx*1e6,20*log10.(abs.(Srx')),ylims=(-100+20*log10(B*τ),20*log10(B*τ)),leg=false,xlabel="fast time (μs)",ylabel="amplitude (dB)",title="Receive Window/Signal"))
 ## PLATFORM AND TARGET LOCATIONS
 t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops
 p_geo_grid=Scene.form3Dgrid_for(p_θ,p_ϕ,p_h) # using 3 nested for loops
