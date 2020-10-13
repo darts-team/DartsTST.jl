@@ -6,7 +6,7 @@ using Dates
 using Interpolations
 using LinearAlgebra
 
-# convert eci orbit posoitions to ECEF based on DCM
+"convert eci orbit posoitions to ECEF based using input DCM"
 function ecef_orbitpos(eci_pos, dcm)
     #eci_pos = 3 x N_plat x N_time
     #dcm = 3 x 3 x 1 or 3 x 3 x N_time
@@ -42,7 +42,7 @@ function ecef_orbitpos(eci_pos, dcm)
     return ecef_pos
 end
 
-#compute DCM ton convert ECI to ECEF basedon on epoch and IERS EOP data
+"compute DCM to convert ECI to ECEF based on epoch and IERS EOP data"
 function eci_dcm(time::Array{Float32,1}, epoch::DateTime, eop_data)
     dcm = zeros(3,3,length(time))
     for ii = 1:length(time)
@@ -52,7 +52,7 @@ function eci_dcm(time::Array{Float32,1}, epoch::DateTime, eop_data)
       return dcm
 end
 
-#compute DCM to convert ECI to ECEF based on epoch
+"compute DCM to convert ECI to ECEF based on epoch"
 function eci_dcm(time::Array{Float32,1}, epoch::DateTime)
     eop_data = get_iers_eop();
     dcm = zeros(3,3,length(time))
@@ -63,7 +63,7 @@ function eci_dcm(time::Array{Float32,1}, epoch::DateTime)
       return dcm
 end
 
-#interpolate darts orbits
+"interpolate darts orbits"
 function interp_orbit(time_old, pos, time_new)
     #pos = 3 x N_plat x N_time
     szp = size(pos)
@@ -77,6 +77,7 @@ function interp_orbit(time_old, pos, time_new)
     pos_i = zeros(szp[1],nplat, length(time_new));
     for iplat=1:nplat
         for iaxis=1:szp[1]
+            #TODO: using CubicSplineInterpolation instead of Linear Interpolations
             itp = LinearInterpolation(time_old, pos[iaxis, iplat,:])
             pos_i[iaxis,iplat,:] = itp(time_new);
         end
@@ -84,9 +85,9 @@ function interp_orbit(time_old, pos, time_new)
     return pos_i
 end
 
-#helper function to compute perpendicular baselines
-#inputs include 3D position vector (3xNpxNt) [m], velocity vector (3xNpxNt) [m/s]
-#look angle (θ in degrees), and reference index
+"helper function to compute perpendicular baselines.
+Inputs include 3D position vector (3xNpxNt) [m], velocity vector (3xNpxNt) [m/s]
+look angle (θ in degrees), and reference index"
 function get_perp_baselines(pos, vel, θ,refind=1)
     @assert ndims(pos)==3 "POS needs to be 3 x Np x Nt"
     @assert ndims(vel)==3 "VEL needs to be 3 x Np x Nt"
@@ -95,7 +96,7 @@ function get_perp_baselines(pos, vel, θ,refind=1)
 
 
     Nplats = size(pos,2); #number of platforms
-    Ntimes = size(pos,3); #number of time signals
+    Ntimes = size(pos,3); #number of time steps
 
     print
     bperp = zeros(Nplats, Nplats, Ntimes);
@@ -107,18 +108,20 @@ function get_perp_baselines(pos, vel, θ,refind=1)
         vtan = vel[:,refind,itimes]  - vrad; #tangential velocity
         that = vtan/norm(vtan); #track vector
         chat = cross(nhat, that); #cross-track vector
-        #get look vector based on TCN-frame and look vector
+        #get look vector based on TCN-frame and look angle TODO: add azimuth
         lhat = cosd(θ)*nhat + sind(θ)*chat;
         #iterate over platforms and compute full perp-baseline matrix
         for iplat = 1:Nplats
             for jplat = 1:Nplats
                 baseline = pos[:,jplat,itimes] - pos[:,iplat,itimes];
+                # use the imaging plane baseline only
+                baseline = dot(baseline,nhat)*nhat + dot(baseline,chat)*chat;
+                # find baseline component perpendicular to look direction
                 bperp[iplat,jplat,itimes] = norm(baseline - dot(baseline,lhat)*lhat);
             end
         end
 
     end
-
     return bperp
 
 end
