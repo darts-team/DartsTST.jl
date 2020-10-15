@@ -74,15 +74,32 @@ function interp_orbit(time_old, pos, time_new)
         nplat = 1
     end
 
-    pos_i = zeros(szp[1],nplat, length(time_new));
-    for iplat=1:nplat
-        for iaxis=1:szp[1]
-            #TODO: using CubicSplineInterpolation instead of Linear Interpolations
-            itp = LinearInterpolation(time_old, pos[iaxis, iplat,:])
-            pos_i[iaxis,iplat,:] = itp(time_new);
+    if nplat == 1 # single platform case
+
+    pos_i_cube = zeros(szp[1],length(time_new));
+        for iplat=1:nplat
+            for iaxis=1:szp[1]
+                #itp = LinearInterpolation(time_old, pos[iaxis, iplat, :]) * Old linear interp code 10/15/2020
+                itp = CubicSplineInterpolation(time_old, pos[iaxis, :])
+                pos_i[iaxis,:] = itp(time_new);
+            end
         end
-    end
-    return pos_i
+
+
+else # N platform case
+    pos_i_cube = zeros(szp[1],nplat, length(time_new));
+        for iplat=1:nplat
+            for iaxis=1:szp[1] # TODO: this can be done in vector instead of loop form
+                #TODO: using CubicSplineInterpolation instead of Linear Interpolations
+                #itp = LinearInterpolation(time_old, pos[iaxis, iplat, :])
+                # testing cubic CubicSplineInterpolation
+                itp = CubicSplineInterpolation(time_old, pos[iaxis, iplat, :])
+                pos_i[iaxis,iplat,:] = itp(time_new);
+            end
+        end
+end
+
+  return pos_i # returns #pos = 3 x N_plat x N_time_new or #pos = 3 x N_time_new
 end
 
 "helper function to compute perpendicular baselines.
