@@ -6,7 +6,7 @@ using Dates
 using Interpolations
 using LinearAlgebra
 
-"convert eci orbit posoitions to ECEF based using input DCM"
+"convert eci orbit positions to ECEF based using input DCM"
 function ecef_orbitpos(eci_pos, dcm)
     #eci_pos = 3 x N_plat x N_time
     #dcm = 3 x 3 x 1 or 3 x 3 x N_time
