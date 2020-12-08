@@ -67,6 +67,7 @@ a_coeff_db = osc_coeffs[i,:] # grab the clock coefficients for each platform
 #TODO: examine implementation of sync_radar_offset value. Scheduled transmissions with TDMA?
 Sphi_tilde = (2*Sphi.*(1 - cos(2*pi*sync_radar_offset*f_psd)))
 
+#TODO change to function
 
 # PSD of AWGN with variance determined by CRLB of sync algorithm
 S_n = (((sig_crlb[i,j])*sdradar_args_fs*(2*pi)*2./sqrt(2)).^2).*ones(size(Sphi))
