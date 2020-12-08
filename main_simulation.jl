@@ -5,8 +5,7 @@ include("modules/scene.jl")
 include("input_parameters_1.jl")
 using Plots
 pyplot()
-## PLATFORM AND TARGET LOCATIONS
-t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops
+## PLATFORM AND TARGET LOCATIONS t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops
 p_geo_grid=Scene.form3Dgrid_for(p_θ,p_ϕ,p_h) # using 3 nested for loops
 #t_geo_grid=Scene.form3Dgrid_array(t_θ,t_ϕ,t_h) # using array processing
 #p_geo_grid=Scene.form3Dgrid_array(p_θ,p_ϕ,p_h) # using array processing
@@ -19,6 +18,10 @@ display(scatter(p_xyz_grid[1,:],p_xyz_grid[2,:],p_xyz_grid[3,:],leg=false,camera
 #savefig("platforms.png")
 display(scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],leg=false,camera=(20,40),markersize=0.3,xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Targets")) #display grid in 3D
 #savefig("targets.png")
+## Calculate Phase Errors after Sync
+#TODO add time vector from orbit outputs: convert DCM into seconds or similar
+phase_err = sync.main(time_vector,p_xyz_grid)
+
 ## GENERATE RAW DATA
 rawdata=Generate_Raw_Data.main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e)
 # plot raw data

@@ -1,9 +1,10 @@
 module Sync
-include("input_parameters_sync.jl")
+include("input_parameters_sync.jl") # clock/sync system parameters
+include("input_parameters_1") # radar system parameters
 
 #-start-function--------------------------------------------------------------------------------------------
 "takes the position vectors and time vector to produce a phase error matrix output"
-function get_phase_error(time_vector (slow time), pos )
+function main(time_vector, pos )
 
 # - steps -
 # 1) determine number of platforms from input position vector
@@ -22,13 +23,16 @@ using Interpolations
 using LinearAlgebra
 using FFTW
 
-# find total elapsed time
+#TODO input time vector from orbits module, rename to time_vector
+
+# find total elapsed time over the course of the orbits
 t_elapse = time_vector[end] - time_vector[1]
 
-fs = round(clk_args_N/t_elapse)
+fs = round(clk_args_N/t_elapse) # upper bound of frequency in the PSD generation. Limited (i.e. selected) by the sync_pri
+clk_args_N = ceil(fs*t_elapse)  # Number of sample points in the PSD. Needs to meet the length of min {1/sync_pri,t_elapse}
+m = f/clk_args_f_osc;           # frequency up-conversion factor (scale factor from LO to RF)
 
-#eci_pos = 3 x N_plat x N_time
-
+# verify size of position input
 szp = size(pos)
 @assert szp[1]==3 "POS needs to be 3 x [Np x Nt] or 3 x Nt"
 if ndims(pos) == 3
@@ -37,39 +41,54 @@ elseif ndims(pos) == 2
     nplat = 1
 end
 
-sig_crlb = getSensorCRLB(pos,N,,fc,fs)
-#find CRLB based on SNR of sync connection
-getSensorCRLB(pos,Ns,clk_args_N,sdradar_args_fc,sdradar_args_fs,sdradar_args_fbw,master)
+if nplat ==1
+phase_err = zeros(size(pos)) # this assumes no sync is used. Does not include any oscillator error effects
+return phase_err_s
 
-# define PSD array
-put matrix here [N x num freq points(clk_args_N)]
+else # multi platform case
 
+# find CRLB based on SNR of sync connection
+sig_crlb = getSensorCRLB(pos,Ns,clk_args_N,sdradar_args_fc,sdradar_args_fs,sdradar_args_fbw,master)
+
+# TODO: Does the sig_crlb need to be updated at every sync time (with changing SNR)
+
+
+# create matrix of phase error values
+phase_err = Array{ComplexF64}(szp[2],szp[3]) # Nplatforms x Ntimes
 
 for i = 1:nplat #for each platform, generate oscillator phase errors at each time point
 
-a_coeff_db = osc_coeffs[i,:]
-[Sphi_2S,f] = osc_psd_twosided(fs,clk_args_N,a_coeff_db)
-
-
+a_coeff_db = osc_coeffs[i,:] # grab the clock coefficients for each platform
+[Sphi_2S,f_psd] = osc_psd_twosided(fs,clk_args_N,a_coeff_db)
 
 
 #-------- sync effects on PSD------------------------
 # PSD of clk phase after finite offset sync
+#TODO: examine implementation of sync_radar_offset value. Scheduled transmissions with TDMA?
 Sphi_tilde = (2*Sphi.*(1 - cos(2*pi*sync_radar_offset*f_psd)))
+
 
 # PSD of AWGN with variance determined by CRLB of sync algorithm
 S_n = (((sig_crlb[i,j])*sdradar_args_fs*(2*pi)*2./sqrt(2)).^2).*ones(size(Sphi))
 
 # PSD of clock phase error after synchronization
-Sphi_sync = (Sphi_tilde+S_n).*rect(f_psd,-1/sync_pri,1/sync_pri,1)
+Sphi_sync = (Sphi_tilde+S_n).*rect(f_psd,-1/sync_pri,1/sync_pri,1) # low pass filter the PSD by the Sync process
 
 #------- GPS only model----------------------------
-%TODO GPS only model for clock error corrections?
+#TODO GPS only model for clock error corrections?
 #---------------------------------------------------
 
-end #for
 
-m = f/clk_args_f_osc; # frequency up-conversion factor (scale factor from LO to RF)
+
+# generate time series of phase error
+[r,t] = osc_timeseries_from_psd_twosided(Sphi_sync,fs)
+
+# interpolate phase error to the measurement times
+itp = CubicSplineInterpolation(t, r) # create interpolant
+phase = itp(time_vector) # interpolates to the time vector given by orbits module
+phase_err[i,:] = phase*m; # scale by frequency up-conversion factor
+end #for loop over platforms
+
 
 
 end # end get_sync_phase
@@ -77,7 +96,7 @@ end # end get_sync_phase
 
 
 #-start-function--------------------------------------------------------------------------------------------
-function [Sphi_2S,f] = osc_psd_twosided(fs,N,a_coeff_db)
+function osc_psd_twosided(fs,N,a_coeff_db)
 #   Generate PSD of clock phase error()
 #INPUTS
 #     fs = 2000; # max PSD frequency [sample rate of clock phase error process]
@@ -96,22 +115,14 @@ function [Sphi_2S,f] = osc_psd_twosided(fs,N,a_coeff_db)
 # for 3000 seconds: use fs = 2000; N = 6000000
 # above comments from Sam - use fs = N / time ?
 
-f = ((-N/2):1:(N/2-1))*fs/N
+
+f = LinRange(-N/2,(N/2)-1,N).*fs./N
 
 a_coeff = 10.^(.1*a_coeff_db)
 
-fmin = .1
-#if (nargin>3)
-#    fmin = varargin[2]
-#end
-
+fmin = .1 # minimum PSD frequency. Zeros out PSD below this value
 # oscillator phase error PSD
-Sphi_2S = a_coeff*[f.^(-4) f.^(-3) f.^(-2) f.^(-1) f.^0]'; # two sided
-# Sphi_2S[f==0] = numel(Sphi_2S)
-# Sphi_2S[f==0] = 1
 Sphi_2S[f==0] = 0
-# try flattening out lower frequencies
-# Sphi_2S[abs(f)<fmin] = 1
 
 fmin1 = min(abs(f[f>0]))
 if (fmin1<fmin)
@@ -130,6 +141,8 @@ Sphi_1S = zeros(size(Sphi_2S))
 Sphi_1S[f>=0] = 2*Sphi_2S[f>=0]; # one sided
 
 end
+return Sphi_2S, f
+
 end #function
 #--end--function-------------------------------------------------------------------------------------------
 
@@ -145,8 +158,9 @@ function osc_timeseries_from_psd_twosided(Sphi,fs)
 #     r:    # random time sequence realization
 #     t = (0:(N-1))*1/fs; # time vector
 
-N = numel(Sphi)
+N = length(Sphi)
 f = ((-N/2):1:(N/2-1))*fs/N
+
 Sphi_1S = zeros(size(Sphi))
 Sphi_1S[f>=0] = 2*Sphi[f>=0]; # one sided with f=0 included
 # Sphi_1S[f>0] = 2*Sphi[f>0]; # one sided
@@ -169,20 +183,21 @@ z = A_Sphi.*exp(1i*phi_u).*amp_u
 z2 = ifftshift(z)
 
 # random time sequence realization
-r = fftshift(ifft(z2))
+r = real(fftshift(ifft(z2))) # take real component of time series
 
 # time vector
 t = (0:(N-1))*1/fs
 
 end
-return [r,t]
+return r,t
 end
 #--end--function-------------------------------------------------------------------------------------------
 
 
 #-start-function-------------------------------------------------------------------------------------------
+"generates a matrix of estimated CRLB values based on relative positions of platforms and Friis transmission"
 function getSensorCRLB(pos,Ns,N,fc,fs,fbw,master)
-# pos:              gives locations of all platforms in network
+# pos:              gives locations of all platforms in network (3 x N_plat x N_time)
 # Ns:               number of platforms
 # M:                number of sample times in time_vec
 # N:                number of samples in waveform (Period (s) = N/fs)
@@ -200,23 +215,30 @@ c = 299792458; # m/s SOL
 snr_dB = Array{Float64,2}(undef, M, Ns)
 crlb_var_syncclk = Array{Float64,2}(undef, M, Ns)
 
-for i = 1 : M # loop over number of sample times
+for i = 1 : Ns
+master_pos = pos[master,:]
 
-for j = 1 : Ns
-  # need Pt Gt Gr
-  # find R, distance between the platform and master
-  master_pos =
-  R = sqrt()
+# find R, distance between the platform and master
+receiver_pos = pos[i,:]
+
+R = sqrt((receiver_pos[1]-master_pos[1])^2+(receiver_pos[2]-master_pos[2])^2+(receiver_pos[3]-master_pos[3])^2)
+for j = 1 : M # loop over number of sample times
+  # need Pt, Gt, Gr, POL. These could be calculated in the orbits module using antenna pattern/platform rotations/
+  Pt = 1        # let transmit power be 1 W (needs to be evaluated in trade study, more likely a consequence of orbit design)
+  Gt = 1        # Isotropic rx/tx antennas for sync
+  Gr = 1        # Isotropic rx/tx antennas for sync
+  POL = 1       # Polarization mismatch factor (let antennas be aligned here) - 0 is total misalignment, 1 is total alignment
+
 
   # use Friis formula to calculate received power, SNR
   Pr = POL * Pt*Gt*Gr*c^2/(4*pi*fc*R)^2;
   snr_linear = Pr/Np;
-  snr_dB[i,j] = 10*log10(snr_linear); # save SNR for debug
+  snr_dB[i,j] = 10*log10(snr_linear); # save SNR for debug/trade study
 
   crlb_var_syncclk[i,j] = 1./(sqrt(2*Ns)*(2*pi*fbw)^2*((10.^(.1*snr_db[i,j]))*(N/fs)*fs)) # clk error after sync for Ns sensors
 end #for
 
-return sig_crlb
+return [sig_crlb, snr_dB] # return tuple of CRLB and SNR values
 #--end--function-------------------------------------------------------------------------------------------
 
 #-start-function-------------------------------------------------------------------------------------------

@@ -2,7 +2,7 @@ module Generate_Raw_Data
 
 c=299792458 # speed of light (m/s)
 
-function main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e) # no RSF
+function main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e,phase_err) # no RSF
     λ=c/fc # wavelength (m)
     Nt=size(t_xyz_grid)[2] # number of targets
     Np=size(p_xyz_grid)[2] # number of platforms
@@ -16,14 +16,17 @@ function main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e) # no RSF
         for i=1:Np # RX platform
             range_rx=distance(t_xyz_grid[:,j],p_xyz_grid[:,i])
             if mode==1 # SAR (ping-pong)
+                phase = 2*phase_err[i] # same phase for each platform (tx + rx = 2 times). path delay has negligible effect
                 range_tx=range_rx
-                rawdata[i]=rawdata[i]+exp(-im*4*pi/λ*range_tx)
+                rawdata[i]=rawdata[i]+exp(-im*4*pi/λ*range_tx)*exp(-im*phase)
             elseif mode==2 # SIMO
-                rawdata[i]=rawdata[i]+exp(-im*2*pi/λ*(range_tx+range_rx))
+                phase = phase_err[tx_el]+phase_err[i] # tx element
+                rawdata[i]=rawdata[i]+exp(-im*2*pi/λ*(range_tx+range_rx))*exp(-im*phase)
             elseif mode==3 # MIMO
                 for k=1:Np # TX platform for MIMO
+                    phase = phase_err[j]+phase_err[k]
                     range_tx=distance(t_xyz_grid[:,j],p_xyz_grid[:,k])
-                    rawdata[i,k]=rawdata[i,k]+exp(-im*2*pi/λ*(range_tx+range_rx))
+                    rawdata[i,k]=rawdata[i,k]+exp(-im*2*pi/λ*(range_tx+range_rx))*exp(-im*phase)
                 end
             end
         end

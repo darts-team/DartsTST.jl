@@ -79,7 +79,7 @@ function interp_orbit(time_old, pos, time_new)
     pos_i_cube = zeros(szp[1],length(time_new));
         for iplat=1:nplat
             for iaxis=1:szp[1]
-                #itp = LinearInterpolation(time_old, pos[iaxis, iplat, :]) * Old linear interp code 10/15/2020
+                #itp = LinearInterpolation(time_old, pos[iaxis, iplat, :]) # Old linear interp code 10/15/2020
                 itp = CubicSplineInterpolation(time_old, pos[iaxis, :])
                 pos_i[iaxis,:] = itp(time_new);
             end
