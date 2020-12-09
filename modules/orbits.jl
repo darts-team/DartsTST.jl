@@ -29,8 +29,8 @@ function ecef_orbitpos(eci_pos, dcm)
     else
         error("DCM is badly shaped")
     end
-    println("No. platforms: ",nplat)
-    println("No. locations: ",ntimes)
+    #println("No. platforms: ",nplat)
+    #println("No. locations: ",ntimes)
 
     ecef_pos = zeros(3,nplat, ntimes);
     for iplat=1:nplat
@@ -38,7 +38,7 @@ function ecef_orbitpos(eci_pos, dcm)
             ecef_pos[:,iplat,itime] = dcm[:,:,itime]*eci_pos[:,iplat,itime];
         end
     end
-    println("Done with it, ", size(ecef_pos))
+    #println("Done with it, ", size(ecef_pos))
     return ecef_pos
 end
 
@@ -78,7 +78,8 @@ function interp_orbit(time_old, pos, time_new)
     for iplat=1:nplat
         for iaxis=1:szp[1]
             #TODO: using CubicSplineInterpolation instead of Linear Interpolations
-            itp = LinearInterpolation(time_old, pos[iaxis, iplat,:])
+            itp = LinearInterpolation(time_old, pos[iaxis, iplat, :])
+            # itp = CubicSplineInterpolation(time_old, pos[iaxis, iplat,:])
             pos_i[iaxis,iplat,:] = itp(time_new);
         end
     end
