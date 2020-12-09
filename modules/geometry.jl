@@ -184,6 +184,27 @@ function rotate_antenna(ant_frame, quat::Quaternion )
     return ant_frame
 end
 
+"""
+Function to compute rho from ray-ellipse intersection
+
+# Arguments
+- `P::3x1 Array`: position vector
+- `lv::3x1 Array`: look vector
+- `Ra::Float`: Radius of earth at P
+- `e::Float`: Earth eccentricity
+
+"""
+function get_rho(P, lv, Ra, e)
+    ra = (((lv[1]^2) + (lv[2]^2)) / (Ra^2)) + ((lv[3]^2) / ((Ra^2) * (1 - (e^2))))
+    rb = 2 * ((((lv[1] * P[1]) + (lv[2] * P[2])) / (Ra^2)) + ((lv[3] * P[3]) / ((Ra^2) * (1 - (e^2)))))
+    rc = (((P[1]^2) + (P[2]^2)) / (Ra^2)) + ((P[3]^2) / ((Ra^2) * (1 - (e^2)))) - 1
+    if (((rb^2) - (4 * ra * rc))) < 0
+        error("Cannot compute rho, input correct platform co-ordinates or look vector")
+    else
+        rh = (- rb - sqrt((rb^2) - (4 * ra * rc))) / (2 * ra)
+    end
+    return rh
+end
 
 
 
