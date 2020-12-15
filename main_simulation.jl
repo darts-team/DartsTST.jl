@@ -3,6 +3,8 @@ include("modules/process_raw_data.jl")
 include("modules/geometry.jl")
 include("modules/scene.jl")
 include("input_parameters_1.jl")
+include("input_parameters_sync.jl")
+include("modules/sync.jl")
 using Plots
 pyplot()
 ## PLATFORM AND TARGET LOCATIONS t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops
