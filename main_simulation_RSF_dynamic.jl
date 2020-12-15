@@ -2,8 +2,10 @@ include("modules/generate_raw_data.jl")
 include("modules/process_raw_data.jl")
 include("modules/geometry.jl")
 include("modules/scene.jl")
-include("input_parameters_RSF.jl")
+include("inputs/input_parameters_RSF_orbits_nadirlooking.jl")
 include("modules/range_spread_function.jl") # as RSF
+include("modules/orbits.jl")
+using NCDatasets
 using Plots
 pyplot()
 ## RANGE SPREAD FUNCTION (matched filter output)
@@ -11,20 +13,33 @@ Srx,MF,ft,t_rx=RSF.ideal_RSF(τ,Δt,B,Trx) # Srx: RX window with MF centered, MF
 # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(τ,Δt,B,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
 display(plot(ft*1e6,20*log10.(abs.(MF)),ylims=(-100+20*log10(B*τ),20*log10(B*τ)),leg=false,xlabel="fast time (μs)",ylabel="amplitude (dB)",title="Matched Filter Output (Range Spread Function)"))
 display(plot(t_rx*1e6,20*log10.(abs.(Srx')),ylims=(-100+20*log10(B*τ),20*log10(B*τ)),leg=false,xlabel="fast time (μs)",ylabel="amplitude (dB)",title="Receive Window/Signal"))
-## PLATFORM AND TARGET LOCATIONS
-t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops
-p_geo_grid=Scene.form3Dgrid_for(p_θ,p_ϕ,p_h) # using 3 nested for loops
-#t_geo_grid=Scene.form3Dgrid_array(t_θ,t_ϕ,t_h) # using array processing
+## PLATFORM LOCATIONS
+orbit_dataset=Dataset("inputs/orbitOutput_082020.nc") # Read orbits data in NetCDF format
+t12_orbits=orbit_dataset["time"][1:2] # first two time samples
+dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
+orbit_time_index=collect(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
+orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
+orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data
+slow_time=collect(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
+orbit_pos_interp=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time) # interpolate orbit to slow time
+#plot(orbit_time,orbit_pos[:,1,:]',xaxis=("time (sec)"),ylabel=("ECEF position (km)")) # plot the ECI orbit in the limited time range
+#plot(slow_time, orbit_pos_interp[:,1,:]', xaxis=("time (sec)"), ylabel=("ECEF position (km)")) # plot orbits in slow-time over SAR duration with PRI sampling
+# TODO modify  Generate_Raw_Data and Process_Raw_Data to accept 3D array with slow-time dimension
+#p_geo_grid=Scene.form3Dgrid_for(p_θ,p_ϕ,p_h) # using 3 nested for loops
 #p_geo_grid=Scene.form3Dgrid_array(p_θ,p_ϕ,p_h) # using array processing
+#p_xyz_grid=Geometry.geo_to_xyz(p_geo_grid,a,e)
+display(scatter(p_xyz_grid[1,:],p_xyz_grid[2,:],p_xyz_grid[3,:],leg=false,camera=(20,40),markersize=3,xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Platforms")) #display grid in 3D
+#savefig("platforms.png")
+## TARGET LOCATIONS
+t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops
+#t_geo_grid=Scene.form3Dgrid_array(t_θ,t_ϕ,t_h) # using array processing
 t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,a,e)
-p_xyz_grid=Geometry.geo_to_xyz(p_geo_grid,a,e)
+display(scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],leg=false,camera=(20,40),markersize=0.3,xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Targets")) #display grid in 3D
+#savefig("targets.png")
+## DISPLAY PLATFORM AND TARGET LOCATIONS ON THE SAME PLOT
 scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],leg=false,camera=(20,40),markersize=0.1) #display grid in 3D
 display(scatter!(p_xyz_grid[1,:],p_xyz_grid[2,:],p_xyz_grid[3,:],leg=false,camera=(20,40),markersize=1,xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Platforms and Targets")) #display grid in 3D
 #savefig("platforms_and_targets.png")
-display(scatter(p_xyz_grid[1,:],p_xyz_grid[2,:],p_xyz_grid[3,:],leg=false,camera=(20,40),markersize=3,xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Platforms")) #display grid in 3D
-#savefig("platforms.png")
-display(scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],leg=false,camera=(20,40),markersize=0.3,xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Targets")) #display grid in 3D
-#savefig("targets.png")
 ## GENERATE RAW DATA
 #rawdata=Generate_Raw_Data.main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e) # without RSF
 ref_range=520e3 # reference range (ideally average of min and max ranges: TODO calculate from all target vs platform positions)

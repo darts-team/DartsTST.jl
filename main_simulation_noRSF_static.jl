@@ -2,7 +2,8 @@ include("modules/generate_raw_data.jl")
 include("modules/process_raw_data.jl")
 include("modules/geometry.jl")
 include("modules/scene.jl")
-include("input_parameters_1.jl")
+#include("inputs/input_parameters_noRSF_static_2Dplatforms_nadirlooking.jl")
+include("inputs/input_parameters_noRSF_static_1Dplatforms_slantlooking.jl")
 using Plots
 pyplot()
 ## PLATFORM AND TARGET LOCATIONS
