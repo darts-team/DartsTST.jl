@@ -29,18 +29,6 @@ display(scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],leg=false,camera
 #rawdata=Generate_Raw_Data.main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e) # without RSF
 ref_range=520e3 # reference range (ideally average of min and max ranges: TODO calculate from all target vs platform positions)
 rawdata=Generate_Raw_Data.main_RSF(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e,Srx,t_rx,ref_range) # with RSF
-#= plot raw data (no RSF)
-if mode==3
-    display(heatmap(abs.(rawdata),c=cgrad([:black,:white]),xlabel="RX platform",ylabel="TX platform",title="raw data amplitude"))
-    #savefig("rawdata_magnitude.png")
-    display(heatmap(angle.(rawdata)*180/pi,c=cgrad([:black,:white]),xlabel="RX platform",ylabel="TX platform",title="raw data phase (deg)"))
-    #savefig("rawdata_phase.png")
-else
-    display(plot(abs.(rawdata),leg=false,xlabel="TX-RX platform pairs",ylabel="relative amplitude",title="raw data amplitude"))
-    #savefig("rawdata_magnitude.png")
-    display(plot(angle.(rawdata)*180/pi,leg=false,xlabel="TX-RX platform pairs",ylabel="phase (deg)",title="raw data phase"))
-    #savefig("rawdata_phase.png")
-end=#
 # plot raw data (RSF)
 display(heatmap(t_rx,1:size(p_xyz_grid)[2],20*log10.(abs.(rawdata)),c=cgrad([:black,:white]),xlabel="fast-time (s)",ylabel="TX/RX platform pairs",title="raw data amplitude (dB)"))
 display(heatmap(t_rx,1:size(p_xyz_grid)[2],angle.(rawdata)*180/pi,c=cgrad([:black,:white]),xlabel="fast-time (s)",ylabel="TX/RX platform pairs",title="raw data phase (deg)"))
@@ -55,7 +43,7 @@ display(scatter(s_geo_grid[1,:],s_geo_grid[2,:],s_geo_grid[3,:],leg=false,camera
 display(scatter(s_xyz_grid[1,:],s_xyz_grid[2,:],s_xyz_grid[3,:],leg=false,camera=(20,40),markersize=0.3,xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Scene Pixel Locations in XYZ")) #display grid in 3D
 ## PROCESS RAW DATA TO GENERATE IMAGE
 #image_3xN=Process_Raw_Data.main(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e) # without RSF
-image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e,t_rx,ref_range)  # with RSF
+image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e,t_rx,ref_range)  # with RSF #TODO do we need a and e? use structure as inpu
 image_3D=Scene.convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
 ## DISPLAY AND SAVE IMAGE
 display(scatter(s_geo_grid[1,:],s_geo_grid[2,:],s_geo_grid[3,:],marker_z=image_3xN/maximum(image_3xN),leg=false,camera=(20,40),markersize=1,markerstrokewidth=0,xlabel="latitude (deg)",ylabel="longitude (deg)",zlabel="height (m)",title="3D Image in GEO")) #display grid in 3D

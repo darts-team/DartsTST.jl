@@ -2,7 +2,7 @@ module Generate_Raw_Data
 
 c=299792458 # speed of light (m/s)
 
-function main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e) # no RSF
+function main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e) # no RSF #TODO do we need a and e? use structure as input
     λ=c/fc # wavelength (m)
     Nt=size(t_xyz_grid)[2] # number of targets
     Np=size(p_xyz_grid)[2] # number of platforms
@@ -31,7 +31,8 @@ function main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e) # no RSF
     return rawdata
 end
 
-function main_RSF(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e,Srx,t_rx,ref_range) # with RSF
+function main_RSF(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e,Srx,t_rx,ref_range) # with RSF #TODO do we need a and e? use structure as input
+    # TODO add descriptions of inputs and output
     λ=c/fc # wavelength (m)
     Nt=size(t_xyz_grid)[2] # number of targets
     Np=size(p_xyz_grid)[2] # number of platforms
