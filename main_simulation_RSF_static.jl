@@ -43,7 +43,7 @@ display(scatter(s_geo_grid[1,:],s_geo_grid[2,:],s_geo_grid[3,:],leg=false,camera
 display(scatter(s_xyz_grid[1,:],s_xyz_grid[2,:],s_xyz_grid[3,:],leg=false,camera=(20,40),markersize=0.3,xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Scene Pixel Locations in XYZ")) #display grid in 3D
 ## PROCESS RAW DATA TO GENERATE IMAGE
 #image_3xN=Process_Raw_Data.main(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e) # without RSF
-image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,a,e,t_rx,ref_range)  # with RSF #TODO do we need a and e? use structure as inpu
+image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,t_rx,ref_range)  # with RSF #TODO use structure as input
 image_3D=Scene.convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
 ## DISPLAY AND SAVE IMAGE
 display(scatter(s_geo_grid[1,:],s_geo_grid[2,:],s_geo_grid[3,:],marker_z=image_3xN/maximum(image_3xN),leg=false,camera=(20,40),markersize=1,markerstrokewidth=0,xlabel="latitude (deg)",ylabel="longitude (deg)",zlabel="height (m)",title="3D Image in GEO")) #display grid in 3D

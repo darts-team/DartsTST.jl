@@ -16,8 +16,8 @@ t_θ=0 # deg latitude
 t_ϕ=0 # deg longitude
 t_h=0 # m  heights
 # image/scene pixel coordinates
-s_θ=-0.00001:0.0000002:0.00001 # deg latitude
-s_ϕ=-0.00001:0.0000002:0.00001 # deg longitude
+s_θ=-0.0001:0.000002:0.0001 # deg latitude
+s_ϕ=-0.0001:0.000002:0.0001 # deg longitude
 s_h=0 # m  heights
 # range spread function (RSF) parameters
 Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
