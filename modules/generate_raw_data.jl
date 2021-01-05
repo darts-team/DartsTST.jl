@@ -113,16 +113,14 @@ function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range)
                     elseif rel_delay_ind<0
                         Srx_shifted=cat(Srx[1+abs(rel_delay_ind):Nft],zeros(abs(rel_delay_ind)),dims=1)
                     end
-
                     rawdata[s,i,:]=rawdata[s,i,:]+exp(-im*4*pi/λ*range_tx)*Srx_shifted
-                    #rawdata[s,i,:]=repeat(t_θ1,inner=[1,1],outer=[1,1])
                 elseif mode==2 # SIMO
                     rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
                     rel_delay_ind=Int(round(rel_delay/Δt_ft))
                     if rel_delay_ind>=0
-                        Srx_shifted=[zeros(1,rel_delay_ind) Srx[1:Nft-rel_delay_ind]']
+                        Srx_shifted=[zeros(rel_delay_ind);Srx[1:Nft-rel_delay_ind]]
                     elseif rel_delay_ind<0
-                        Srx_shifted=[Srx[1+abs(rel_delay_ind):Nft]' zeros(1,abs(rel_delay_ind))]
+                        Srx_shifted=[Srx[1+abs(rel_delay_ind):Nft];zeros(abs(rel_delay_ind))]
                     end
                     rawdata[s,i,:]=rawdata[s,i,:]+exp(-im*2*pi/λ*(range_tx+range_rx))*Srx_shifted
                 elseif mode==3 # MIMO
@@ -131,9 +129,9 @@ function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range)
                         rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
                         rel_delay_ind=Int(round(rel_delay/Δt_ft))
                         if rel_delay_ind>=0
-                            Srx_shifted=[zeros(1,rel_delay_ind) Srx[1:Nft-rel_delay_ind]']
+                            Srx_shifted=[zeros(rel_delay_ind);Srx[1:Nft-rel_delay_ind]]
                         elseif rel_delay_ind<0
-                            Srx_shifted=[Srx[1+abs(rel_delay_ind):Nft]' zeros(1,abs(rel_delay_ind))]
+                            Srx_shifted=[Srx[1+abs(rel_delay_ind):Nft];zeros(abs(rel_delay_ind))]
                         end
                         rawdata[s,i,k,:]=rawdata[s,i,k,:]+exp(-im*2*pi/λ*(range_tx+range_rx))*Srx_shifted
                     end
