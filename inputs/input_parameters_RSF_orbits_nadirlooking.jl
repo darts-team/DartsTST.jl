@@ -1,7 +1,7 @@
 c=299792458 # speed of light (m/s)
 # planetary shape constants
-a=6378.137e3
-e=sqrt(0.00669437999015)
+earth_radius=6378.137e3 # semi-major axis at equator
+earth_eccentricity=sqrt(0.00669437999015)
 # MIMO parameters
 mode=1 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
 tx_el=1 # which element transmits for SIMO (max value N)
