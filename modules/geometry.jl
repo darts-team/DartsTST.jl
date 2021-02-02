@@ -5,7 +5,7 @@ quat(rot_angle, rot_ax) = Quaternion(cosd(rot_angle/2.0), rot_ax*sind(rot_angle/
 rotate_frame(v,q) = vect(inv(q)*v*q)
 rotate_vec(v,q) = vect(q*v*inv(q))
 
-function geo_to_xyz(geo,a=6378.137e3,e=sqrt(0.00669437999015)) # geo (θϕh) is a 3xN array for N  points
+function geo_to_xyz(geo,earth_radius,earth_eccentricity) # geo (θϕh) is a 3xN array for N  points
     xyz=zeros(size(geo))
     θ=geo[1,:] # latitude [deg]
     ϕ=geo[2,:] # longitude [deg]
@@ -17,7 +17,7 @@ function geo_to_xyz(geo,a=6378.137e3,e=sqrt(0.00669437999015)) # geo (θϕh) is 
     return xyz
 end
 
-function xyz_to_geo(xyz,a=6378.137e3,e=sqrt(0.00669437999015))
+function xyz_to_geo(xyz,earth_radius,earth_eccentricity)
     geo=zeros(3)
     x=xyz[1]
     y=xyz[2]
@@ -37,7 +37,7 @@ function xyz_to_geo(xyz,a=6378.137e3,e=sqrt(0.00669437999015))
     return geo
 end
 
-function peg_calculations(peg,a=6378.137e3,e=sqrt(0.00669437999015))
+function peg_calculations(peg,earth_radius,earth_eccentricity)
     e2  = e^2 #eccentricity squared
     #break out peg parameters
     pegθ  = peg[1]*π/180
@@ -86,7 +86,7 @@ function sch_to_xyz_2(sch,Mxyzprime_xyz,O,ra)
     return xyz
 end
 
-function sch_to_xyz(sch,peg,a=6378.137e3,e=sqrt(0.00669437999015)) # works with multiple points (array inputs) #TODO works only for grid
+function sch_to_xyz(sch,peg,earth_radius,earth_eccentricity) # works with multiple points (array inputs) #TODO works only for grid
     xyz=zeros(size(sch))
     XYZPrime=zeros(size(sch))
     e2  = e^2 #eccentricity squared
