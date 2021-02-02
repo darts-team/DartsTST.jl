@@ -1,5 +1,6 @@
 module Geometry
 using ReferenceFrameRotations
+using LinearAlgebra
 
 quat(rot_angle, rot_ax) = Quaternion(cosd(rot_angle/2.0), rot_ax*sind(rot_angle/2.0))
 rotate_frame(v,q) = vect(inv(q)*v*q)
@@ -206,6 +207,21 @@ function get_rho(P, lv, Ra, e)
     return rh
 end
 
+" Compute TCN frame based on SC position and velocity "
+function get_tcn(pos, vel)
+    @assert length(pos)==3 "POS needs to be 3 x 1"
+    @assert length(vel)==3 "VEL needs to be 3 x 1"
+    @assert size(pos)==size(vel) "POS and VEL need to have same size"
+
+    #create geocetric TCN frame for reference satellite described
+    #in coordinates of input 'position' and 'velocity' assumed to be ECEF
+    nhat = -pos/norm(pos); # unit nadir vector
+    vrad = dot(vel, -nhat)*(-nhat); #radial velocity
+    vtan = vel  - vrad; #tangential velocity
+    that = vtan/norm(vtan); #track vector
+    chat = cross(nhat, that); #cross-track vector
+    return that, chat, nhat
+end
 
 
 end

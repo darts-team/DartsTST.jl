@@ -7,7 +7,7 @@ using NCDatasets
 using Plots
 using Dates
 
-# Create NetCDF data structure
+# Read in NetCDF orbit file
 ds = Dataset("orbitOutput_082020.nc");
 
 # read in time and position data
@@ -44,4 +44,4 @@ scatter!(orbit_time[ind], orbit_pos[:,1,ind]', marker = (:+))
 # get perpendicular baselines for the interpolated orbit and plot them
 orbit_vel = ds["velocity"][:,:,read_samps];
 bperp = Orbits.get_perp_baselines(orbit_pos, orbit_vel, 30);
-plot(orbit_time, reshape(bperp, 6*6, length(orbit_time))', xaxis=("time (sec)"), ylabel=("Perp baseline (km)"))
+plot(orbit_time, reshape(bperp, size(bperp,1)*size(bperp,2), length(orbit_time))', xaxis=("time (sec)"), ylabel=("Perp baseline (km)"))
