@@ -6,7 +6,7 @@ using Dates
 using Interpolations
 using LinearAlgebra
 
-"convert eci orbit positions to ECEF based using input DCM"
+"convert eci orbit posoitions to ECEF based using input DCM"
 function ecef_orbitpos(eci_pos, dcm)
     #eci_pos = 3 x N_plat x N_time
     #dcm = 3 x 3 x 1 or 3 x 3 x N_time
@@ -29,8 +29,8 @@ function ecef_orbitpos(eci_pos, dcm)
     else
         error("DCM is badly shaped")
     end
-    println("No. platforms: ",nplat)
-    println("No. locations: ",ntimes)
+    #println("No. platforms: ",nplat)
+    #println("No. locations: ",ntimes)
 
     ecef_pos = zeros(3,nplat, ntimes);
     for iplat=1:nplat
@@ -38,7 +38,7 @@ function ecef_orbitpos(eci_pos, dcm)
             ecef_pos[:,iplat,itime] = dcm[:,:,itime]*eci_pos[:,iplat,itime];
         end
     end
-    println("Done with it, ", size(ecef_pos))
+    #println("Done with it, ", size(ecef_pos))
     return ecef_pos
 end
 
@@ -74,32 +74,16 @@ function interp_orbit(time_old, pos, time_new)
         nplat = 1
     end
 
-    if nplat == 1 # single platform case
-
-    pos_i_cube = zeros(szp[1],length(time_new));
-        for iplat=1:nplat
-            for iaxis=1:szp[1]
-                #itp = LinearInterpolation(time_old, pos[iaxis, iplat, :]) # Old linear interp code 10/15/2020
-                itp = CubicSplineInterpolation(time_old, pos[iaxis, :])
-                pos_i[iaxis,:] = itp(time_new);
-            end
+    pos_i = zeros(szp[1],nplat, length(time_new));
+    for iplat=1:nplat
+        for iaxis=1:szp[1]
+            #TODO: using CubicSplineInterpolation instead of Linear Interpolations
+            itp = LinearInterpolation(time_old, pos[iaxis, iplat, :])
+            # itp = CubicSplineInterpolation(time_old, pos[iaxis, iplat,:])
+            pos_i[iaxis,iplat,:] = itp(time_new);
         end
-
-
-else # N platform case
-    pos_i_cube = zeros(szp[1],nplat, length(time_new));
-        for iplat=1:nplat
-            for iaxis=1:szp[1] # TODO: this can be done in vector instead of loop form
-                #TODO: using CubicSplineInterpolation instead of Linear Interpolations
-                #itp = LinearInterpolation(time_old, pos[iaxis, iplat, :])
-                # testing cubic CubicSplineInterpolation
-                itp = CubicSplineInterpolation(time_old, pos[iaxis, iplat, :])
-                pos_i[iaxis,iplat,:] = itp(time_new);
-            end
-        end
-end
-
-  return pos_i # returns #pos = 3 x N_plat x N_time_new or #pos = 3 x N_time_new
+    end
+    return pos_i
 end
 
 "helper function to compute perpendicular baselines.

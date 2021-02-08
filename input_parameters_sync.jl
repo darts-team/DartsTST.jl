@@ -6,7 +6,7 @@ sync_pri = 1; # repition interval of sync
 
 sync_processing_time = .0005; # processing time between stage 1 and stage 2 sync
 
-sync_radar_offset = 0.001 # time between sync epoch and radar pulse
+#sync_radar_offset = 0.001 # time between sync epoch and radar pulse
 sdradar_args_N = 1024 # waveform length
 sdradar_args_fc = 1e9 # waveform center frequency
 sdradar_args_fs = 50e6; # sync receiver sampling rate
