@@ -5,6 +5,7 @@ include("modules/scene.jl")
 include("inputs/input_parameters_RSF_orbits_nadirlooking.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
+include("modules/error_sources.jl")
 using NCDatasets
 using Plots
 using Statistics
@@ -12,7 +13,7 @@ using Statistics
 plotly()
 #gr()
 ## RANGE SPREAD FUNCTION (matched filter output)
-if fast_time==1 # matched filter gain is included in Srx
+if enable_fast_time # matched filter gain is included in Srx
     Srx,MF,ft,t_rx=RSF.ideal_RSF(τ,Δt,B,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
     # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(τ,Δt,B,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
     display(plot(ft*1e6,20*log10.(abs.(MF)),ylims=(-100+20*log10(B*τ),20*log10(B*τ)),leg=false,xlabel="fast time (μs)",ylabel="amplitude (dB)",title="Matched Filter Output (Range Spread Function)",size=(1600,900)))
@@ -51,12 +52,15 @@ display(scatter!(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],leg=fa
 #rawdata=Generate_Raw_Data.main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc) # without RSF
 ref_range=Generate_Raw_Data.distance(mean(t_xyz_grid,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range
 #rawdata=Generate_Raw_Data.main_RSF(t_xyz_grid,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range) # with fasttime, without slowtime #TODO use structure as input
-if fast_time==1;rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range,SNR);end # with fastime and slowtime; matched filter gain is included in Srx
-if fast_time==0;rawdata=Generate_Raw_Data.main_noRSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc,SNR,τ,B);end # without fastime, with slowtime; matched filter gain is included inside the function
+if enable_fast_time;rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range) # with fastime and slowtime; matched filter gain is included in Srx
+else;rawdata=Generate_Raw_Data.main_noRSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc);end # without fastime, with slowtime; matched filter gain is included inside the function
+# add random noise
+if !enable_fast_time;SNR=SNR*τ*B;end # SNR increases after matched filter
+if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end
 # plot raw data (RSF)
 if mode==1 || mode==2
-    if fast_time==1;display(heatmap(t_rx,1:size(p_xyz)[2]*size(p_xyz)[3],20*log10.(abs.(reshape(rawdata,size(p_xyz)[2]*size(p_xyz)[3],size(t_rx)[1]))),c=cgrad([:black,:white]),xlabel="fast-time (s)",ylabel="TX/RX platform pairs",title="raw data amplitude (dB)",size=(1600,900)));end
-    if fast_time==0;display(heatmap(1:size(p_xyz)[2],1:size(p_xyz)[3],20*log10.(abs.(rawdata)),c=cgrad([:black,:white]),xlabel="platforms",ylabel="pulse number",title="raw data amplitude (dB)",size=(1600,900)));end
+    if enable_fast_time;display(heatmap(t_rx,1:size(p_xyz)[2]*size(p_xyz)[3],20*log10.(abs.(reshape(rawdata,size(p_xyz)[2]*size(p_xyz)[3],size(t_rx)[1]))),c=cgrad([:black,:white]),xlabel="fast-time (s)",ylabel="TX/RX platform pairs",title="raw data amplitude (dB)",size=(1600,900)))
+    else;display(heatmap(1:size(p_xyz)[2],1:size(p_xyz)[3],20*log10.(abs.(rawdata)),c=cgrad([:black,:white]),xlabel="platforms",ylabel="pulse number",title="raw data amplitude (dB)",size=(1600,900)));end
 elseif mode==3;end #TODO
 #display(heatmap(t_rx,1:size(p_xyz)[2],angle.(rawdata)*180/pi,c=cgrad([:black,:white]),xlabel="fast-time (s)",ylabel="TX/RX platform pairs",title="raw data phase (deg)",size=(1600,900)))
 ## IMAGE SCENE
@@ -71,8 +75,8 @@ display(scatter(s_xyz_grid[1,:],s_xyz_grid[2,:],s_xyz_grid[3,:],leg=false,camera
 ## PROCESS RAW DATA TO GENERATE IMAGE
 #image_3xN=Process_Raw_Data.main(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc) # without fastime, without slowtime
 #image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)  # with fastime, without slowtime
-if fast_time==1;image_3xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range);end  # with fastime, with slowtime
-if fast_time==0;image_3xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc);end # without fastime, with slowtime
+if enable_fast_time;image_3xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range);  # with fastime, with slowtime
+else;image_3xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc);end # without fastime, with slowtime
 image_3D=Scene.convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
 ## DISPLAY AND SAVE IMAGE
 display(scatter(s_geo_grid[1,:],s_geo_grid[2,:],s_geo_grid[3,:],marker_z=image_3xN/maximum(image_3xN),leg=false,camera=(20,40),markersize=1,markerstrokewidth=0,xlabel="latitude (deg)",ylabel="longitude (deg)",zlabel="height (m)",title="3D Image in GEO",size=(1600,900))) #display grid in 3D
