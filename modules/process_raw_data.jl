@@ -86,7 +86,7 @@ function main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_ra
                     processed_image[j]=processed_image[j]+rawdata[s,i,Int(round(Nft/2))+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
                 elseif mode==3 # MIMO
                     for k=1:Np # TX platform
-                        range_tx=distance(s_xyz_grid[:,j],p_xyz_3D[:,k])
+                        range_tx=distance(s_xyz_grid[:,j],p_xyz_3D[:,k,s])
                         rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
                         rel_delay_ind=Int(round(rel_delay/Δt))
                         processed_image[j]=processed_image[j]+rawdata[s,i,k,Int(round(Nft/2))+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
@@ -116,7 +116,7 @@ function main_noRSF_slowtime(rawdata,s_xyz_grid,p_xyz_3D,mode,tx_el,fc) # withou
                     processed_image[j]=processed_image[j]+rawdata[s,i]*exp(im*2*pi/λ*(range_tx+range_rx))
                 elseif mode==3 # MIMO
                     for k=1:Np # TX platform
-                        range_tx=distance(s_xyz_grid[:,j],p_xyz_3D[:,k])
+                        range_tx=distance(s_xyz_grid[:,j],p_xyz_3D[:,k,s])
                         processed_image[j]=processed_image[j]+rawdata[s,i,k]*exp(im*2*pi/λ*(range_tx+range_rx))
                     end
                 end
