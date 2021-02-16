@@ -18,13 +18,15 @@ t_θ=0 # deg latitude
 t_ϕ=0 # deg longitude
 t_h=0 # m  heights
 # image/scene pixel coordinates
-s_θ=-0.0005:0.00002:0.0005 # deg latitude
-s_ϕ=-0.001:0.00002:0.001 # deg longitude
-s_h=0 # m  heights
+s_θ=-0.00015:0.000005:0.00015 # deg latitude
+s_ϕ=-0.001:0.000005:0.001 # deg longitude
+s_h=0:10:30 # m  heights
 # range spread function (RSF) parameters
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
-enable_thermal_noise=true # whether to enable or disable random additive noise (e.g. thermal noise)
+enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
 bandwidth=10e6 # bandwidth (Hz)
+# performance metrics
+res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
