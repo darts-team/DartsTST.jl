@@ -19,8 +19,8 @@ t_ϕ=0 # deg longitude
 t_h=0 # m  heights
 # image/scene pixel coordinates
 s_θ=-0.00015:0.000005:0.00015 # deg latitude
-s_ϕ=-0.001:0.000005:0.001 # deg longitude
-s_h=0 # m  heights
+s_ϕ=-0.0015:0.00005:0.0015 # deg longitude
+s_h=0#-300:20:300 # m  heights
 # range spread function (RSF) parameters
 enable_fast_time=false # whether to enable or disable fast-time axis, 0:disable, 1: enable
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
