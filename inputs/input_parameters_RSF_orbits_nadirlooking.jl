@@ -11,7 +11,7 @@ fp=2 # pulse repetition frequency (Hz)
 SNR=30 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz taken from orbits (including slow-time)
 orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
-SAR_duration=3 # synthetic aperture duration (s)
+SAR_duration=2 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations (volumetric grid) defined in geo (θϕh)
 t_θ=0 # deg latitude
@@ -20,9 +20,9 @@ t_h=0 # m  heights
 # image/scene pixel coordinates
 s_θ=-0.00015:0.000005:0.00015 # deg latitude
 s_ϕ=-0.001:0.000005:0.001 # deg longitude
-s_h=0:10:30 # m  heights
+s_h=0 # m  heights
 # range spread function (RSF) parameters
-enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
+enable_fast_time=false # whether to enable or disable fast-time axis, 0:disable, 1: enable
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
 pulse_length=10e-6 # s pulse length

@@ -95,19 +95,19 @@ image_3D=Scene.convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
 for k=1:Ns_h # height slices from the scene
     display(heatmap(s_ϕ,s_θ,image_3D[:,:,k],ylabel="latitude (deg)",xlabel="longitude (deg)",title="Lat/Lon 2D Image at Height="*string(s_h[k])*"m",c=cgrad([:black,:white]),aspect_ratio=:equal,size=(1600,900)))
 end
-for k=1:Ns_θ # latitude slices from the scene
+#=for k=1:Ns_θ # latitude slices from the scene
     display(heatmap(s_h,s_ϕ,image_3D[k,:,:],ylabel="longitude (deg)",xlabel="heights (m)",title="Lon/Height 2D Image at Lat="*string(s_θ[k])*"deg",c=cgrad([:black,:white]),aspect_ratio=:equal,size=(1600,900)))
 end
 for k=1:Ns_ϕ # longitude slices from the scene
     display(heatmap(s_h,s_θ,image_3D[:,k,:],ylabel="latitude (deg)",xlabel="heights (m)",title="Lat/Height 2D Image at Lon="*string(s_ϕ[k])*"deg",c=cgrad([:black,:white]),aspect_ratio=:equal,size=(1600,900)))
-end
+end=#
 #savefig("image1.png")
 ## PERFORMANCE METRICS
-#= Resolution
-scene_res=[s_θ[2]-s_θ[1],s_ϕ[2]-s_ϕ[1],s_h[2]-s_h[1]] # scene resolution in lat/lon/h TODO local xyz
+# Resolution
+include("modules/Performance_Metrics.jl")
 target_location=[t_θ t_ϕ t_h] # point target location for resolution calculation
 if size(target_location)[1]==1 # resolution is calculated when there is only one point target
-    resolutions=Performance_Metrics.resolution(image_3D,scene_res,res_dB,target_location) # resolutions in each of the 3 axes
+    resolutions=Performance_Metrics.resolution(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h) # resolutions in each of the 3 axes
     print(resolutions)
 end
 # Sidelobes
