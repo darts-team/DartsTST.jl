@@ -6,24 +6,24 @@ quat(rot_angle, rot_ax) = Quaternion(cosd(rot_angle/2.0), rot_ax*sind(rot_angle/
 rotate_frame(v,q) = vect(inv(q)*v*q)
 rotate_vec(v,q) = vect(q*v*inv(q))
 
-function geo_to_xyz(geo,a=6378.137e3,e=sqrt(0.00669437999015)) # geo (θϕh) is a 3xN array for N  points
+function geo_to_xyz(geo,earth_radius,earth_eccentricity) # geo (θϕh) is a 3xN array for N  points
     xyz=zeros(size(geo))
     θ=geo[1,:] # latitude [deg]
     ϕ=geo[2,:] # longitude [deg]
     h=geo[3,:] # height [m]
-    re=a./(float(1).-e^2*sind.(θ).^2).^0.5
+    re=earth_radius./(float(1).-earth_eccentricity^2*sind.(θ).^2).^0.5
     xyz[1,:]=(re+h).*cosd.(θ).*cosd.(ϕ)
     xyz[2,:]=(re+h).*cosd.(θ).*sind.(ϕ)
-    xyz[3,:]=(re.*(float(1).-e^2)+h).*sind.(θ)
+    xyz[3,:]=(re.*(float(1).-earth_eccentricity^2)+h).*sind.(θ)
     return xyz
 end
 
-function xyz_to_geo(xyz,a=6378.137e3,e=sqrt(0.00669437999015))
+function xyz_to_geo(xyz,earth_radius,earth_eccentricity)
     geo=zeros(3)
     x=xyz[1]
     y=xyz[2]
     z=xyz[3]
-    b=a*(1-e^2)^0.5
+    b=earth_radius*(1-earth_eccentricity^2)^0.5
     if x>=0
         ϕ=atand(y/x)
     elseif x<0
@@ -31,21 +31,21 @@ function xyz_to_geo(xyz,a=6378.137e3,e=sqrt(0.00669437999015))
     end
     p=(x^2+y^2)^0.5
     alpha=atand((z/p)*(1/(1-e^2))^0.5)
-    θ=atand((z+(e^2/(1-e^2))*b*sind(alpha)^3)/(p-e^2*a*cosd(alpha)^3))
-    re=a/(1-e^2*sind(θ)^2)^0.5
+    θ=atand((z+(earth_eccentricity^2/(1-earth_eccentricity^2))*b*sind(alpha)^3)/(p-earth_eccentricity^2*earth_radius*cosd(alpha)^3))
+    re=earth_radius/(1-earth_eccentricity^2*sind(θ)^2)^0.5
     h=p/cosd(θ)-re
     geo=[θ, ϕ, h]
     return geo
 end
 
-function peg_calculations(peg,a=6378.137e3,e=sqrt(0.00669437999015))
-    e2  = e^2 #eccentricity squared
+function peg_calculations(peg,earth_radius,earth_eccentricity)
+    e2  = earth_eccentricity^2 #eccentricity squared
     #break out peg parameters
     pegθ  = peg[1]*π/180
     pegϕ  = peg[2]*π/180
     peghed  = peg[3]*π/180
-    repeg = a/sqrt(1-e2*sin(pegθ)^2)
-    rnpeg = a*(1-e2)/sqrt((1-e2*sin(pegθ)^2)^3)
+    repeg = earth_radius/sqrt(1-e2*sin(pegθ)^2)
+    rnpeg = earth_radius*(1-e2)/sqrt((1-e2*sin(pegθ)^2)^3)
     ra = repeg*rnpeg/(repeg*cos(peghed)^2+rnpeg*sin(peghed)^2)
 
     #ENU to XYZ transformation matrix
@@ -87,10 +87,10 @@ function sch_to_xyz_2(sch,Mxyzprime_xyz,O,ra)
     return xyz
 end
 
-function sch_to_xyz(sch,peg,a=6378.137e3,e=sqrt(0.00669437999015)) # works with multiple points (array inputs) #TODO works only for grid
+function sch_to_xyz(sch,peg,earth_radius,earth_eccentricity) # works with multiple points (array inputs) #TODO works only for grid
     xyz=zeros(size(sch))
     XYZPrime=zeros(size(sch))
-    e2  = e^2 #eccentricity squared
+    e2  = earth_eccentricity^2 #eccentricity squared
     #break out SCH vectors
     s   = sch[1,:]
     c   = sch[2,:]
@@ -99,8 +99,8 @@ function sch_to_xyz(sch,peg,a=6378.137e3,e=sqrt(0.00669437999015)) # works with 
     pegθ  = peg[1]*π/180
     pegϕ  = peg[2]*π/180
     peghed  = peg[3]*π/180
-    repeg = a/sqrt(1-e2*sin(pegθ)^2)
-    rnpeg = a*(1-e2)/sqrt((1-e2*sin(pegθ)^2)^3)
+    repeg = earth_radius/sqrt(1-e2*sin(pegθ)^2)
+    rnpeg = earth_radius*(1-e2)/sqrt((1-e2*sin(pegθ)^2)^3)
     ra = repeg*rnpeg/(repeg*cos(peghed)^2+rnpeg*sin(peghed)^2)
 
     #conversion from S,C,H to Stheta, Ctheta, H coordinates
