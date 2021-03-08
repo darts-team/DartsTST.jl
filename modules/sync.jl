@@ -39,7 +39,12 @@ function get_sync_phase(time_vector, pos, parameters)
     sync_processing_time    = parameters.sync_processing_time
     mode                    = parameters.mode
     no_sync_flag            = parameters.no_sync_flag
+<<<<<<< Updated upstream
     # sigma_freq_offsets      = parameters.sigma_freq_offsets
+=======
+    fc                      = parameters.fc
+    sigma_freq_offsets      = parameters.sigma_freq_offsets
+>>>>>>> Stashed changes
     
     
     # find total elapsed time over the course of the orbits
@@ -58,7 +63,11 @@ function get_sync_phase(time_vector, pos, parameters)
     if clk_args_N < 40e3 # enfore a minimum number of points. Needed for PSD accuracy
         clk_args_N = 40e3
     end#if   
+<<<<<<< Updated upstream
     up_convert = sync_fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF)
+=======
+    up_convert =  fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF)
+>>>>>>> Stashed changes
 
     # verify size of position input
     szp = size(pos)
@@ -71,7 +80,12 @@ function get_sync_phase(time_vector, pos, parameters)
         ntimes = szp[2]
     end
 
+<<<<<<< Updated upstream
     sigma_freq_offsets      = ones(nplat).* 1e-5 # temporary TODO: replace with input values
+=======
+    # sigma_freq_offsets      = ones(nplat).* 1.5e-3 # temporary TODO: replace with input values
+    
+>>>>>>> Stashed changes
 
 ## Determine TDMA Schedule TODO: change to match Ilgin's algorithm
 # there's a sync TDMA schedule that we'll lump together into one event with length (sync_processing_time*nplat)
@@ -117,7 +131,15 @@ end
     #display(plot(time_vector,crlb,xlabel="time (s)",title="CRLB"))
 
     # create matrix of phase error values
+<<<<<<< Updated upstream
     phase_err   = Array{Float64}(undef, szp[2], szp[3]) # Nplatforms x Ntimes
+=======
+    if mode == 1 || mode == 2
+         phase_err   = Array{Float64}(undef, szp[2], szp[3]) # Nplatforms x Ntimes
+     elseif mode == 3
+         phase_err   = Array{Float64}(undef, szp[2], szp[2], szp[3]) # Nplatforms x Nplatforms x Ntimes
+     end
+>>>>>>> Stashed changes
 
     for i = 1:nplat #for each platform, generate oscillator phase errors at each time point
         println("Platform number: ", i) # testing
@@ -191,16 +213,24 @@ end
         # reset phase error to 0 at each sync time. Do this by finding the start/stop indices at each of the sync times
         if no_sync_flag
             
+<<<<<<< Updated upstream
         else
         # if sync_pri > dt # only do if the SRI is longer than the PRI
+=======
+        else        
+>>>>>>> Stashed changes
             for nsync = 1 : length(t_sync)-1
                 sync_time       = t_sync[nsync]
                 next_sync_time  = t_sync[nsync+1]
                 start_idx       = findfirst(internal_time_vec -> internal_time_vec >= sync_time, internal_time_vec)
                 stop_idx        = findfirst(internal_time_vec -> internal_time_vec >= next_sync_time, internal_time_vec)
+<<<<<<< Updated upstream
                 # # grab phase values during this interval
                 # println("Start idx = ", start_idx)
                 # println("Stop idx = ", stop_idx)
+=======
+                # grab phase values during this interval
+>>>>>>> Stashed changes
                 if start_idx != nothing
                     if stop_idx == nothing
                         stop_idx        = length(internal_time_vec)
@@ -235,12 +265,20 @@ end
     elseif mode == 3 # MIMO
         for m = 1 : nplat
             pulse_idx = findall(tx_map->tx_map == m,tx_map) # gives all radar pulse times for given transmitter
+<<<<<<< Updated upstream
             # println("tx_map:", tx_map)
             # println("platform number:", m)
             # println("pulse_idx:", pulse_idx)
             phase_err[m,:] = up_convert.* phase_state[m,pulse_idx[1:ntimes]]
         end#for nplat
     end
+=======
+            for n = 1 : nplat
+                phase_err[m,n,:] = up_convert.* phase_state[n,pulse_idx[1:ntimes]] # gives phase error state for rx platformat tx times
+            end#for nplat
+        end#for nplat
+    end#if
+>>>>>>> Stashed changes
 
     return phase_err
 
