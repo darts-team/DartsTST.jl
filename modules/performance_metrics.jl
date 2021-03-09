@@ -1,62 +1,80 @@
 module Performance_Metrics
 using Plots
 
-function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,scene_axis3)
-    image_1D_1,image_1D_2,image_1D_3=obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3)
-    if length(image_1D_1)!=1
+#TODO add function definitions, comments, define input types
+function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
+    image_1D_1,image_1D_2,image_1D_3=obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
+    if length(image_1D_1)>1
         scene_res1=scene_axis1[2]-scene_axis1[1] # scene resolution along the 1st axis
         res_1=resolution_1D(image_1D_1,scene_res1,res_dB)
-        PSLR_1,ISLR_1=sidelobe_1D(image_1D_1)
-    else;res_1=NaN;PSLR_1=NaN;ISLR_1=NaN;end
-    if length(image_1D_2)!=1
+        PSLR_1,ISLR_1=sidelobe_1D(image_1D_1,1)
+        loc_error_1=location_error(image_1D_1,target_location[1],scene_axis1)
+    else;res_1=NaN;PSLR_1=NaN;ISLR_1=NaN;loc_error_1=NaN;end
+    if length(image_1D_2)>1
         scene_res2=scene_axis2[2]-scene_axis2[1] # scene resolution along the 2nd axis
         res_2=resolution_1D(image_1D_2,scene_res2,res_dB)
-        PSLR_2,ISLR_2=sidelobe_1D(image_1D_2)
-    else;res_2=NaN;PSLR_2=NaN;ISLR_2=NaN;end
-    if length(image_1D_3)!=1
+        PSLR_2,ISLR_2=sidelobe_1D(image_1D_2,2)
+        loc_error_2=location_error(image_1D_2,target_location[2],scene_axis2)
+    else;res_2=NaN;PSLR_2=NaN;ISLR_2=NaN;loc_error_2=NaN;end
+    if length(image_1D_3)>1
         scene_res3=scene_axis3[2]-scene_axis3[1] # scene resolution along the 3rd axis
         res_3=resolution_1D(image_1D_3,scene_res3,res_dB)
-        PSLR_3,ISLR_3=sidelobe_1D(image_1D_3)
-    else;res_3=NaN;PSLR_3=NaN;ISLR_3=NaN;end
+        PSLR_3,ISLR_3=sidelobe_1D(image_1D_3,3)
+        loc_error_3=location_error(image_1D_3,target_location[3],scene_axis3)
+    else;res_3=NaN;PSLR_3=NaN;ISLR_3=NaN;loc_error_3=NaN;end
     resolutions=[res_1,res_2,res_3]
     PSLRs=[PSLR_1,PSLR_2,PSLR_3]
     ISLRs=[ISLR_1,ISLR_2,ISLR_3]
-    return resolutions,PSLRs,ISLRs
+    loc_errors=[loc_error_1,loc_error_2,loc_error_3]
+    return resolutions,PSLRs,ISLRs,loc_errors
 end
 
-function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3)
-    target_index1=findall(target_location[1] .==scene_axis1)
-    target_index2=findall(target_location[2] .==scene_axis2)
-    target_index3=findall(target_location[3] .==scene_axis3)
-    if isempty(target_index1) || isempty(target_index2) || isempty(target_index3)
-        println("Target is not inside the scene!")
+function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
+    if PSF_peak_target==1 # 1D slices from PSF peak
+        max_ind=findall(image_3D .==maximum(image_3D))
+        slice_index1=max_ind[1][1]
+        slice_index2=max_ind[1][2]
+        slice_index3=max_ind[1][3]
+    elseif PSF_peak_target==2 # PSF slices from actual target location
+        slice_index1=findall(target_location[1] .==scene_axis1)
+        slice_index2=findall(target_location[2] .==scene_axis2)
+        slice_index3=findall(target_location[3] .==scene_axis3)
+    end
+    if PSF_peak_target==2 && (isempty(slice_index1) || isempty(slice_index2) || isempty(slice_index3))
+        image_1D_1=NaN;image_1D_2=NaN;image_1D_3=NaN
     else
         if length(scene_axis1)>1
-            image_slice=image_3D[:,target_index2,target_index3]
+            image_slice=image_3D[:,slice_index2,slice_index3]
             image_1D_1=zeros(Float64,length(image_slice))
             image_1D_1[:]=image_slice
+            display(plot(scene_axis1,20*log10.(image_1D_1),xaxis=("scene axis 1 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900))) # plot the PSF along axis 1
         else;image_1D_1=NaN;println("PSF metrics along 1st dimension cannot be calculated since image has no 1st dimension.");end
         if length(scene_axis2)>1
-            image_slice=image_3D[target_index1,:,target_index3]
+            image_slice=image_3D[slice_index1,:,slice_index3]
             image_1D_2=zeros(Float64,length(image_slice))
             image_1D_2[:]=image_slice
+            display(plot(scene_axis2,20*log10.(image_1D_2),xaxis=("scene axis 2 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900))) # plot the PSF along axis 2
         else;image_1D_2=NaN;println("PSF metrics along 2nd dimension cannot be calculated since image has no 2nd dimension.");end
         if length(scene_axis3)>1
-            image_slice=image_3D[target_index1,target_index2,:]
+            image_slice=image_3D[slice_index1,slice_index2,:]
             image_1D_3=zeros(Float64,length(image_slice))
             image_1D_3[:]=image_slice
+            display(plot(scene_axis3,20*log10.(image_1D_3),xaxis=("scene axis 3 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900))) # plot the PSF along axis 3
         else;image_1D_3=NaN;println("PSF metrics along 3rd dimension cannot be calculated since image has no 3rd dimension.");end
     end
-    # display(plot(scene_axis1,20*log10.(image_1D_1),xaxis=("scene axis 1 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900))) # plot the PSF along axis 1
-    # display(plot(scene_axis2,20*log10.(image_1D_2),xaxis=("scene axis 2 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900))) # plot the PSF along axis 2
-    # display(plot(scene_axis3,20*log10.(image_1D_3),xaxis=("scene axis 3 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900))) # plot the PSF along axis 3
     return image_1D_1,image_1D_2,image_1D_3
+end
+
+function location_error(image_1D,target_location_1D,scene_axis)
+    target_ind=findall(target_location_1D .==scene_axis);target_ind=target_ind[1]
+    max_ind=findall(image_1D .==maximum(image_1D));max_ind=max_ind[1]
+    scene_res=scene_axis[2]-scene_axis[1] # scene resolution along the axis
+    loc_error=(max_ind-target_ind)*scene_res
 end
 
 function resolution_1D(image_1D,scene_res,res_dB) # image1D in linear scale (not dB)
     image_1D=20*log10.(image_1D/maximum(image_1D))
-    max_ind=findall(image_1D .==maximum(image_1D))
-    max_ind=max_ind[1]
+    max_ind=findall(image_1D .==maximum(image_1D));max_ind=max_ind[1]
     res_ind_2=findfirst(image_1D[max_ind].-image_1D[max_ind:end] .>=res_dB) #TODO warn if scene extent is smaller than resolution
     res_ind_1=findlast(image_1D[max_ind].-image_1D[1:max_ind] .>=res_dB)
     if isempty(res_ind_1) & isempty(res_ind_2);println("Scene is smaller than resolution on each side!");res=NaN
@@ -68,12 +86,12 @@ function resolution_1D(image_1D,scene_res,res_dB) # image1D in linear scale (not
     return res
 end
 
-function sidelobe_1D(image_1D)
+function sidelobe_1D(image_1D,axis_no)
     peak_value,peak_ind=findmax(image_1D)
     SLpeaks_ind=findpeaks(image_1D)
     if length(SLpeaks_ind)>1
         PSLR=20*log10(peak_value/image_1D[SLpeaks_ind[2]])
-    else;println("No sidelobes found inside the scene! Need to increase resolution and/or scene size.");PSLR=NaN;end
+    else;println("No sidelobes found inside the scene for dimension ",axis_no,"! Need to increase resolution and/or scene size.");PSLR=NaN;end
     ISLR=1
     return PSLR,ISLR
 end

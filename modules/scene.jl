@@ -1,4 +1,5 @@
 module Scene
+#TODO #TODO add function definitions, comments, define input types, remove unused functions
 
 include("geometry.jl")
 using LinearAlgebra
