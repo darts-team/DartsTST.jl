@@ -7,7 +7,7 @@ include("inputs/input_parameters_RSF_orbits_slantlooking.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/error_sources.jl")
-include("modules/Performance_Metrics.jl")
+include("modules/performance_metrics.jl")
 using NCDatasets
 using Plots
 using Statistics
