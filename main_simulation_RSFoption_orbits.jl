@@ -108,8 +108,6 @@ end
 #savefig("image1.png")
 ## PERFORMANCE METRICS
 # PSF metrics
-include("inputs/input_parameters_RSF_orbits_slantlooking.jl")
-include("modules/Performance_Metrics.jl")
 if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when there is only one point target
     target_index1=findall(t_θ .==s_θ)
     target_index2=findall(t_ϕ .==s_ϕ)
