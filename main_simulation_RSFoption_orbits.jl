@@ -108,18 +108,28 @@ end
 #savefig("image1.png")
 ## PERFORMANCE METRICS
 # PSF metrics
-#include("modules/Performance_Metrics.jl")
+include("inputs/input_parameters_RSF_orbits_slantlooking.jl")
+include("modules/Performance_Metrics.jl")
 if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when there is only one point target
-    target_location=[t_θ t_ϕ t_h] # point target location
-    resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h) # resolutions in each of the 3 axes
+    target_index1=findall(t_θ .==s_θ)
+    target_index2=findall(t_ϕ .==s_ϕ)
+    target_index3=findall(t_h .==s_h)
+    if isempty(target_index1) || isempty(target_index2) || isempty(target_index3)
+        show("PSF related performance metrics cannot be calculated since target is not inside the scene!")
+        PSF_metrics=false
+    else
+        PSF_metrics=true
+        target_location=[t_θ t_ϕ t_h] # point target location
+        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h,PSF_peak_target) # resolutions in each of the 3 axes
+    end
 else
-    resolutions=[NaN,NaN,NaN]
-    PSLRs=[NaN,NaN,NaN]
-    ISLRs=[NaN,NaN,NaN]
-    loc_errors=[NaN,NaN,NaN]
-    println("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
+    PSF_metrics=false
+    show("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
 end
-println("Resolutions: ",round.(resolutions,digits=6)," in scene axes units")
-println("Location Errors: ",round.(loc_errors,digits=6)," in scene axes units")
+if PSF_metrics
+println("Resolutions: ",round.(resolutions,digits=8)," in scene axes units")
+println("Location Errors: ",round.(loc_errors,digits=8)," in scene axes units")
 println("PSLRs: ",round.(PSLRs,digits=2)," dB")
 println("ISLRs: ",round.(ISLRs,digits=2)," dB")
+println("PSF Peak Amplitude: ",round(maximum(20*log10.(image_3D)),digits=2)," dB")
+end
