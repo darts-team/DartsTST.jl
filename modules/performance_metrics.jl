@@ -1,6 +1,7 @@
 module Performance_Metrics
 using Plots
 
+#TODO add function definitions, comments, define input types
 function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
     image_1D_1,image_1D_2,image_1D_3=obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
     if length(image_1D_1)>1

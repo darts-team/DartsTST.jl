@@ -22,7 +22,7 @@ if enable_fast_time # matched filter gain is included in Srx
     #display(plot(t_rx*1e6,20*log10.(abs.(Srx)),ylims=(-100+20*log10(bandwidth*pulse_length),20*log10(bandwidth*pulse_length)),leg=false,xlabel="fast time (μs)",ylabel="amplitude (dB)",title="Receive Window/Signal",size=(1600,900)))
 end
 ## PLATFORM LOCATIONS
-orbit_dataset=Dataset("inputs/orbitOutput_082020.nc") # Read orbits data in NetCDF format
+orbit_dataset=Dataset("inputs/orbitOutput_082020.nc") # Read orbits data in NetCDF format TODO take from input parameters
 t12_orbits=orbit_dataset["time"][1:2] # first two time samples
 dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
 orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
@@ -49,7 +49,7 @@ t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,earth_radius,earth_eccentricity)
 ## DISPLAY PLATFORM AND TARGET LOCATIONS ON THE SAME PLOT
 #display(scatter(t_xyz_grid[1,:],t_xyz_grid[2,:],t_xyz_grid[3,:],leg=false,camera=(20,40),markersize=1,size=(1600,900))) #display grid in 3D
 #display(scatter!(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],leg=false,camera=(20,40),markersize=1,xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Platforms and Targets")) #display grid in 3D
-#savefig("platforms_and_targets.png")
+#savefig("platforms_and_targets.png") #TODO save images as an option
 ## GENERATE RAW DATA
 #rawdata=Generate_Raw_Data.main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc) # without RSF
 ref_range=Generate_Raw_Data.distance(mean(t_xyz_grid,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range
@@ -108,8 +108,6 @@ end
 #savefig("image1.png")
 ## PERFORMANCE METRICS
 # PSF metrics
-include("inputs/input_parameters_RSF_orbits_slantlooking.jl")
-include("modules/Performance_Metrics.jl")
 if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when there is only one point target
     target_index1=findall(t_θ .==s_θ)
     target_index2=findall(t_ϕ .==s_ϕ)
