@@ -22,11 +22,16 @@ s_θ=-0.0001:0.000001:0.0001 # deg latitude
 s_ϕ=-0.0005:0.00001:0.0005 # deg longitude
 s_h=-40:1:40 # m  heights
 # range spread function (RSF) parameters
-enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
-enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
 bandwidth=10e6 # bandwidth (Hz)
 # performance metrics
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
+PSF_peak_target=2 # 1: peak, 2: target
+# simulation options
+enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
+enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
+display_geometry=false # whether to display geometry plots
+display_RSF_rawdata=false # whether to display RSF and rawdata plots
+display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension
