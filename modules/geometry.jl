@@ -186,14 +186,17 @@ function rotate_antenna(ant_frame, quat::Quaternion )
 end
 
 """
-Function to compute rho from ray-ellipse intersection
+Compute range from ray-ellipse intersection
+ - Usage: ρ = get_rho(position, look vector, Earth Radius, Earth Eccentricity)
 
 # Arguments
-- `P::3x1 Array`: position vector
-- `lv::3x1 Array`: look vector
-- `Ra::Float`: Radius of earth at P
-- `e::Float`: Earth eccentricity
+- `P::3x1 Float Array`: position vector
+- `lv::3x1 Float Array`: look vector
+- `Ra::Float`: Ellipsoid Radius at P (usually Earth Radius)
+- `e::Float`: Ellipsoid eccentricity (usually Earth Eccentricity)
 
+# Return
+- `ρ::Float`: range to surface of ellipsoid from P in the direction of lv
 """
 function get_rho(P, lv, Ra, e)
     ra = (((lv[1]^2) + (lv[2]^2)) / (Ra^2)) + ((lv[3]^2) / ((Ra^2) * (1 - (e^2))))
@@ -202,12 +205,25 @@ function get_rho(P, lv, Ra, e)
     if (((rb^2) - (4 * ra * rc))) < 0
         error("Cannot compute rho, input correct platform co-ordinates or look vector")
     else
-        rh = (- rb - sqrt((rb^2) - (4 * ra * rc))) / (2 * ra)
+        ρ = (- rb - sqrt((rb^2) - (4 * ra * rc))) / (2 * ra)
     end
-    return rh
+    return ρ
 end
 
-" Compute TCN frame based on SC position and velocity "
+"""
+ Compute TCN frame based on SC position and velocity
+ - Usage: t,c,n = get_tcn(pos, vel)
+
+# Arguments
+- `pos::3x1 Float Array`: position vector (usually satellite position in XYZ)
+- `vel::3x1 Float Array`: velocity vector (usually satellite velocity in XYZ)
+
+# Return
+- `t-hat::3x1 Flot Array`: definition of the t_hat (tangential velocity) vector in base frame (usually XYZ)
+- `c-hat::3x1 Float Array`: definition of the c_hat (cross-track) vector in base frame (usually XYZ)
+- `n-hat::3x1 Float Array`: definition of the n_hat (nadir) vector in base frame (usually XYZ)
+
+ """
 function get_tcn(pos, vel)
     @assert length(pos)==3 "POS needs to be 3 x 1"
     @assert length(vel)==3 "VEL needs to be 3 x 1"
