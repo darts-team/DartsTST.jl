@@ -7,7 +7,17 @@ using Plots
 using Distributed
 
 #-start-function--------------------------------------------------------------------------------------------
-"takes the position vectors and time vector to produce a phase error matrix output"
+
+"""
+takes the position vectors and slow time vector to produce a phase error matrix output
+
+# Arguments
+- `time_vector::N times x 1 Array`: slow time vector
+- `pos::3xN Array`: look vector
+- `parameters::Parameters`: structure of simulation configuration parameters
+
+"""
+
 function get_sync_phase(time_vector, pos, parameters)
     # - Inputs -
     # time_vector   : a vector of time values at which the orbit positions for each platform are sampled
@@ -39,12 +49,8 @@ function get_sync_phase(time_vector, pos, parameters)
     sync_processing_time    = parameters.sync_processing_time
     mode                    = parameters.mode
     no_sync_flag            = parameters.no_sync_flag
-<<<<<<< Updated upstream
-    # sigma_freq_offsets      = parameters.sigma_freq_offsets
-=======
     fc                      = parameters.fc
     sigma_freq_offsets      = parameters.sigma_freq_offsets
->>>>>>> Stashed changes
     
     
     # find total elapsed time over the course of the orbits
@@ -63,11 +69,7 @@ function get_sync_phase(time_vector, pos, parameters)
     if clk_args_N < 40e3 # enfore a minimum number of points. Needed for PSD accuracy
         clk_args_N = 40e3
     end#if   
-<<<<<<< Updated upstream
-    up_convert = sync_fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF)
-=======
     up_convert =  fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF)
->>>>>>> Stashed changes
 
     # verify size of position input
     szp = size(pos)
@@ -80,12 +82,8 @@ function get_sync_phase(time_vector, pos, parameters)
         ntimes = szp[2]
     end
 
-<<<<<<< Updated upstream
-    sigma_freq_offsets      = ones(nplat).* 1e-5 # temporary TODO: replace with input values
-=======
     # sigma_freq_offsets      = ones(nplat).* 1.5e-3 # temporary TODO: replace with input values
     
->>>>>>> Stashed changes
 
 ## Determine TDMA Schedule TODO: change to match Ilgin's algorithm
 # there's a sync TDMA schedule that we'll lump together into one event with length (sync_processing_time*nplat)
@@ -131,15 +129,11 @@ end
     #display(plot(time_vector,crlb,xlabel="time (s)",title="CRLB"))
 
     # create matrix of phase error values
-<<<<<<< Updated upstream
-    phase_err   = Array{Float64}(undef, szp[2], szp[3]) # Nplatforms x Ntimes
-=======
     if mode == 1 || mode == 2
          phase_err   = Array{Float64}(undef, szp[2], szp[3]) # Nplatforms x Ntimes
      elseif mode == 3
          phase_err   = Array{Float64}(undef, szp[2], szp[2], szp[3]) # Nplatforms x Nplatforms x Ntimes
      end
->>>>>>> Stashed changes
 
     for i = 1:nplat #for each platform, generate oscillator phase errors at each time point
         println("Platform number: ", i) # testing
@@ -213,24 +207,13 @@ end
         # reset phase error to 0 at each sync time. Do this by finding the start/stop indices at each of the sync times
         if no_sync_flag
             
-<<<<<<< Updated upstream
-        else
-        # if sync_pri > dt # only do if the SRI is longer than the PRI
-=======
         else        
->>>>>>> Stashed changes
             for nsync = 1 : length(t_sync)-1
                 sync_time       = t_sync[nsync]
                 next_sync_time  = t_sync[nsync+1]
                 start_idx       = findfirst(internal_time_vec -> internal_time_vec >= sync_time, internal_time_vec)
                 stop_idx        = findfirst(internal_time_vec -> internal_time_vec >= next_sync_time, internal_time_vec)
-<<<<<<< Updated upstream
-                # # grab phase values during this interval
-                # println("Start idx = ", start_idx)
-                # println("Stop idx = ", stop_idx)
-=======
                 # grab phase values during this interval
->>>>>>> Stashed changes
                 if start_idx != nothing
                     if stop_idx == nothing
                         stop_idx        = length(internal_time_vec)
@@ -265,20 +248,11 @@ end
     elseif mode == 3 # MIMO
         for m = 1 : nplat
             pulse_idx = findall(tx_map->tx_map == m,tx_map) # gives all radar pulse times for given transmitter
-<<<<<<< Updated upstream
-            # println("tx_map:", tx_map)
-            # println("platform number:", m)
-            # println("pulse_idx:", pulse_idx)
-            phase_err[m,:] = up_convert.* phase_state[m,pulse_idx[1:ntimes]]
-        end#for nplat
-    end
-=======
             for n = 1 : nplat
                 phase_err[m,n,:] = up_convert.* phase_state[n,pulse_idx[1:ntimes]] # gives phase error state for rx platformat tx times
             end#for nplat
         end#for nplat
     end#if
->>>>>>> Stashed changes
 
     return phase_err
 
@@ -287,14 +261,22 @@ end #get_sync_phase
 
 
 # -------------Helper functions-----------------
+"""
+calculate the two-sided PSD of the clock phase error
 
+# Arguments
+- `fs::Integer`: max PSD frequency [sample rate of clock phase error process]
+- `N::Integer`: number of PSD sample points
+- `a_coeff_db::1 x 5 Array`: coefficients of the noise characteristic asymptotes
+
+"""
 #-start-function--------------------------------------------------------------------------------------------
 function osc_psd_twosided(fs,N,a_coeff_db)
-#   Generate PSD of clock phase error()
+#   Generate PSD of clock phase error
 #INPUTS
 #     fs = 2000; # max PSD frequency [sample rate of clock phase error process]
 #     N = 600000; # number of PSD sample points
-#     a_coeff_db = [-28 -40 -200 -130 -155]; # coefficients of the noise characteristic asymptotes. (optional)
+#     a_coeff_db = [-28 -40 -200 -130 -155]; # coefficients of the noise characteristic asymptotes.
 #     fmin = .1; # minimum frequency .> 0 in Hz to window PSD [optional, default = .1 Hz].
 #
 # OUTPUTS
@@ -335,6 +317,15 @@ end #function
 #--end--function-------------------------------------------------------------------------------------------
 
 #-start-function--------------------------------------------------------------------------------------------
+"""
+generates realizations of phase error given a two-sided oscillator PSD
+
+# Arguments
+- `Sphi::Nx1 Array`: 2 sided oscillator phase error PSD
+- `fs::Integer`: max PSD frequency [sample rate of clock phase error process]
+- `a_coeff_db:: 1x5 Array`: coefficients of the noise characteristic asymptotes
+
+"""
 function osc_timeseries_from_psd_twosided(Sphi,fs)
 #   Generate time series from two sided PSD of clock phase error.
 #   Will first calculate the one sided PSD which = 0 for f<0
@@ -376,7 +367,18 @@ end#function
 
 
 #-start-function-------------------------------------------------------------------------------------------
-"generates a matrix of estimated CRLB values based on relative positions of platforms and Friis transmission"
+"""
+generates a matrix of estimated CRLB values at each position based on relative positions of platforms and Friis transmission formula with respect to the master platform
+
+# Arguments
+- `pos::3 x N_plat x N_time Array`: vector of platform positions
+- `N::Integer`: number of samples in waveform (Period (s) = N/fs)
+- `fc::Integer`: center frequency of transmitted sync waveform
+- `fs::Integer`: sampling frequency of sync receiver
+- `fbw::Integer`: sync waveform bandwidth
+- `master::Integer`: master platform number
+
+"""
 function getSensorCRLB(pos,N,fc,fs,fbw,master)
 #function getSensorCRLB(pos,N,fc,fs,fbw,master, Parameters)
 # pos:              gives locations of all platforms in network (3 x N_plat x N_time)
@@ -444,6 +446,16 @@ end#function
 #--end--function-------------------------------------------------------------------------------------------
 
 #-start-function-------------------------------------------------------------------------------------------
+"""
+rectangle function for filter
+
+# Arguments
+- `t::Float`: vector of platform positions
+- `t1::Float`: start time of rect
+- `t2::Float`: end time of rect
+- `height::Float`: amplitude of rect
+
+"""
 function rect(t,t1,t2,height) # does Julia have a built in rect function?
 # Unit energy rect pulse either from -T/2 to T/2 with height 1/sqrt(T)
 # | from t1 to t2 with height 1/sqrt(t2-t1)
@@ -464,6 +476,20 @@ end
 #--end--function-------------------------------------------------------------------------------------------
 
 ##-start-function-------------------------------------------------------------------------------------------
+"""
+calculates the post-synchronization phase error PSD
+
+# Arguments
+- `Sphi::Nsamplesx1 Array`: unsync'd phase error PSD
+- `f_psd::Nsamplesx1 Array`: frequency vector for PSD
+- `sync_radar_offset::Float`: time elapsed since last sync
+- `sig_crlb::Float`: Cramer-Rao lower bound of Gaussian noise in sync
+- `sync_prf::Float`: repetition frequency of sync process (1/SRI)
+- `sync_fs::Float`: sync receiver sampling rate
+- `sync_clk_fs::Float`: sample rate of clock error process
+
+
+"""
 function sync_effects_on_PSD(Sphi,f_psd,sync_radar_offset,sig_crlb,sync_prf,sync_fs, sync_clk_fs)
 # Function describes PSD of clk phase after finite offset sync
 # Sphi is input PSD
@@ -489,7 +515,18 @@ end#function
 
 
 #-start-function-------------------------------------------------------------------------------------------
-"generates a matrix of estimated CRLB values based on relative positions of platforms and Friis transmission using a mean-network based value"
+
+"""
+generates a matrix of estimated CRLB values at each position based on relative positions of platforms and Friis transmission using a mean-network based value
+
+# Arguments
+- `pos::3 x N_plat x N_time Array`: vector of platform positions
+- `N::Integer`: number of samples in waveform (Period (s) = N/fs)
+- `fc::Integer`: center frequency of transmitted sync waveform
+- `fs::Integer`: sampling frequency of sync receiver
+- `fbw::Integer`: sync waveform bandwidth
+
+"""
 function getSensorCRLB_network(pos,N,fc,fs,fbw)
 #function getSensorCRLB_network(pos,N,fc,fs,fbw,Parameters)
 # pos:              gives locations of all platforms in network (3 x N_plat x N_time)
@@ -567,6 +604,15 @@ end#function
 #--end--function-------------------------------------------------------------------------------------------
 
 #-start-function-------------------------------------------------------------------------------------------
+"""
+calculates the effects of downsampling on the phase error PSD
+
+# Arguments
+- `Sphi::Nx1 Array`: 2 sided oscillator phase error PSD
+- `sync_clk_fs::Float`: sample rate of clock error process
+- `sync_prf::Float`: repetition frequency of sync process (1/SRI)
+
+"""
 function downsampled_spectrum(Sphi,sync_clk_fs,sync_prf)
     # M: downsampling factor
     M = round(sync_clk_fs/(2.0*sync_prf))    
@@ -595,6 +641,14 @@ end#function
 #--end--function-------------------------------------------------------------------------------------------
 
 #-start-function-------------------------------------------------------------------------------------------
+"""
+this function produces an all-real output of a shift of input vector x by n samples
+
+# Arguments
+- `x::Nx1 Array`: input vector to be shifted
+- `n::Integer`: number of samples to shift by
+
+"""
 function shift(x,n)
 # this function produces an all-real output of a shift of input vector x by n samples
 
