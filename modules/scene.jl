@@ -122,4 +122,17 @@ function convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
   return image_3D
 end
 
+""" Compute look vector based based on TCN basis vectors,
+ # Arguments
+  - t-hat: 3x1 definition of the t_hat (tangential velocity) vector in base frame (usually XYZ)
+  - c-hat: 3x1 definition of the c_hat (cross-track) vector in base frame (usually XYZ)
+  - n-hat: 3x1 definition of the n_hat (nadir) vector in base frame (usually XYZ)
+  - θ-rng: scalar look angle (as measured from the nadir vector) [radians]
+  - ϕ-az:  azimuth angle (angle projected on the T-C plane measured from the C-vector) [radians]
+# Return
+  + 3x1 normalized look vector in base frame (usually XYZ)
+- to get TCN frame  see modules/geometry.jl->get_tcn()
+"""
+lookvec_fromTCN(t_hat,c_hat,n_hat,θ_rng,ϕ_az) =  sin(θ_rng) * sin(ϕ_az) * t_hat + sin(θ_rng)* cos(ϕ_az) * c_hat + cos(θ_rng) * n_hat
+
 end
