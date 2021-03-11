@@ -1,4 +1,6 @@
+#include("modules/sync.jl")
 module Error_Sources
+using ..Sync
 
 function random_noise(rawdata,SNR,enable_fast_time,mode)
     Np_RX=size(rawdata)[2] # number of RX platforms
@@ -35,10 +37,79 @@ function random_noise(rawdata,SNR,enable_fast_time,mode)
     return rawdata
 end
 
-function synchronization_errors
-end
+function synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
+    mode   = parameters.mode
+    master = parameters.master
+    
+    Np_RX=size(rawdata)[2] # number of RX platforms
+    Nst=size(rawdata)[1] # number of slow-time samples
+    if mode==3
+        Np_TX=size(rawdata)[3]# number of TX platforms
+    end 
+    
+    ## Synchronization Effects
+    phase_err = Sync.get_sync_phase(slow_time,orbit_pos_interp,parameters) # or is this supposed to be "orbit_pos_interp"?
+    # note: phase_err is (Nplat x N slow-time) for modes 1 & 2, but (Nplat x Nplat x N slow-time) for MIMO
+    # for MIMO, first axis is the transmitting platform number, 2nd is receive platform, 3rd is slow-time number
+    
+    
+    ## combine with raw data
+    if enable_fast_time
+        #TODO fix addition of phase error with fast-time enabled
+        
+        Nft=size(rawdata)[end] # number of fast-time sampless
+        if mode == 1 #ping-pong
+            for s = 1 : Nst # slow-time (pulses)
+                for i = 1 : Np_RX
+                    rawdata[s,i,:] = rawdata[s,i,:] .* exp(im*2*phase_err[i,s])' # 2x because tx and rx are the same platform
+                end#N platforms
+            end#slow time
+        elseif mode == 2 # SIMO
+            for s = 1 : Nst # slow-time (pulses)
+                tx_phase = phase_err[master,s] # transmitter phase error state 
+                for i = 1 : Np_RX
+                    rawdata[s,i,:] = rawdata[s,i,:].*exp(im*(phase_err[i,s] + tx_phase) )
+                end#N platforms
+            end#slow time
+        elseif mode == 3 #MIMO
+            for s = 1 : Nst # slow-time (pulses)
+                for i = 1 : Np_TX # Tx platform for MIMO
+                    for k = 1 : Np_RX # Rx platform for MIMO
+                        rawdata[s,k,i,:] = rawdata[s,k,i,:].*exp(im*(phase_err[i,i,s] + phase_err[i,k,s]) ) #tx phase + rx phase at tx time
+                    end#N Rx platforms
+                end#N Tx platforms
+            end#slow time
+        end#mode
+        
+    else # no fast time
+        if mode == 1 #ping-pong
+            for s = 1 : Nst # slow-time (pulses)
+                for i = 1 : Np_RX
+                    rawdata[s,i] = rawdata[s,i]*exp(im*2*phase_err[i,s]) # 2x because tx and rx are the same platform
+                end#N platforms
+            end#slow time
+        elseif mode == 2 # SIMO
+            for s = 1 : Nst # slow-time (pulses)
+                tx_phase = phase_err[master,s] # transmitter phase error state 
+                for i = 1 : Np_RX
+                    rawdata[s,i] = rawdata[s,i]*exp(im*(phase_err[i,s] + tx_phase) )
+                end#N platforms
+            end#slow time
+        elseif mode == 3 #MIMO
+            for s = 1 : Nst # slow-time (pulses)
+                for i = 1 : Np_TX # Tx platform for MIMO
+                    for k = 1 : Np_RX # Rx platform for MIMO
+                        rawdata[s,k,i] = rawdata[s,k,i]*exp(im*(phase_err[i,i,s] + phase_err[i,k,s]) ) #tx phase + rx phase at tx time
+                    end#N Rx platforms
+                end#N Tx platforms
+            end#slow time
+        end#mode    
+end#if fast time
+
+    return rawdata
+end#sync_error function
 
 function position_errors
 end
 
-end
+end#module
