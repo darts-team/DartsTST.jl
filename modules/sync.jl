@@ -136,7 +136,7 @@ end
      end
 
     for i = 1:nplat #for each platform, generate oscillator phase errors at each time point
-        println("Platform number: ", i) # testing
+        # println("Platform number: ", i) # testing
 
         a_coeff_db = osc_coeffs[i, :]   # grab the clock coefficients for each platform
         crlbs      = sig_crlb[i,:]      # grab the CRLB previously calculated

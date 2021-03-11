@@ -9,12 +9,10 @@ include("modules/sync.jl")
 include("modules/error_sources.jl")
 include("modules/Performance_Metrics.jl")
 
-
-#include("modules/Performance_Metrics.jl")
 using NCDatasets
 using Plots
 using Statistics
-using JLD2 # note you may have to Pkg.add("JLD2")
+using JLD2 # note: may have to Pkg.add("JLD2")
 
 #pyplot()
 plotly()

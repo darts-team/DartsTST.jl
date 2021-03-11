@@ -1,6 +1,9 @@
 # add new clock based parameters
 # need to have selection of oscillator_quality for each receiver (for non-uniform constellation)
-
+use_orbits_flag = false # true if using an orvbit file to inform number of platforms
+if !use_orbits_flag
+    setNumPlatforms = 3 # manually select number of Rx platforms
+end 
 sync_pri = 1 # (s) repition interval of sync
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
@@ -24,10 +27,13 @@ end
 ## TODO need to figure out a way to get the number of platforms without hardcoding this orbit file name - use OrbitFileName variable?
 # ------this is ugly code that needs to be replaced------
 # orbit_dataset=Dataset("inputs/orbitOutput_082020.nc") # Read orbits data in NetCDF format
-
-orbit_dataset=Dataset(orbit_filename) # Read orbits data in NetCDF format
-orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data
-nplat=size(orbit_pos)[2] # number of platforms
+if use_orbits_flag
+    orbit_dataset=Dataset(orbit_filename) # Read orbits data in NetCDF format
+    orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data
+    nplat=size(orbit_pos)[2] # number of platforms
+else
+    nplat = setNumPlatforms
+end
 ##-----------
 if size(a_coeff_dB)[1] == 1
     osc_coeffs = repeat(a_coeff_dB,nplat)
