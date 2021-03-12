@@ -1,10 +1,10 @@
-# add new clock based parameters
-# need to have selection of oscillator_quality for each receiver (for non-uniform constellation)
-use_orbits_flag = false # true if using an orvbit file to inform number of platforms
+using NCDatasets
+
+use_orbits_flag = true # true if using an orbit file to inform number of platforms
 if !use_orbits_flag
     setNumPlatforms = 3 # manually select number of Rx platforms
 end 
-sync_pri = 1 # (s) repition interval of sync
+sync_pri = 1 # (s) repetition interval of sync
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length

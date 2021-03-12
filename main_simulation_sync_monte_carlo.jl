@@ -23,7 +23,7 @@ if enable_fast_time # matched filter gain is included in Srx
 end
 
 ## PLATFORM LOCATIONS
-orbit_dataset=Dataset("inputs/orbitOutput_082020.nc") # Read orbits data in NetCDF format
+orbit_dataset=Dataset(orbit_filename) # Read orbits data in NetCDF format
 t12_orbits=orbit_dataset["time"][1:2] # first two time samples
 dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
 orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
