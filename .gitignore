@@ -1,1 +1,9 @@
+<<<<<<< HEAD
 .ipynb_checkpoints
+=======
+
+.DS_Store
+*.nc
+*.jld2
+*.nc
+>>>>>>> 8030d0f007fbfe68ece1a24fe382583ae4739388
