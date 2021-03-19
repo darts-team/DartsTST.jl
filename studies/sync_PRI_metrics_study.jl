@@ -6,7 +6,7 @@ include("../modules/sync.jl")
 include("../modules/range_spread_function.jl") # as RSF
 include("../modules/orbits.jl")
 include("../modules/error_sources.jl")
-include("../modules/Performance_Metrics.jl")
+include("../modules/performance_metrics.jl")
 
 using NCDatasets
 using Plots
