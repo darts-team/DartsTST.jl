@@ -27,9 +27,9 @@ t_θ=7 # deg latitude
 t_ϕ=0 # deg longitude
 t_h=0 # m  heights
 # image/scene pixel coordinates
-s_θ=7-0.0002:0.000004:7+0.0002 # deg latitude
-s_ϕ=-0.0008:0.00004:0.0008 # deg longitude
-s_h=-30:1:30 # m  heights
+s_θ=7-0.0002:0.0000025:7+0.0002 # deg latitude
+s_ϕ=-0.0008:0.00001:0.0008 # deg longitude
+s_h=-30:0.5:30 # m  heights
 
 # range spread function (RSF) parameters
 enable_fast_time = false # whether to enable or disable fast-time axis, 0:disable, 1: enable
@@ -44,3 +44,4 @@ bandwidth=40e6 # bandwidth (Hz)
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
 
 Ntrials = 50 # number of trials in Monte Carlo simulations
+PSF_peak_target = 1
