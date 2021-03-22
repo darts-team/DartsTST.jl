@@ -6,6 +6,7 @@ include("modules/scene.jl")
 include("inputs/input_parameters_slantlooking.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
+include("modules/sync.jl")
 include("modules/error_sources.jl")
 include("modules/performance_metrics.jl")
 using NCDatasets
@@ -145,9 +146,9 @@ else
     show("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
 end
 if PSF_metrics
-println("Resolutions: ",round.(resolutions,digits=8)," in scene axes units")
-println("Location Errors: ",round.(loc_errors,digits=8)," in scene axes units")
-println("PSLRs: ",round.(PSLRs,digits=2)," dB")
-println("ISLRs: ",round.(ISLRs,digits=2)," dB")
-println("PSF Peak Amplitude: ",round(maximum(20*log10.(image_3D)),digits=2)," dB")
+    println("Resolutions: ",round.(resolutions,digits=8)," in scene axes units")
+    println("Location Errors: ",round.(loc_errors,digits=8)," in scene axes units")
+    println("PSLRs: ",round.(PSLRs,digits=2)," dB")
+    println("ISLRs: ",round.(ISLRs,digits=2)," dB")
+    println("PSF Peak Amplitude: ",round(maximum(20*log10.(image_3D)),digits=2)," dB")
 end
