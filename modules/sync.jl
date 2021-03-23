@@ -18,7 +18,7 @@ takes the position vectors and slow time vector to produce a phase error matrix 
 
 """
 
-function get_sync_phase(time_vector, pos, parameters)
+function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, pos::Array{Float64,3}, parameters)
     # - Inputs -
     # time_vector   : a vector of time values at which the orbit positions for each platform are sampled
     # pos           : a matrix (3 x [Np x Nt] or 3 x Nt) of the orbit positions for each platform
@@ -271,7 +271,7 @@ calculate the two-sided PSD of the clock phase error
 
 """
 #-start-function--------------------------------------------------------------------------------------------
-function osc_psd_twosided(fs,N,a_coeff_db)
+function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1})
 #   Generate PSD of clock phase error
 #INPUTS
 #     fs = 2000; # max PSD frequency [sample rate of clock phase error process]
@@ -326,7 +326,7 @@ generates realizations of phase error given a two-sided oscillator PSD
 - `a_coeff_db:: 1x5 Array`: coefficients of the noise characteristic asymptotes
 
 """
-function osc_timeseries_from_psd_twosided(Sphi,fs)
+function osc_timeseries_from_psd_twosided(Sphi::Array{Float64,1},fs::Float64)
 #   Generate time series from two sided PSD of clock phase error.
 #   Will first calculate the one sided PSD which = 0 for f<0
 #INPUTS
@@ -379,7 +379,7 @@ generates a matrix of estimated CRLB values at each position based on relative p
 - `master::Integer`: master platform number
 
 """
-function getSensorCRLB(pos,N,fc,fs,fbw,master)
+function getSensorCRLB(pos::Array{Float64,3},N::Float64,fc::Float64,fs::Float64,fbw::Float64,master::Int64)
 #function getSensorCRLB(pos,N,fc,fs,fbw,master, Parameters)
 # pos:              gives locations of all platforms in network (3 x N_plat x N_time)
 # nplat:            number of platforms
@@ -490,7 +490,7 @@ calculates the post-synchronization phase error PSD
 
 
 """
-function sync_effects_on_PSD(Sphi,f_psd,sync_radar_offset,sig_crlb,sync_prf,sync_fs, sync_clk_fs)
+function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync_radar_offset::Float64,sig_crlb::Float64,sync_prf::Float64,sync_fs::Float64, sync_clk_fs::Float64)
 # Function describes PSD of clk phase after finite offset sync
 # Sphi is input PSD
 
@@ -527,8 +527,8 @@ generates a matrix of estimated CRLB values at each position based on relative p
 - `fbw::Integer`: sync waveform bandwidth
 
 """
-function getSensorCRLB_network(pos,N,fc,fs,fbw)
-#function getSensorCRLB_network(pos,N,fc,fs,fbw,Parameters)
+function getSensorCRLB_network(pos::Array{Float64,3},N::Int64,fc::Float64,fs::Float64,fbw::Float64)
+#function getSensorCRLB_network(pos,N,fc,fs,fbw,Parameters) #TODO add in support for parameter structure
 # pos:              gives locations of all platforms in network (3 x N_plat x N_time)
 # nplat:            number of platforms
 # ntimes:           number of sample times in time_vec
@@ -613,7 +613,7 @@ calculates the effects of downsampling on the phase error PSD
 - `sync_prf::Float`: repetition frequency of sync process (1/SRI)
 
 """
-function downsampled_spectrum(Sphi,sync_clk_fs,sync_prf)
+function downsampled_spectrum(Sphi::Array{Float64,1},sync_clk_fs::Float64,sync_prf::Float64)
     # M: downsampling factor
     M = round(sync_clk_fs/(2.0*sync_prf))    
     
