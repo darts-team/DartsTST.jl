@@ -77,7 +77,7 @@ image_3D=Scene.convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
 # PSF metrics
 if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when there is only one point target
     target_location=[t_θ t_ϕ t_h] # point target location
-    ideal_res,ideal_PSLR,ideal_ISLR,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h,PSF_peak_target) # resolutions in each of the 3 axes
+    ideal_res,ideal_PSLR,ideal_ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h,PSF_peak_target) # resolutions in each of the 3 axes
 else
     resolution=[NaN,NaN,NaN]
     PSLR=[NaN,NaN,NaN]
