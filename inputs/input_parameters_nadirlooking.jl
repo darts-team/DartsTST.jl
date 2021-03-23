@@ -34,4 +34,4 @@ enable_thermal_noise=false # whether to enable or disable random additive noise 
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
 display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
-display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension
+display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension, 3: display as 3D scatter plot
