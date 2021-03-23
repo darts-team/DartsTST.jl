@@ -69,7 +69,7 @@ function peg_calculations(peg,earth_radius,earth_eccentricity)
     return Mxyzprime_xyz,O,ra
 end
 
-function sch_to_xyz_2(sch,Mxyzprime_xyz,O,ra)
+function sch_to_xyz_2(sch,Mxyzprime_xyz,O,ra) # works with a single point only
     xyz = zeros(3)
     #break out SCH vectors
     s   = sch[1]
