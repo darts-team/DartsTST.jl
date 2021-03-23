@@ -7,7 +7,7 @@ include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
 include("modules/error_sources.jl")
-include("modules/Performance_Metrics.jl")
+include("modules/performance_metrics.jl")
 
 using NCDatasets
 using Plots
@@ -77,7 +77,7 @@ image_3D=Scene.convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
 # PSF metrics
 if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when there is only one point target
     target_location=[t_θ t_ϕ t_h] # point target location
-    ideal_res,ideal_PSLR,ideal_ISLR=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h) # resolutions in each of the 3 axes
+    ideal_res,ideal_PSLR,ideal_ISLR,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h,PSF_peak_target) # resolutions in each of the 3 axes
 else
     resolution=[NaN,NaN,NaN]
     PSLR=[NaN,NaN,NaN]
@@ -91,12 +91,10 @@ ideal_peak_idx3         = Int64(ideal_idx[3])
 
 ## Initialize up result vectors
 peaks       = zeros(Ntrials)
-peak_idx1   = zeros(Int64,Ntrials) # save the index, then convert to position based on axes
-peak_idx2   = zeros(Int64,Ntrials)
-peak_idx3   = zeros(Int64,Ntrials)
 resolutions = zeros(3,Ntrials)
 PSLRs       = zeros(3,Ntrials)
 ISLRs       = zeros(3,Ntrials)
+loc_errors  = zeros(3,Ntrials)
 ## run trials
 for ntrial = 1 : Ntrials
     println("Trial Number: ", ntrial)
@@ -119,7 +117,7 @@ for ntrial = 1 : Ntrials
     # PSF metrics
     if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when there is only one point target
         target_location=[t_θ t_ϕ t_h] # point target location
-        resolution,PSLR,ISLR=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h) # resolutions in each of the 3 axes
+        resolution,PSLR,ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h,PSF_peak_target) # resolutions in each of the 3 axes
     else
         resolution=[NaN,NaN,NaN]
         PSLR=[NaN,NaN,NaN]
@@ -128,21 +126,11 @@ for ntrial = 1 : Ntrials
     end
     (peak, idx)             = findmax(image_3D) # finds maximum and index of max
     peaks[ntrial]           = peak  
-    peak_idx1[ntrial]       = Int64(idx[1])
-    peak_idx2[ntrial]       = Int64(idx[2])
-    peak_idx3[ntrial]       = Int64(idx[3])
     resolutions[:,ntrial]   = resolution
     PSLRs[:,ntrial]         = PSLR
     ISLRs[:,ntrial]         = ISLR
+    loc_errors[:,ntrial]    = loc_error
 end#Ntrials
-
-# convert peak indices to locations
-peak_θ = s_θ[peak_idx1]
-peak_ϕ = s_θ[peak_idx2]
-peak_h = s_h[peak_idx3] 
-ideal_peak_θ = s_θ[ideal_peak_idx1]
-ideal_peak_ϕ = s_ϕ[ideal_peak_idx2]
-ideal_peak_h = s_h[ideal_peak_idx3]
 
 if disable_freq_offset # test to denote frequency error or not in save file name
     freq_text = "noFreq"
@@ -152,7 +140,7 @@ end
 
 outputfilename = "syncModule_MonteCarlo_$osc_type"*"_$sync_pri"*"s_"*freq_text* ".jld2" # this is the output filename that the data is saved to using JLD2
 # this saves the data into a JLD2 file. Data includes the estimates
-@save outputfilename peaks peak_θ peak_ϕ peak_h resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR
+@save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR loc_errors
 #println(std(resolutions[1,:]))
 # Note: JLD2 can be read using "@load filename var1 var2...
 println("Run Complete")
