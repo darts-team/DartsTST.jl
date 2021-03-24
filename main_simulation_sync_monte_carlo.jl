@@ -7,7 +7,7 @@ include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
 include("modules/error_sources.jl")
-include("modules/Performance_Metrics.jl")
+include("modules/performance_metrics.jl")
 
 using NCDatasets
 using Plots
@@ -91,9 +91,6 @@ ideal_peak_idx3         = Int64(ideal_idx[3])
 
 ## Initialize up result vectors
 peaks       = zeros(Ntrials)
-peak_idx1   = zeros(Int64,Ntrials) # save the index, then convert to position based on axes
-peak_idx2   = zeros(Int64,Ntrials)
-peak_idx3   = zeros(Int64,Ntrials)
 resolutions = zeros(3,Ntrials)
 PSLRs       = zeros(3,Ntrials)
 ISLRs       = zeros(3,Ntrials)
@@ -132,6 +129,7 @@ for ntrial = 1 : Ntrials
     loc_errors[:,ntrial]    = loc_error
     PSLRs[:,ntrial]         = PSLR
     ISLRs[:,ntrial]         = ISLR
+    loc_errors[:,ntrial]    = loc_error
 end#Ntrials
 
 if disable_freq_offset # test to denote frequency error or not in save file name

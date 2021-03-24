@@ -12,6 +12,7 @@ using NCDatasets
 using Plots
 using Statistics
 using JLD2 # note: may have to Pkg.add("JLD2")
+using Distributed
 
 ## Determining Parameters
 c=299792458 # speed of light (m/s)
@@ -142,11 +143,17 @@ no_sync_flag)
 
 
 
-Ntrials = 50 # number of trials in Monte Carlo simulations
+Ntrials = 50 # number of trials per SRI in Monte Carlo simulations
 
 sync_PRIs = [.1 .5 1 2 5 10 20 50]
+maxprocs = 16 # maximum number of cores to use
 
 numSRI = length(sync_PRIs)
+curr_procs = nprocs()
+if curr_procs < maxprocs
+    addprocs(maxprocs - curr_procs)
+end
+
 
 ## RANGE SPREAD FUNCTION (matched filter output)
 if enable_fast_time # matched filter gain is included in Srx
@@ -207,17 +214,14 @@ s_xyz_grid=Geometry.geo_to_xyz(s_geo_grid,earth_radius,earth_eccentricity)
 ## find Ideal case results first
 #PROCESS RAW DATA TO GENERATE IMAGE
 if enable_fast_time # with fastime, with slowtime
-    image_3xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+    image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
 else # without fastime, with slowtime
-    image_3xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc)
+    image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc)
 end
-image_3D=Scene.convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
+image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_θ,Ns_ϕ,Ns_h)
 
 # PERFORMANCE METRICS
 (ideal_peak, ideal_idx) = findmax(image_3D) # finds maximum and index of max
-ideal_peak_idx1         = Int64(ideal_idx[1])
-ideal_peak_idx2         = Int64(ideal_idx[2])
-ideal_peak_idx3         = Int64(ideal_idx[3])
 
 if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when there is only one point target
     target_index1=findall(t_θ .==s_θ)
@@ -229,7 +233,7 @@ if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when 
     else
         PSF_metrics=true
         target_location=[t_θ t_ϕ t_h] # point target location
-        ideal_res,ideal_PSLR,ideal_ISLR,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h,PSF_peak_target) # resolutions in each of the 3 axes
+        ideal_res,ideal_PSLR,ideal_ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h,PSF_peak_target) # resolutions in each of the 3 axes
     end
 else
     PSF_metrics=false
@@ -239,21 +243,17 @@ end
 
 ## Initialize up result vectors
 peaks       = zeros(numSRI,Ntrials)
-peak_idx1   = zeros(Int64,numSRI,Ntrials) # save the index, then convert to position based on axes
-peak_idx2   = zeros(Int64,numSRI,Ntrials)
-peak_idx3   = zeros(Int64,numSRI,Ntrials)
 resolutions = zeros(3,numSRI,Ntrials)
 PSLRs       = zeros(3,numSRI,Ntrials)
 ISLRs       = zeros(3,numSRI,Ntrials)
 loc_errors  = zeros(3,numSRI,Ntrials)
 ## run trials
-for k = 1 : numSRI
-    sync_pri = sync_PRIs[k]
-    parameters.sync_pri = sync_pri
-    println("Sync PRI: ", sync_pri)
-
-    for ntrial = 1 : Ntrials
-        println("Trial Number: ", ntrial)
+@parallel for ntrial = 1 : Ntrials
+    # println("Trial Number: ", ntrial)
+     for k = 1 : numSRI
+        sync_pri = sync_PRIs[k]
+        parameters.sync_pri = sync_pri
+            
         ## add in error sources, loop over Ntrials and number of SRIs
         if add_phase_errors == true
             rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
@@ -261,11 +261,11 @@ for k = 1 : numSRI
 
         ## PROCESS RAW DATA TO GENERATE IMAGE
         if enable_fast_time # with fastime, with slowtime
-            image_3xN=Process_Raw_Data.main_RSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+            image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
         else # without fastime, with slowtime
-            image_3xN=Process_Raw_Data.main_noRSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc)
+            image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc)
         end
-        image_3D=Scene.convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
+        image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_θ,Ns_ϕ,Ns_h)
 
         ## PERFORMANCE METRICS
         # PSF metrics
@@ -280,22 +280,12 @@ for k = 1 : numSRI
         end
         (peak, idx)             = findmax(image_3D) # finds maximum and index of max
         peaks[k,ntrial]         = peak
-        peak_idx1[k,ntrial]     = Int64(idx[1])
-        peak_idx2[k,ntrial]     = Int64(idx[2])
-        peak_idx3[k,ntrial]     = Int64(idx[3])
         loc_errors[:,k,ntrial]  = loc_error
         resolutions[:,ntrial]   = resolution
         PSLRs[:,k,ntrial]       = PSLR
         ISLRs[:,k,ntrial]       = ISLR
     end#Ntrials
 end#N SRIs
-# convert peak indices to locations
-peak_θ = s_θ[peak_idx1]
-peak_ϕ = s_θ[peak_idx2]
-peak_h = s_h[peak_idx3]
-ideal_peak_θ = s_θ[ideal_peak_idx1]
-ideal_peak_ϕ = s_ϕ[ideal_peak_idx2]
-ideal_peak_h = s_h[ideal_peak_idx3]
 
 if disable_freq_offset # test to denote frequency error or not in save file name
     freq_text = "noFreq"
@@ -303,9 +293,9 @@ else
     freq_text = "wFreq"
 end
 
-outputfilename = "syncModule_MonteCarlo_$osc_type"*"_sync_pri_sweep_"*freq_text* ".jld2" # this is the output filename that the data is saved to using JLD2
+outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$osc_type"*"_sync_pri_sweep_"*freq_text* ".jld2" # this is the output filename that the data is saved to using JLD2
 # this saves the data into a JLD2 file. Data includes the estimates
-@save outputfilename peaks peak_θ peak_ϕ peak_h resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors
+@save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors
 #println(std(resolutions[1,:]))
 # Note: JLD2 can be read using "@load filename var1 var2...
-# println("Run Complete")
+println("Run Complete, and file saved to " *outputfilename)

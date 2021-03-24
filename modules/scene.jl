@@ -44,6 +44,7 @@ end
 
 "look angle to slant/ground range conversion (spherical planet assumed)\n
 Inputs\n
+  θ_l: look angles
   p_h: platform height\n
   ra: radius of spherical planet\n
   t_h: target heights vector\n
@@ -91,7 +92,7 @@ function groundrange_to_lookangle(ra,rg,p_h) # # target height is assumed 0 TODO
   return rs,θ_l*180/pi
 end
 
-"look angles and target heights to target xyz conversion (spherical planet assumed)\n
+"look angles and target heights to target xyz conversion (spherical approximation)\n
 Inputs\n
   earth_radius: radius of earth \n
   earth_eccentricity: eccentricity of earth\n
@@ -124,7 +125,8 @@ function lookh_to_xyz(lookh,p_θϕh,peg,earth_radius,earth_eccentricity)
     return vT_xyz
 end
 
-"\n
+#TODO
+"Converts target positions defined in chP (ch of sch, platform position in θϕh and rotation in deg of look angle vector around platform position vector) to xyz\n
 Inputs\n
   earth_radius: radius of earth \n
   earth_eccentricity: eccentricity of earth\n
@@ -154,19 +156,19 @@ function chP_to_xyz_grid(t_c,t_h,rot_P,p_θϕh,peg,earth_radius,earth_eccentrici
   return t_xyz_grid_rot
 end
 
-"Converts 2D scene array of size 3xN to 3D scene array of size Ns1xNs2xNs3 which is useful for displaying tomograms\n
+"Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which is useful for displaying tomograms\n
 Inputs\n
-  image_3xN: 2D scene array of size 3xN (N=Ns1xNs2xNs3) \n
+  image_1xN: 1D scene array of size 1xN (N=Ns1xNs2xNs3) \n
   Ns1,Ns2,Ns3: lengths of scene vectors in each principle axis \n
 Outputs\n
   image_3D: 3D scene array of size Ns1xNs2xNs3"
-function convert_image_3xN_to_3D(image_3xN,Ns1,Ns2,Ns3)
+function convert_image_1xN_to_3D(image_1xN,Ns1,Ns2,Ns3)
   image_3D=zeros(Ns1,Ns2,Ns3)
   for i=1:Ns1
     for j=1:Ns2
       for k=1:Ns3
         indx=(i-1)*Ns2*Ns3+(j-1)*Ns3+k
-        image_3D[i,j,k]=image_3xN[indx] # square for power?
+        image_3D[i,j,k]=image_1xN[indx] # square for power?
       end
     end
   end
