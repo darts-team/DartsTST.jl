@@ -1,5 +1,4 @@
-
 .DS_Store
 *.nc
 *.jld2
-*.nc
+.ipynb_checkpoints
