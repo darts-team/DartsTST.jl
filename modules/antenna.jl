@@ -1,5 +1,8 @@
 module Antenna
 
+using LinearAlgebra
+using NCDatasets
+
 function pattern_sinc(sidelobe_dB,theta, hpbw)
    #     % Nino Majurec, May 23, 2019
    # % Function simulates radiation pattern for a conical horn antenna.
@@ -125,21 +128,45 @@ function pattern_sinc(sidelobe_dB,theta, hpbw)
 
 end
 
-function xyz_to_sphr(xyz)
+"""
+Converts cartesian XYZ vector to r,θ,ϕ
+using the TICRA convention
+
+# Arguments
+   - vec::`Array{Float64,}`, cartesian (x,y,z) vector (should be in Antenna Frame)
+
+# Output
+   - sphr::`Array{Float64,2}`, [r, θ, ϕ] (, rad, rad)
+"""
+function xyz_to_sphr(xyz::Array{Float64,1})
    sphr =[0.,0.,0.]
    sphr[1] = norm(xyz) #r
    sphr[2] = acos(xyz[3]/norm(xyz)) # theta
    sphr[3] = atan(xyz[2],xyz[1]) #phi
    return sphr
 end
+function xyz_to_sphr(xyz::Array{Float64,2})
+   @assert size(xyz,1) == 3 "XYZ vector must by 3xN"
+   sphr =zeros(size(xyz))
+   for ii=1:size(xyz,2)
+      sphr[:,ii] = xyz_to_sphr(xyz[:,ii])
+   end
+   return sphr
+end
 
-"This function converts cartesian XYZ vector to Az,El
+"""
+Converts cartesian XYZ vector to Az,El
 using the TICRA Az over El convention
 
-Arguments
-   - vec::`Array{Float64,}` cartesian vector in Antenna Frame
- "
-function xyz_to_azel(vec::Array{Float32,})
+# Arguments
+   - vec::`Array{Float64,}`, cartesian (x,y,z) vector (should be in Antenna Frame)
+
+# Output
+   - az::`Array{Float64,}`, Azimuth (deg)
+   - el::`Array{Float64,}`, Elevation (deg)
+
+"""
+function xyz_to_azel(vec::Array{Float64,})
    @assert size(vec,1) == 3 "XYZ vector must by 3xN"
    # normalize vector
    for ii=1:size(vec,2)
@@ -164,6 +191,79 @@ function interpolate_gain(v, gain_in, th_in )
    itp = LinearInterpolation(th_in,gain_in, extrapolation_bc = Line());
    gain =  itp(th)
    return gain
+end
+
+"""
+Creates an Structure of Antenna Principal Cuts based on netCDF file
+# Arguments
+ - `file::String`, full filename with path of the netCDF
+ - `pol::String`, [optional] polarization string either Hpol or Vpol (default)
+ - `frequency::Array{Float64,1}`, [optional], antenna frequency in GHz [1.25 default]
+# Output
+ - `cuts::AntCutType`, in addition to peg coordinates also contains other parameters necessary for peg calculations
+"""
+abstract type AntCutType end
+mutable struct AntCuts <:AntCutType
+    file::String # filename,must have full path
+    pol::String # polarization (should be Hpol or Vpol)
+    freqs::Array{Float64,} # frequency
+    cut_az::Array{Float64,} # azimuth axis (deg)
+    cut_el::Array{Float64,} # elevation axis (deg)
+    az_copol::Array{Complex{Float32},} # copol azimuth cut (complex)
+    az_xpol::Array{Complex{Float32},} # crosspol azimuth cut (complex)
+    el_copol::Array{Complex{Float32},} # copol azimuth cut (complex)
+    el_xpol::Array{Complex{Float32},} # crosspol azimuth cut (complex)
+    function AntCuts(file, pol::String="Vpol",freqs::Array{Float64,}=[1.25])
+      ds    = Dataset(file) #create file datastructure
+      fvec  = ds["frequency"][:] #read frequencies from file
+      frind = findall(in(freqs), fvec) #get index of all frequencies to read
+      grp   = ds.group[pol] #create polarization group from netCDF file
+      cut_az = ds["cut_azimuth"][:] #read azimuth axis from file
+      cut_el = ds["cut_elevation"][:] #read azimuth axis from file
+
+      # read cuts
+      az_copol = grp["copol_azimuth_cut_real"][:,frind]+grp["copol_azimuth_cut_imag"][:,frind]im;
+      az_xpol = grp["crosspol_azimuth_cut_real"][:,frind]+grp["crosspol_azimuth_cut_imag"][:,frind]im;
+      el_copol = grp["copol_elevation_cut_real"][:,frind]+grp["copol_elevation_cut_imag"][:,frind]im;
+      el_xpol = grp["crosspol_elevation_cut_real"][:,frind]+grp["crosspol_elevation_cut_imag"][:,frind]im;
+
+      #this to squeeze singleton dimensions
+      sqz(a) = dropdims(a, dims = tuple(findall(size(a) .== 1)...))
+      new(file, pol, freqs, cut_az, cut_el, sqz(az_copol), sqz(az_xpol), sqz(el_copol), sqz(el_xpol))
+    end
+end
+"""
+Creates an Structure of Antenna Grids based on netCDF file
+# Arguments
+ - `file::String`, full filename with path of the netCDF
+ - `pol::String`, [optional] polarization string either Hpol or Vpol (default)
+ - `frequency::Array{Float64,1}`, [optional], antenna frequency in GHz [1.25 default]
+# Output
+ - `grid::AntGridType`, in addition to peg coordinates also contains other parameters necessary for peg calculations
+"""
+abstract type AntGridType end
+mutable struct AntGrid <:AntGridType
+    file::String # filename,must have full path
+    pol::String # polarization (should be Hpol or Vpol)
+    freqs::Array{Float64,} # frequency
+    az::Array{Float64,} # azimuth axis (deg)
+    el::Array{Float64,} # elevation axis (deg)
+    copol::Array{Complex{Float32},} # copol azimuth grid (complex)
+    xpol::Array{Complex{Float32},} # crosspol azimuth grid (complex)
+    function AntGrid(file, pol::String="Vpol",freqs::Array{Float64,}=[1.25])
+      ds    = Dataset(file) #create file datastructure
+      fvec  = ds["frequency"][:] #read frequencies from file
+      frind = findall(in(freqs), fvec) #get index of all frequencies to read
+      grp   = ds.group[pol] #create polarization group from netCDF file
+      az = ds["grid_azimuth"][:] #read azimuth axis from file
+      el = ds["grid_elevation"][:] #read azimuth axis from file
+
+      # read grid
+      copol = grp["copol_grid_real"][:,:,frind]+grp["copol_grid_imag"][:,:,frind]im;
+      xpol  = grp["crosspol_grid_real"][:,:,frind]+grp["crosspol_grid_imag"][:,:,frind]im;
+      sqz(a) = dropdims(a, dims = tuple(findall(size(a) .== 1)...))
+      new(file, pol, freqs, az, el, sqz(copol), sqz(xpol))
+    end
 end
 
 end
