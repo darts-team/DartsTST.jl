@@ -1,4 +1,4 @@
-module AntennaPattern
+module Antenna
 
 function pattern_sinc(sidelobe_dB,theta, hpbw)
    #     % Nino Majurec, May 23, 2019
@@ -133,6 +133,22 @@ function xyz_to_sphr(xyz)
    return sphr
 end
 
+"This function converts cartesian XYZ vector to Az,El
+using the TICRA Az over El convention
+
+Arguments
+   - vec::`Array{Float64,}` cartesian vector in Antenna Frame
+ "
+function xyz_to_azel(vec::Array{Float32,})
+   @assert size(vec,1) == 3 "XYZ vector must by 3xN"
+   # normalize vector
+   for ii=1:size(vec,2)
+      vec[:,ii] = vec[:,ii]/norm(vec[:,ii])
+   end
+   az = -asin.(vec[1,:])*180/π;
+   el = atan.(vec[2,:], vec[3,:])*180/π;
+   return az, el
+end
 
 function compute_gain(v, hpbw, slb_dB )
    v_sphr = xyz_to_sphr.(v)
@@ -148,4 +164,6 @@ function interpolate_gain(v, gain_in, th_in )
    itp = LinearInterpolation(th_in,gain_in, extrapolation_bc = Line());
    gain =  itp(th)
    return gain
+end
+
 end
