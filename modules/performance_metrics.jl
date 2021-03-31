@@ -43,24 +43,24 @@ function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene
     if PSF_peak_target==2 && (isempty(slice_index1) || isempty(slice_index2) || isempty(slice_index3))
         image_1D_1=NaN;image_1D_2=NaN;image_1D_3=NaN
     else
-        plotly()
+        gr() # or plotly()
         if length(scene_axis1)>1
             image_slice=image_3D[:,slice_index2,slice_index3]
             image_1D_1=zeros(Float64,length(image_slice))
             image_1D_1[:]=image_slice
-            display(plot(scene_axis1,20*log10.(image_1D_1),xaxis=("scene axis 1 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900))) # plot the PSF along axis 1
+            display(plot(scene_axis1,20*log10.(image_1D_1),xaxis=("scene axis 1 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the PSF along axis 1
         else;image_1D_1=NaN;println("PSF metrics along 1st dimension cannot be calculated since image has no 1st dimension.");end
         if length(scene_axis2)>1
             image_slice=image_3D[slice_index1,:,slice_index3]
             image_1D_2=zeros(Float64,length(image_slice))
             image_1D_2[:]=image_slice
-            display(plot(scene_axis2,20*log10.(image_1D_2),xaxis=("scene axis 2 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900))) # plot the PSF along axis 2
+            display(plot(scene_axis2,20*log10.(image_1D_2),xaxis=("scene axis 2 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the PSF along axis 2
         else;image_1D_2=NaN;println("PSF metrics along 2nd dimension cannot be calculated since image has no 2nd dimension.");end
         if length(scene_axis3)>1
             image_slice=image_3D[slice_index1,slice_index2,:]
             image_1D_3=zeros(Float64,length(image_slice))
             image_1D_3[:]=image_slice
-            display(plot(scene_axis3,20*log10.(image_1D_3),xaxis=("scene axis 3 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900))) # plot the PSF along axis 3
+            display(plot(scene_axis3,20*log10.(image_1D_3),xaxis=("scene axis 3 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the PSF along axis 3
         else;image_1D_3=NaN;println("PSF metrics along 3rd dimension cannot be calculated since image has no 3rd dimension.");end
     end
     return image_1D_1,image_1D_2,image_1D_3
