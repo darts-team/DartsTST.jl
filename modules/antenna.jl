@@ -2,6 +2,7 @@ module Antenna
 
 using LinearAlgebra
 using NCDatasets
+using Interpolations
 
 function pattern_sinc(sidelobe_dB,theta, hpbw)
    #     % Nino Majurec, May 23, 2019
@@ -184,14 +185,7 @@ function compute_gain(v, hpbw, slb_dB )
    return res
 end
 
-function interpolate_gain(v, gain_in, th_in )
-   v_sphr = xyz_to_sphr.(v)
-   th = [v_sphr[i][2] for i in 1:size(v_sphr,1)]
 
-   itp = LinearInterpolation(th_in,gain_in, extrapolation_bc = Line());
-   gain =  itp(th)
-   return gain
-end
 
 """
 Creates an Structure of Antenna Principal Cuts based on netCDF file
@@ -200,10 +194,9 @@ Creates an Structure of Antenna Principal Cuts based on netCDF file
  - `pol::String`, [optional] polarization string either Hpol or Vpol (default)
  - `frequency::Array{Float64,1}`, [optional], antenna frequency in GHz [1.25 default]
 # Output
- - `cuts::AntCutType`, in addition to peg coordinates also contains other parameters necessary for peg calculations
+ - `cuts::AntCuts`, in addition to peg coordinates also contains other parameters necessary for peg calculations
 """
-abstract type AntCutType end
-mutable struct AntCuts <:AntCutType
+struct AntCuts
     file::String # filename,must have full path
     pol::String # polarization (should be Hpol or Vpol)
     freqs::Array{Float64,} # frequency
@@ -239,10 +232,9 @@ Creates an Structure of Antenna Grids based on netCDF file
  - `pol::String`, [optional] polarization string either Hpol or Vpol (default)
  - `frequency::Array{Float64,1}`, [optional], antenna frequency in GHz [1.25 default]
 # Output
- - `grid::AntGridType`, in addition to peg coordinates also contains other parameters necessary for peg calculations
+ - `grid::AntGridType`, contains az/el antenna grid pattern
 """
-abstract type AntGridType end
-mutable struct AntGrid <:AntGridType
+struct AntGrid
     file::String # filename,must have full path
     pol::String # polarization (should be Hpol or Vpol)
     freqs::Array{Float64,} # frequency
@@ -250,7 +242,7 @@ mutable struct AntGrid <:AntGridType
     el::Array{Float64,} # elevation axis (deg)
     copol::Array{Complex{Float32},} # copol azimuth grid (complex)
     xpol::Array{Complex{Float32},} # crosspol azimuth grid (complex)
-    function AntGrid(file, pol::String="Vpol",freqs::Array{Float64,}=[1.25])
+    function AntGrid(file::String, pol::String="Vpol",freqs::Array{Float64,}=[1.25])
       ds    = Dataset(file) #create file datastructure
       fvec  = ds["frequency"][:] #read frequencies from file
       frind = findall(in(freqs), fvec) #get index of all frequencies to read
@@ -265,5 +257,103 @@ mutable struct AntGrid <:AntGridType
       new(file, pol, freqs, az, el, sqz(copol), sqz(xpol))
     end
 end
+
+function interpolate_pattern(v::Array{Float64,2}, gain_in::Array{Float64,}, th_in::Array{Float64,})
+   v_sphr = xyz_to_sphr.(v)
+   th = [v_sphr[i][2] for i in 1:size(v_sphr,1)]
+
+   itp = LinearInterpolation(th_in,gain_in, extrapolation_bc = Line());
+   gain =  itp(th)
+   return gain
+end
+"""
+Wrapper method to interpolate Antenna Grids to look vector(s)
+# Arguments
+ - `ant::AntGrid`, antenna grid (see Antenna.AntGrid())
+ - `vec::Array{Float64,}`, xyz vector [3xN] (should be in Antenna Frame)
+ - `frequency::Float64`, [optional], antenna frequency in GHz [1.25 default]
+# Output
+- `copol::Array{Float64,1}`, copol antenna pattern [Nx1]
+- `xpol::Array{Float64,1}`, cross-pol antenna pattern [Nx1]
+"""
+function interpolate_pattern(ant::AntGrid, xyz::Array{Float64,}, freq::Float64=1.25)
+
+   # convert xyz to az,el
+   az, el = xyz_to_azel(xyz)
+
+   # make sure inputs are within the limits of the pattern
+   @assert minimum(el) >= minimum(ant.el) && maximum(el) <=maximum(ant.el) "Look vector array excceeds pattern elevation bounds"
+   @assert minimum(az) >= minimum(ant.az) && maximum(az) <=maximum(ant.az) "Look vector array excceeds pattern azimuth bounds"
+   @assert freq >= minimum(ant.freqs) && freq <=maximum(ant.freqs) "Frequency excceeds pattern bandwidth"
+   if length(ant.freqs) == 1
+      @assert ant.freqs[1] ≈ freq "Input antenna pattern doesn't match input frequency"
+   end
+
+   #interpolate the complex patterns
+   if(length(ant.freqs)>1) #slightly different interpolator for a 3D pattern
+      cpit = interpolate((ant.az, ant.el, ant.freqs), ant.copol, Gridded(Linear()));
+      cpol = cpit.(az, el, freq);
+      xpit = interpolate((ant.az, ant.el, ant.freqs), ant.xpol, Gridded(Linear()));
+      xpol = xpit.(az, el, freq);
+   else
+      cpit = interpolate((ant.az, ant.el), ant.copol, Gridded(Linear()));
+      cpol = cpit.(az, el);
+      xpit = interpolate((ant.az, ant.el), ant.xpol, Gridded(Linear()));
+      xpol = xpit.(az, el);
+   end
+
+   return cpol, xpol
+end
+"""
+Wrapper method to interpolate Antenna Cuts to look vector(s)
+# Arguments
+ - `ant::AntCuts`, antenna cuts (see Antenna.AntCuts())
+ - `vec::Array{Float64,}`, xyz vector [3xN] (should be in Antenna Frame)
+ - `frequency::Float64`, [optional], antenna frequency in GHz [1.25 default]
+# Output
+- `copol::Array{Float64,1}`, copol antenna pattern [Nx1]
+- `xpol::Array{Float64,1}`, cross-pol antenna pattern [Nx1] - WARNING: this should not be used
+"""
+function interpolate_pattern(ant::AntCuts, xyz::Array{Float64,}, freq::Float64=1.25)
+
+   # convert xyz to az,el
+   az, el = xyz_to_azel(xyz)
+
+   # make sure inputs are within the limits of the pattern
+   @assert minimum(el) >= minimum(ant.cut_el) && maximum(el) <=maximum(ant.cut_el) "Look vector array excceeds pattern elevation bounds"
+   @assert minimum(az) >= minimum(ant.cut_az) && maximum(az) <=maximum(ant.cut_az) "Look vector array excceeds pattern azimuth bounds"
+   @assert freq >= minimum(ant.freqs) && freq <=maximum(ant.freqs) "Frequency excceeds pattern bandwidth"
+   if length(ant.freqs) == 1
+      @assert ant.freqs[1] ≈ freq "Input antenna pattern doesn't match input frequency"
+   end
+
+   #azimuth axis need to be sorted (ascending)
+   azsort = sortperm(ant.cut_az)
+
+   #interpolate the complex patterns
+   if(length(ant.freqs)>1) #slightly different interpolator for a 3D pattern
+      mag = maximum(abs.(ant.az_copol));
+      #interpolate azimuth and elevation separately
+      azcpit = interpolate((ant.cut_az[azsort], ant.freqs), ant.az_copol[azsort,:], Gridded(Linear()));
+      azcpol = azcpit.(az, freq);
+      elcpit = interpolate((ant.cut_el, ant.freqs), ant.el_copol./mag, Gridded(Linear())); #elevation is normalized
+      elcpol = elcpit.(el, freq);
+      #combine elevation and azimuth
+      cpol   = azcpol.*elcpol;
+
+   else
+      mag = maximum(abs.(ant.el_copol));
+      #interpolate azimuth and elevation separately
+      azcpit = LinearInterpolation(ant.cut_az[azsort], ant.az_copol[azsort], extrapolation_bc = Line());
+      azcpol = azcpit.(az);
+      elcpit = LinearInterpolation(ant.cut_el, ant.el_copol./mag, extrapolation_bc = Line()); #elevation is normalized
+      elcpol = elcpit.(el);
+      #combine elevation and azimuth
+      cpol   = azcpol.*elcpol;
+   end
+
+   return cpol
+end
+
 
 end
