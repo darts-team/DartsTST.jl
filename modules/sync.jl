@@ -18,7 +18,7 @@ takes the position vectors and slow time vector to produce a phase error matrix 
 
 """
 
-function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, pos::Array{Float64,3}, parameters)
+@everywhere function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, pos::Array{Float64,3}, parameters)
     # - Inputs -
     # time_vector   : a vector of time values at which the orbit positions for each platform are sampled
     # pos           : a matrix (3 x [Np x Nt] or 3 x Nt) of the orbit positions for each platform

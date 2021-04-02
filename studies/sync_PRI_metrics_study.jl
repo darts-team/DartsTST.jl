@@ -143,18 +143,21 @@ no_sync_flag)
 
 
 
-Ntrials = 50 # number of trials per SRI in Monte Carlo simulations
+Ntrials = 3 # number of trials per SRI in Monte Carlo simulations
 
-sync_PRIs = [.1 .5 1 2 5 10 20 50]
-maxprocs = 16 # maximum number of cores to use
+sync_PRIs = [.1 .5]
+# sync_PRIs = [.1 .5 1 2 5 10 20 50]
+maxprocs = 6 # maximum number of cores to use
 
 numSRI = length(sync_PRIs)
 curr_procs = nprocs()
 if curr_procs < maxprocs
     addprocs(maxprocs - curr_procs)
-end
-
-
+    
+    # not adding the else case where we would remove processes. Possible but not useful
+end#if
+curr_procs = nprocs()
+println("Current procs: " * "$curr_procs")
 ## RANGE SPREAD FUNCTION (matched filter output)
 if enable_fast_time # matched filter gain is included in Srx
     Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
