@@ -251,7 +251,7 @@ PSLRs       = zeros(3,numSRI,Ntrials)
 ISLRs       = zeros(3,numSRI,Ntrials)
 loc_errors  = zeros(3,numSRI,Ntrials)
 ## run trials
-@parallel for ntrial = 1 : Ntrials
+@distributed for ntrial = 1 : Ntrials
     # println("Trial Number: ", ntrial)
      for k = 1 : numSRI
         sync_pri = sync_PRIs[k]
