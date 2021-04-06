@@ -69,7 +69,6 @@ function xyz_to_geo(xyz::Array{Float64,},earth_radius::Float64=6.378137e6,earth_
     return geo
 end
 
-<<<<<<< HEAD
 """
 Creates a Peg point based on peg coordinates
 
@@ -79,10 +78,9 @@ Creates a Peg point based on peg coordinates
  - `earth_eccentricity::Float64`, optional, earth eccentricity
 
 # Output
- - `peg::PegPointType`, in addition to peg coordinates also contains other parameters necessary for peg calculations
+ - `peg::PegPoint`, in addition to peg coordinates also contains other parameters necessary for peg calculations
 """
-abstract type PegDataType end
-mutable struct PegPoint <:PegDataType
+mutable struct PegPoint
     pegLat::Float64 # peg latitude (deg)
     pegLon::Float64 # peg longitude (deg)
     pegHdg::Float64 # peg heading (deg)
@@ -123,55 +121,7 @@ mutable struct PegPoint <:PegDataType
         Mxyzprime_xyz=Menu_xyz*Mxyzprime_enu
         new(pegLat, pegLon, pegHdg, eq_rad, ecc, Mxyzprime_xyz, O, ra)
     end
-=======
-function peg_calculations(peg,earth_radius,earth_eccentricity)
-    e2  = earth_eccentricity^2 #eccentricity squared
-    #break out peg parameters
-    pegθ  = peg[1]*π/180
-    pegϕ  = peg[2]*π/180
-    peghed  = peg[3]*π/180
-    repeg = earth_radius/sqrt(1-e2*sin(pegθ)^2)
-    rnpeg = earth_radius*(1-e2)/sqrt((1-e2*sin(pegθ)^2)^3)
-    ra = repeg*rnpeg/(repeg*cos(peghed)^2+rnpeg*sin(peghed)^2)
 
-    #ENU to XYZ transformation matrix
-    Menu_xyz = [-sin(pegϕ) -sin(pegθ)*cos(pegϕ) cos(pegθ)*cos(pegϕ);
-                 cos(pegϕ) -sin(pegθ)*sin(pegϕ) cos(pegθ)*sin(pegϕ);
-                  0            cos(pegθ)             sin(pegθ)]
-
-
-    #X'Y'Z' to ENU transformation matrix
-    Mxyzprime_enu = [0 sin(peghed) -cos(peghed);
-                     0 cos(peghed) sin(peghed);
-                     1    0           0]
-    #Up vector in XYZ
-    Uxyz = Menu_xyz*[0 0 1]';
-
-    #vector from center of ellipsoid to pegpoint
-    P = [repeg*cos(pegθ)*cos(pegϕ), repeg*cos(pegθ)*sin(pegϕ), repeg*(1-e2)*sin(pegθ)]
-
-    #translation vector
-    O = P-ra*Uxyz
-    Mxyzprime_xyz=Menu_xyz*Mxyzprime_enu
-    return Mxyzprime_xyz,O,ra
-end
-
-function sch_to_xyz_2(sch,Mxyzprime_xyz,O,ra) # works with a single point only
-    xyz = zeros(3)
-    #break out SCH vectors
-    s   = sch[1]
-    c   = sch[2]
-    h   = sch[3]
-    #conversion from S,C,H to Stheta, Ctheta, H coordinates
-    Stheta=s/ra
-    Clamda=c/ra
-    #convert [Stheta, Clamda, h] vector to [X',Y',Z'] vector
-    XYZPrime=[(ra+h)*cos(Clamda)*cos(Stheta), (ra+h)*cos(Clamda)*sin(Stheta),(ra+h)*sin(Clamda)]
-    #compute the xyz value
-    xyz=Mxyzprime_xyz*XYZPrime+O;
-    xyz=[xyz[1],xyz[2],xyz[3]]
-    return xyz
->>>>>>> cf789f8fe320d600493f7cf004fc5524f5197a44
 end
 
 
@@ -185,7 +135,7 @@ Converts SCH coordinates to ECEF XYZ
 # Output
  - `XYZ:3xN Float Array`, ECEF XYZ coordinates
 """
-function sch_to_xyz(sch::Array{Float64,1},peg)
+function sch_to_xyz(sch::Array{Float64,1},peg::PegPoint)
 
     #conversion from S,C,H to Stheta, Ctheta, H coordinates
     Stheta=sch[1]/peg.Ra
@@ -197,7 +147,7 @@ function sch_to_xyz(sch::Array{Float64,1},peg)
     #compute and return the xyz value
     return peg.Mxyzprime_xyz*XYZPrime+peg.O
 end
-function sch_to_xyz(sch::Array{Float64,2},peg)
+function sch_to_xyz(sch::Array{Float64,2},peg::PegPoint)
     @assert size(sch,1)==3 "SCH vector needs to be 3xN"
 
     #set up xyz output
