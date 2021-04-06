@@ -4,17 +4,21 @@ using Plots
 
 function plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata)
     gr()
-    if enable_fast_time
+    if enable_fast_time # plot range-compressed pulse (matched filter output)
         display(plot(ft*1e6,20*log10.(abs.(MF)),ylims=(-100+20*log10(maximum(MF)),20*log10(maximum(MF))),leg=false,xlabel="fast time (μs)",ylabel="amplitude (dB)",title="Matched Filter Output (Range Spread Function)",size=(1600,900)))
         display(plot(t_rx*1e6,20*log10.(abs.(Srx)),ylims=(-100+20*log10(maximum(Srx)),20*log10(maximum(Srx))),leg=false,xlabel="fast time (μs)",ylabel="amplitude (dB)",title="Receive Window/Signal",size=(1600,900)))
     end
+    # plot rawdata
     if mode==1 || mode==2
-        if enable_fast_time
+        if enable_fast_time #rawdata is displayed as a 2D image of size Nft x Np*Nst
             display(heatmap(t_rx,1:Np*Nst,20*log10.(abs.(reshape(rawdata,Np*Nst,size(t_rx)[1]))),c=cgrad([:black,:white]),xlabel="fast-time (s)",ylabel="TX/RX platform pairs",title="raw data amplitude (dB)",size=(1600,900)))
-        else
+        else #rawdata is displayed as a 2D image of size Np x Nst
             display(heatmap(1:Np,1:Nst,20*log10.(abs.(rawdata)),c=cgrad([:black,:white]),xlabel="platforms",ylabel="pulse number",title="raw data amplitude (dB)",size=(1600,900)))
         end
-    elseif mode==3 #TODO
+    elseif mode==3 #TODO how to display it?
+        if enable_fast_time # rawdata is a 4D array of size Nst x Np(RX) x Np(TX) x Nft
+        else # rawdata is a 3D array of size Nst x Np(RX) x Np(TX)
+        end
     end
 end
 
