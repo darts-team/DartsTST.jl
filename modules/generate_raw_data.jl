@@ -3,7 +3,7 @@ using Random
 
 c=299792458 # speed of light (m/s)
 
-function main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc) # no RSF #TODO use structure as input
+function main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc) # no RSF
     λ=c/fc # wavelength (m)
     Nt=size(t_xyz_grid)[2] # number of targets
     Np=size(p_xyz_grid)[2] # number of platforms
@@ -32,7 +32,7 @@ function main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc) # no RSF #TODO use structure 
     return rawdata
 end
 
-function main_RSF(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,Srx,t_rx,ref_range) # with RSF #TODO use structure as input
+function main_RSF(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,Srx,t_rx,ref_range) # with RSF
     # TODO add descriptions of inputs and output
     λ=c/fc # wavelength (m)
     Nt=size(t_xyz_grid)[2] # number of targets
@@ -86,7 +86,7 @@ function main_RSF(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,Srx,t_rx,ref_range) # with
     return rawdata
 end
 
-function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range) # with RSF and slow-time  #TODO use structure as input
+function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range) # with RSF and slow-time
     # TODO add descriptions of inputs and output
     λ=c/fc # wavelength (m)
     Nt=size(t_xyz_grid)[2] # number of targets
@@ -143,7 +143,7 @@ function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range)
     return rawdata
 end
 
-function main_noRSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc) # without fast-time and slow-time  #TODO use structure as input
+function main_noRSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc) # without fast-time and slow-time 
     # TODO add descriptions of inputs and output
     λ=c/fc # wavelength (m)
     Nt=size(t_xyz_grid)[2] # number of targets

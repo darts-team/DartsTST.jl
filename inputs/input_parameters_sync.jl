@@ -1,10 +1,10 @@
-# add new clock based parameters
-# need to have selection of oscillator_quality for each receiver (for non-uniform constellation)
-use_orbits_flag = false # true if using an orvbit file to inform number of platforms
+using NCDatasets
+
+use_orbits_flag = true # true if using an orbit file to inform number of platforms
 if !use_orbits_flag
     setNumPlatforms = 3 # manually select number of Rx platforms
 end 
-sync_pri = 1 # (s) repition interval of sync
+sync_pri = 1 # (s) repetition interval of sync
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length
@@ -41,7 +41,9 @@ end #if
 if disable_freq_offset == 1 # option to remove linear phase drift due to osc frequency offset
     sigma_freq_offsets = zeros(nplat)
 else
-    sigma_freq_offsets = 1.5e-3 # Hz - std. dev. of the frequency offset of the oscillator. This is the linear phase ramp value
+    sigma_freq_offsets = 2e-3 # Hz - std. dev. of the frequency offset of the oscillator. This is the linear phase ramp value
+    # value above comes from: (2e-3 * 2*pi * 1sec) * (180/pi rad/deg) ~= .75 deg/s linear phase drift on LO (roughly matching Krieger paper)
+    # at RF: .75 deg/s * (1GHz/10MHz upconversion) = 75 deg/s linear phase drift
     sigma_freq_offsets = sigma_freq_offsets .* ones(nplat) # convert to matrix form, one value for each oscillator
 end
 

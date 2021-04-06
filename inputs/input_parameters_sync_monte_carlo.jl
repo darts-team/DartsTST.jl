@@ -10,7 +10,8 @@ fc=1e9 # center frequency (Hz)
 fp=100 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz taken from orbits (including slow-time)
-orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
+orbit_filename="../darts-simtool/inputs/orbitOutput_082020.nc" # position in km, time in sec
+
 SAR_duration=3 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations (volumetric grid) defined in geo (θϕh)
@@ -27,9 +28,9 @@ t_θ=7 # deg latitude
 t_ϕ=0 # deg longitude
 t_h=0 # m  heights
 # image/scene pixel coordinates
-s_θ=7-0.0002:0.000004:7+0.0002 # deg latitude
-s_ϕ=-0.0008:0.00004:0.0008 # deg longitude
-s_h=-30:1:30 # m  heights
+s_θ=7-0.0002:0.0000025:7+0.0002 # deg latitude
+s_ϕ=-0.0008:0.00001:0.0008 # deg longitude
+s_h=-30:0.5:30 # m  heights
 
 # range spread function (RSF) parameters
 enable_fast_time = false # whether to enable or disable fast-time axis, 0:disable, 1: enable
@@ -42,5 +43,7 @@ pulse_length=10e-6 # s pulse length
 bandwidth=40e6 # bandwidth (Hz)
 # performance metrics
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
+PSF_peak_target=1 # 1: peak, 2: target
 
 Ntrials = 50 # number of trials in Monte Carlo simulations
+PSF_peak_target = 1
