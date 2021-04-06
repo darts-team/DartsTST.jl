@@ -89,10 +89,10 @@ if PSF_metrics
     println("ISLRs: ",round.(ISLRs,digits=2)," dB")
     println("PSF Peak Amplitude: ",round(maximum(20*log10.(image_3D)),digits=2)," dB")
 end
-## PLOTS
-# 1D PSF cuts are displayed by default in the performance.metrics module
+## PLOTS (1D PSF cuts are displayed by default in the performance.metrics module)
 if display_geometry || display_RSF_rawdata || display_tomograms!=0
     include("modules/plotting.jl")
-    orbit_pos_all=reshape(p_xyz,3,Np*Nst) # platform positions in xyz; for each platform, its position at each pulse (PRI) is plotted; output loops over platforms first, then slow-time
-    Plotting.main(enable_fast_time,display_geometry,display_RSF_rawdata,display_tomograms,mode,rawdata,image_3D,image_1xN,ft,t_rx,MF,Srx,bandwidth,pulse_length,orbit_time,orbit_pos,orbit_pos_all,t_xyz_grid,s_xyz_grid,s_geo_grid,p_xyz,s_θ,s_ϕ,s_h)
+    if display_RSF_rawdata;Plotting.plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata);end
+    if display_geometry;Plotting.plot_geometry(orbit_time,orbit_pos,p_xyz,t_xyz_grid,s_geo_grid,s_xyz_grid);end
+    if display_tomograms!=0;Plotting.plot_tomogram(display_tomograms,image_3D,s_θ,s_ϕ,s_h,s_geo_grid,s_xyz_grid);end
 end
