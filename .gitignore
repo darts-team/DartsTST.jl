@@ -2,3 +2,4 @@
 .DS_Store
 *.nc
 *.jld2
+.ipynb_checkpoints
