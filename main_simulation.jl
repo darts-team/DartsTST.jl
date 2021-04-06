@@ -17,7 +17,7 @@ if enable_fast_time # matched filter gain is included in Srx
     # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
 end
 ## PLATFORM LOCATIONS
-orbit_dataset=Dataset("inputs/orbitOutput_082020.nc") # Read orbits data in NetCDF format TODO take from input parameters
+orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
 t12_orbits=orbit_dataset["time"][1:2] # first two time samples
 dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
 orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
@@ -29,7 +29,6 @@ orbit_pos_interp=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time) # interpola
 p_xyz=1e3*orbit_pos_interp # convert km to m
 Np=size(orbit_pos)[2] # number of platforms
 Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
-orbit_pos_all=reshape(p_xyz,3,Np*Nst) # platform positions in xyz; for each platform, its position at each PRF treated as a different platform; output loops over platforms first, then slow-time
 ## TARGET LOCATIONS
 t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops
 #t_geo_grid=Scene.form3Dgrid_array(t_θ,t_ϕ,t_h) # using array processing
@@ -94,5 +93,6 @@ end
 # 1D PSF cuts are displayed by default in the performance.metrics module
 if display_geometry || display_RSF_rawdata || display_tomograms!=0
     include("modules/plotting.jl")
+    orbit_pos_all=reshape(p_xyz,3,Np*Nst) # platform positions in xyz; for each platform, its position at each pulse (PRI) is plotted; output loops over platforms first, then slow-time
     Plotting.main(enable_fast_time,display_geometry,display_RSF_rawdata,display_tomograms,mode,rawdata,image_3D,image_1xN,ft,t_rx,MF,Srx,bandwidth,pulse_length,orbit_time,orbit_pos,orbit_pos_all,t_xyz_grid,s_xyz_grid,s_geo_grid,p_xyz,s_θ,s_ϕ,s_h)
 end
