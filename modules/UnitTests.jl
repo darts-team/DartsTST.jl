@@ -60,11 +60,11 @@ slow_time=(0:1/parameters.fp:2)
 @testset "simtool" begin
     @testset "Geometry Module" begin
         @test [0,0,-1] == Geometry.rotate_frame([1,0,0], Geometry.quat(-90, [0,1,0]))
-        @test [6.378137e6,0,0] == Geometry.geo_to_xyz([0,0,0],6.378137e6  , 0.)
-        @test [0,0,6.378137e6] == Geometry.geo_to_xyz([90,0,0],6.378137e6  , 0.)
-        @test [0,6.378137e6,0] == Geometry.geo_to_xyz([0,90,0],6.378137e6  , 0.)
-        @test [0,1,0] == Geometry.geo_to_xyz( Geometry.xyz_to_geo([0,1,0], 1 , 0) , 1 , 0)
-        @test [0,cosd(30),sind(30)] == Geometry.geo_to_xyz(Geometry.xyz_to_geo([0,cosd(30),sind(30)], 1 , 0) , 1 , 0)
+        @test [6.378137e6,0,0] == Geometry.geo_to_xyz([0.,0.,0.],6.378137e6  , 0.)
+        @test [0,0,6.378137e6] == Geometry.geo_to_xyz([90.,0.,0.],6.378137e6  , 0.)
+        @test [0,6.378137e6,0] == Geometry.geo_to_xyz([0.,90.,0.],6.378137e6  , 0.)
+        @test [0.,1.,0.] == Geometry.geo_to_xyz( Geometry.xyz_to_geo([0.,1.,0.]))
+        @test [15.,13.,12.] ≈ Geometry.xyz_to_geo(Geometry.geo_to_xyz([15.,13.,12.]))
     end
     @testset "Sync Module" begin
         @test ([0.9084405771506712, 0.8548258968972741, 13.848179529735841, 39.02668776561919, 3.2794229862786333], [-2.5, -1.5, -0.5, 0.5, 1.5]) == Sync.osc_psd_twosided(5,5,[1 1 1 1 1])
