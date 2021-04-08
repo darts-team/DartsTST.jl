@@ -1,18 +1,30 @@
-include("../modules/generate_raw_data.jl")
-include("../modules/process_raw_data.jl")
-include("../modules/geometry.jl")
-include("../modules/scene.jl")
-include("../modules/sync.jl")
-include("../modules/range_spread_function.jl") # as RSF
-include("../modules/orbits.jl")
-include("../modules/error_sources.jl")
-include("../modules/performance_metrics.jl")
 
 using NCDatasets
 using Plots
 using Statistics
 using JLD2 # note: may have to Pkg.add("JLD2")
-using Distributed
+using Distributed, SharedArrays
+
+maxprocs = 20 # maximum number of cores to use
+curr_procs = nprocs()
+if curr_procs < maxprocs
+    addprocs(maxprocs - curr_procs)
+    
+    # not adding the else case where we would remove processes. Possible but not useful
+end#if
+curr_procs = nprocs()
+println("Current procs: " * "$curr_procs")
+## includes
+@everywhere include("../darts-simtool/modules/generate_raw_data.jl")
+@everywhere include("../darts-simtool/modules/process_raw_data.jl")
+@everywhere include("../darts-simtool/modules/geometry.jl")
+@everywhere include("../darts-simtool/modules/scene.jl")
+@everywhere include("../darts-simtool/modules/sync.jl")
+@everywhere include("../darts-simtool/modules/range_spread_function.jl") # as RSF
+@everywhere include("../darts-simtool/modules/orbits.jl")
+@everywhere include("../darts-simtool/modules/error_sources.jl")
+@everywhere include("../darts-simtool/modules/performance_metrics.jl")
+
 
 ## Determining Parameters
 c=299792458 # speed of light (m/s)
@@ -44,17 +56,16 @@ t_θ=7 # deg latitude
 t_ϕ=0 # deg longitude
 t_h=0 # m  heights
 # image/scene pixel coordinates
-s_θ=7-0.0002:0.0000025:7+0.0002 # deg latitude
-s_ϕ=-0.0008:0.00001:0.0008 # deg longitude
-s_h=-30:0.5:30 # m  heights
+s_θ=7-0.0003:0.0000025:7+0.0003 # deg latitude
+s_ϕ=-0.001:0.00001:0.001 # deg longitude
+s_h=-35:0.5:35 # m  heights
 # s_θ=7-0.0002:0.0001:7+0.0002 # deg latitude -- for testing
 # s_ϕ=-0.0008:0.0004:0.0008 # deg longitude
 # s_h=-30:10:30 # m  heights
 
 # range spread function (RSF) parameters
-enable_fast_time = false # whether to enable or disable fast-time axis, 0:disable, 1: enable
+enable_fast_time = true # whether to enable or disable fast-time axis, 0:disable, 1: enable
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
-add_phase_errors = true
 disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
 pulse_length=10e-6 # s pulse length
@@ -97,7 +108,7 @@ sync_pri=1 # to be overwritten in loop
 no_sync_flag = false; # if flag == true, no sync is used. flag == false results in normal sync process estimation
 ## make a struct of important input parameters
 #list key parameters in here, they will get passed to most(?) modules
-mutable struct keyParameters
+@everywhere mutable struct keyParameters
     # radar parameters
     mode #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     tx_el # which element transmits for SIMO (max value N)
@@ -143,21 +154,10 @@ no_sync_flag)
 
 
 
-Ntrials = 3 # number of trials per SRI in Monte Carlo simulations
-
-sync_PRIs = [.1 .5]
-# sync_PRIs = [.1 .5 1 2 5 10 20 50]
-maxprocs = 6 # maximum number of cores to use
-
+Ntrials = 100 # number of trials per SRI in Monte Carlo simulations
+sync_PRIs = [.1 .5 1 2 5 10 20]
 numSRI = length(sync_PRIs)
-curr_procs = nprocs()
-if curr_procs < maxprocs
-    addprocs(maxprocs - curr_procs)
-    
-    # not adding the else case where we would remove processes. Possible but not useful
-end#if
-curr_procs = nprocs()
-println("Current procs: " * "$curr_procs")
+
 ## RANGE SPREAD FUNCTION (matched filter output)
 if enable_fast_time # matched filter gain is included in Srx
     Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
@@ -243,25 +243,25 @@ else
     show("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
 end
 
-
-## Initialize up result vectors
-peaks       = zeros(numSRI,Ntrials)
-resolutions = zeros(3,numSRI,Ntrials)
-PSLRs       = zeros(3,numSRI,Ntrials)
-ISLRs       = zeros(3,numSRI,Ntrials)
-loc_errors  = zeros(3,numSRI,Ntrials)
+## Initialize result vectors
+peaks       = SharedArray{Float64}(numSRI,Ntrials)
+resolutions = SharedArray{Float64}(3,numSRI,Ntrials)
+PSLRs       = SharedArray{Float64}(3,numSRI,Ntrials)
+ISLRs       = SharedArray{Float64}(3,numSRI,Ntrials)
+loc_errors  = SharedArray{Float64}(3,numSRI,Ntrials)
 ## run trials
-@distributed for ntrial = 1 : Ntrials
+@sync @distributed for ntrial = 1 : Ntrials
+# Threads.@threads for ntrial = 1 : Ntrials
     # println("Trial Number: ", ntrial)
+    
      for k = 1 : numSRI
         sync_pri = sync_PRIs[k]
         parameters.sync_pri = sync_pri
-            
-        ## add in error sources, loop over Ntrials and number of SRIs
-        if add_phase_errors == true
-            rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
-        end
-
+        println("Starting SRI value: ", sync_pri)
+    
+        ## add in error sources
+        rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
+    
         ## PROCESS RAW DATA TO GENERATE IMAGE
         if enable_fast_time # with fastime, with slowtime
             image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
@@ -269,7 +269,7 @@ loc_errors  = zeros(3,numSRI,Ntrials)
             image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc)
         end
         image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_θ,Ns_ϕ,Ns_h)
-
+    
         ## PERFORMANCE METRICS
         # PSF metrics
         if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when there is only one point target
@@ -279,16 +279,17 @@ loc_errors  = zeros(3,numSRI,Ntrials)
             resolution=[NaN,NaN,NaN]
             PSLR=[NaN,NaN,NaN]
             ISLR=[NaN,NaN,NaN]
-            println("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
+            # println("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
         end
         (peak, idx)             = findmax(image_3D) # finds maximum and index of max
         peaks[k,ntrial]         = peak
         loc_errors[:,k,ntrial]  = loc_error
-        resolutions[:,ntrial]   = resolution
+        resolutions[:,k,ntrial] = resolution
         PSLRs[:,k,ntrial]       = PSLR
         ISLRs[:,k,ntrial]       = ISLR
-    end#Ntrials
-end#N SRIs
+    end#N SRIs
+    
+end#Ntrials
 
 if disable_freq_offset # test to denote frequency error or not in save file name
     freq_text = "noFreq"
@@ -302,3 +303,5 @@ outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$osc_type"*"_sync_pri_swee
 #println(std(resolutions[1,:]))
 # Note: JLD2 can be read using "@load filename var1 var2...
 println("Run Complete, and file saved to " *outputfilename)
+
+
