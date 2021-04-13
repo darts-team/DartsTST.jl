@@ -1,38 +1,68 @@
 module Scene
-#TODO #TODO add function definitions, comments, define input types, remove unused functions
+#TODO add function definitions, comments, define input types, remove unused functions
 
-include("geometry.jl")
+#include("geometry.jl")
+using ..Geometry
 using LinearAlgebra
 
-function form3Dgrid_for(t_θ,t_ϕ,t_h) # for loop method
-  t_geo_grid=zeros(3,length(t_θ)*length(t_ϕ)*length(t_h))
+"""
+Generates 3D (volumetric) grid from three 1D (linear) arrays using nested for-loops
+## Arguments
+  - array1,1D arrays of size N1 representing first principal axes of the 3D volume
+  - array2,1D arrays of size N2 representing second principal axes of the 3D volume
+  - array3:1D arrays of size N3 representing third principal axes of the 3D volume
+## Outputs
+  vol_grid: coordinates of 3D (volumetric) grid of points as 3xN matrix where N=N1xN2xN3
+"""
+function form3Dgrid_for(array1,array2,array3)
+  vol_grid=zeros(3,length(array1)*length(array2)*length(array3))
   m=0
-  for i=1:length(t_θ)
-    for j=1:length(t_ϕ)
-      for k=1:length(t_h)
+  for i=1:length(array1)
+    for j=1:length(array2)
+      for k=1:length(array3)
         m=m+1
-        t_geo_grid[:,m]=[t_θ[i],t_ϕ[j],t_h[k]]
+        vol_grid[:,m]=[array1[i],array2[j],array3[k]]
       end
     end
   end
-  return t_geo_grid
+  return vol_grid
 end
 
-function form3Dgrid_array(t_θ,t_ϕ,t_h) # array method
-  t_θ1=Array{Float64}(undef,1,length(t_θ))
-  t_ϕ1=Array{Float64}(undef,1,length(t_ϕ))
-  t_h1=Array{Float64}(undef,1,length(t_h))
-  t_θ1[:].=t_θ
-  t_ϕ1[:].=t_ϕ
-  t_h1[:].=t_h
-  t_θ_all=repeat(t_θ1,inner=[1,1],outer=[1,length(t_ϕ)*length(t_h)])
-  t_ϕ_all=repeat(t_ϕ1,inner=[1,length(t_θ)],outer=[1,length(t_h)])
-  t_h_all=repeat(t_h1,inner=[1,length(t_θ)*length(t_ϕ)],outer=[1,1])
-  t_geo_grid=[t_θ_all;t_ϕ_all;t_h_all]
-  return t_geo_grid
+"""
+Generates 3D (volumetric) grid from three 1D (linear) arrays using array processing
+## Arguments
+  - array1,1D arrays of size N1 representing first principal axes of the 3D volume
+  - array2,1D arrays of size N2 representing second principal axes of the 3D volume
+  - array3:1D arrays of size N3 representing third principal axes of the 3D volume
+## Outputs
+  vol_grid: coordinates of 3D (volumetric) grid of points as 3xN matrix where N=N1xN2xN3
+"""
+function form3Dgrid_array(array1,array2,array3)
+  array11=Array{Float64}(undef,1,length(array1))
+  array22=Array{Float64}(undef,1,length(array2))
+  array33=Array{Float64}(undef,1,length(array3))
+  array11[:].=array1
+  array22[:].=array2
+  array33[:].=array3
+  array1_all=repeat(array11,inner=[1,1],outer=[1,length(array2)*length(array3)])
+  array2_all=repeat(array22,inner=[1,length(array1)],outer=[1,length(array3)])
+  array3_all=repeat(array33,inner=[1,length(array1)*length(array2)],outer=[1,1])
+  vol_grid=[array1_all;array2_all;array3_all]
+  return vol_grid
 end
 
-function lookangle_to_range(ra,θ_l,p_h,t_h) # look angle to slant/ground range,  p_h is platform height, spherical planet with radius ra, t_h is target heights vector
+"""
+Convert look angle to slant/ground range (spherical planet assumed)
+## Inputs
+  - θ_l: look angles (deg)
+  - p_h: platform height (m)
+  - ra: radius of spherical planet (m)
+  - t_h: target heights vector (m)
+## Outputs
+  - rs: slant ranges to the targets
+  - rg: ground ranges to the targets
+"""
+function lookangle_to_range(θ_l,p_h,t_h, ra)
     ra=ra.+t_h
     p_h=p_h.-t_h
     inc=asind.(sind.(θ_l).*(ra+p_h)./ra) # deg incidence angle
@@ -42,7 +72,17 @@ function lookangle_to_range(ra,θ_l,p_h,t_h) # look angle to slant/ground range,
     return rs, rg
 end
 
-function slantrange_to_lookangle(ra,rs,p_h) # slant range to look angle and ground range,  p_h is platform height, spherical planet with radius ra TODO add target height
+"""
+Slant range to look angle and ground range conversion (spherical planet assumed)
+## Inputs
+  - p_h: platform height
+  - ra: radius of spherical planet
+  - rs: slant ranges to the targets
+## Outputs
+  - θ_l: look angles to the targets
+  - rg: ground ranges to the targets
+"""
+function slantrange_to_lookangle(ra,rs,p_h) # target height is assumed 0 TODO add target height
   θ_l=acos.((rs.^2+(ra+p_h).^2-ra^2)./(2*rs.*(ra+p_h))) # rad look angle
   inc=asin.((ra+p_h)./ra.*sin.(θ_l)) # rad incidence angle
   α=inc-θ_l # rad planet-central anglesin
@@ -50,14 +90,35 @@ function slantrange_to_lookangle(ra,rs,p_h) # slant range to look angle and grou
   return rg,θ_l*180/pi
 end
 
-function groundrange_to_lookangle(ra,rg,p_h) # ground range to look angle and slant range,  p_h is platform height, spherical planet with radius ra  TODO add target height
+"""
+Ground range to look angle and slant range conversion (spherical planet assumed)
+## Arguments
+  p_h: platform height
+  ra: radius of spherical planet
+  rg: ground ranges to the targets
+## Outputs
+  - θ_l: look angles to the targets
+  - rs: slant ranges to the targets
+"""
+function groundrange_to_lookangle(ra,rg,p_h) # # target height is assumed 0 TODO add target height
   α=rg/ra # rad planet-central angle
   rs=(((ra+p_h)*sind.(α)).^2+((ra+p_h).*cosd.(α)-ra).^2).^0.5 # slant range
   θ_l=acos.((rs.^2+(ra+p_h).^2-ra^2)./(2*rs.*(ra+p_h))) # rad look angle
   return rs,θ_l*180/pi
 end
 
-function lookh_to_xyz(lookh,p_θϕh,peg,a,e)  # look is a 3xN array for N  points, p_geo is platform location in geo
+"""
+Convert Azimuth/Elevation look angles and target heights to target xyz (spherical approximation)
+## Arguments
+  - lookh: 3xN array for N point targets (1st dimension: azimuth look angles [deg], 2nd dimension: elevation look angles [deg], 3rd dimension: target heights [m])
+  - platform_geo: platform location in geographic coordinates (lat/lon/height)
+  - peg: peg point struct (see Geometry.PegPoint for details)
+  - earth_radius: radius of earth (optional)
+  - earth_eccentricity: eccentricity of earth (optional)
+## Outputs
+  - T_xyz: vector of target positions in xyz
+"""
+function lookh_to_xyz(lookh,platform_geo,peg::Geometry.PegPoint,earth_radius::Float64=6.378137e6,earth_eccentricity::Float64=0.08181919084267456)
     vL2_sch=zeros(size(lookh))
     peg_xyz_grid=zeros(size(lookh))
     vL_xyz=zeros(size(lookh))
@@ -65,29 +126,43 @@ function lookh_to_xyz(lookh,p_θϕh,peg,a,e)  # look is a 3xN array for N  point
     ϕ_l=lookh[1,:] # deg  azimuth angles
     θ_l=lookh[2,:] # deg elevation angles
     t_h=lookh[3,:] # target heights
-    p_h=p_θϕh[3] # platform height
-    p_xyz=Geometry.geo_to_xyz(p_θϕh,a,e) # platform position in xyz
-    rs,rg=lookangle_to_range(a,θ_l,p_h,t_h) # slant range between target and platform, assumes spherical planet #TODO change a to ra TODO t_h can be a smaller vector and then repeat
+    p_h=platform_geo[3] # platform height
+    p_xyz=Geometry.geo_to_xyz(platform_geo,earth_radius,earth_eccentricity) # platform position in xyz
+    rs,rg=lookangle_to_range(θ_l,p_h,t_h, earth_radius) # slant range between target and platform, assumes spherical planet TODO t_h can be a smaller vector and then repeat
     vL2_sch[1,:]=sind.(θ_l).*sind.(ϕ_l)
     vL2_sch[2,:]=sind.(θ_l).*cosd.(ϕ_l) #TODO add d for left/right looking
     vL2_sch[3,:]=-cosd.(θ_l) # look vectors in geo (for each target at each look angle
-    vL2_xyz=Geometry.sch_to_xyz(vL2_sch,peg,a,e) # look vectors in xyz (for each target at each look angle)
-    peg_geo=[peg[1],peg[2],0]
-    peg_xyz=Geometry.geo_to_xyz(peg_geo,a,e)
-    peg_xyz_grid=repeat(peg_xyz,1,size(lookh)[2])
+    #peg_point = Geometry.PegPoint(peg[1], peg[2], peg[3],earth_radius,earth_eccentricity) # create peg point struct
+    vL2_xyz=Geometry.sch_to_xyz(vL2_sch,peg) # look vectors in xyz (for each target at each look angle)
+    peg_geo=[peg.pegLat,peg.pegLon,0]
+    peg_xyz=Geometry.geo_to_xyz(peg_geo,earth_radius,earth_eccentricity)
+    peg_xyz_grid=repeat(peg_xyz,1,size(lookh,2))
     rs_grid=repeat(rs',3,1)
     vL_xyz=rs_grid.*(vL2_xyz.-peg_xyz_grid)
-    vT=vL_xyz.+p_xyz # target vectors in xyz (for azimuth angle of 0 deg)
-    return vT
+    vT_xyz=vL_xyz.+p_xyz # target vectors in xyz (for azimuth angle of 0 deg)
+    return vT_xyz
 end
 
-function chP_to_xyz_grid(t_c,t_h,rot_P,p_θϕh,peg,a,e)
+"""
+Converts target positions defined in chP (C,H- of SCH) and azimuth angle vector around platform position vector to ECEF xyz
+## Arguments
+  - t_c: cross-track coordinates of target points
+  - t_h: height coordinates of target points
+  - rot_P: amount of rotations (as an array) in degrees of look vector about platform position vector
+  - platform_geo: platform location in geographic coordinates (lat/lon/height)
+  - peg: peg point coordinates for sch to xyz conversion (see Geometry.PegPoint)
+  - earth_radius: radius of earth (optional)
+  - earth_eccentricity: eccentricity of earth (optional)
+## Outputs
+  - XYZ-grid: target positions in ECEF-xyz as a 3xN array
+"""
+function chP_to_xyz_grid(t_c,t_h,rot_P,platform_geo,peg::Geometry.PegPoint,earth_radius::Float64=6.378137e6,earth_eccentricity::Float64=0.08181919084267456)
   t_s=0 # before rotation around P, targets are at the same along-track position with platform
-  p_xyz=Geometry.geo_to_xyz(p_θϕh,a,e) # platform position in xyz
+  p_xyz=Geometry.geo_to_xyz(platform_geo,earth_radius,earth_eccentricity) # platform position in xyz
   p_xyz=p_xyz/norm(p_xyz)
   t_sch_grid=Scene.form3Dgrid_for(t_s,t_c,t_h) # using 3 nested for loops
   #t_geo_grid=Scene.form3Dgrid_array(t_s,t_c,t_h) # using array processing
-  t_xyz_grid=Geometry.sch_to_xyz(t_sch_grid,peg,a,e)
+  t_xyz_grid=Geometry.sch_to_xyz(t_sch_grid,peg)
   t_xyz_grid_rot=zeros(3,size(t_c)[1]*size(t_h)[1]*size(rot_P)[1])
   # rotate look vector around platform vector by azimuth degrees
   for i=1:size(rot_P)[1]
@@ -100,23 +175,21 @@ function chP_to_xyz_grid(t_c,t_h,rot_P,p_θϕh,peg,a,e)
   return t_xyz_grid_rot
 end
 
-function chP_to_xyz_single(t_sch,rot_P,p_θϕh,peg,a,e)
-  p_xyz=Geometry.geo_to_xyz(p_θϕh,a,e) # platform position in xyz
-  p_xyz=p_xyz/norm(p_xyz)
-  Mxyzprime_xyz,O,ra=Geometry.peg_calculations(peg,a,e)
-  t_xyz=Geometry.sch_to_xyz_2(t_sch,Mxyzprime_xyz,O,ra)
-  # rotate look vector around platform vector by azimuth degrees
-  q = Geometry.quat(rot_P, p_xyz) #create a quaternion to rotate a vector by rot_P degrees about platform position vector
-  t_xyz_rot = Geometry.rotate_vec(t_xyz, q) #rotate target position vectors around platform position vector
-end
-
-function convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
-  image_3D=zeros(Ns_θ,Ns_ϕ,Ns_h)
-  for i=1:Ns_θ
-    for j=1:Ns_ϕ
-      for k=1:Ns_h
-        indx=(i-1)*Ns_ϕ*Ns_h+(j-1)*Ns_h+k
-        image_3D[i,j,k]=image_3xN[indx] # square for power?
+"""
+Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which is useful for displaying tomograms
+## Arguments
+  - image_1xN: 1D scene array of size 1xN (N=Ns1xNs2xNs3)
+  - Ns1,Ns2,Ns3: lengths of scene vectors in each principle axis
+## Outputs
+  - image_3D: 3D scene array of size Ns1xNs2xNs3
+"""
+function convert_image_1xN_to_3D(image_1xN,Ns1,Ns2,Ns3)
+  image_3D=zeros(Ns1,Ns2,Ns3)
+  for i=1:Ns1
+    for j=1:Ns2
+      for k=1:Ns3
+        indx=(i-1)*Ns2*Ns3+(j-1)*Ns3+k
+        image_3D[i,j,k]=image_1xN[indx] # square for power?
       end
     end
   end

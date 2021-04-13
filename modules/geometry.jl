@@ -2,11 +2,25 @@ module Geometry
 using ReferenceFrameRotations
 using LinearAlgebra
 
+" Create Quaternion based on rotation angle and axis"
 quat(rot_angle, rot_ax) = Quaternion(cosd(rot_angle/2.0), rot_ax*sind(rot_angle/2.0))
+" Rotate frame given a rotation quaternion "
 rotate_frame(v,q) = vect(inv(q)*v*q)
+" Rotate vector, given a rotation quaternion "
 rotate_vec(v,q) = vect(q*v*inv(q))
 
-function geo_to_xyz(geo,earth_radius,earth_eccentricity) # geo (θϕh) is a 3xN array for N  points
+"""
+Converts Lat/Log/Height to ECEF XYZ position
+
+# Arguments
+ - `geo::3x1 Float Array`, Lat/Long/Height (deg,deg,m)
+ - `earth_radius::Float64`, optional, earth equatorial radius (in meters)
+ - `earth_eccentricity::Float64`, optional, earth eccentricity
+
+# Output
+ - `xyz::3x1 Float Array`, ECEF xyz positions (in meters)
+"""
+function geo_to_xyz(geo::Array{Float64,},earth_radius::Float64=6.378137e6,earth_eccentricity::Float64=0.08181919084267456)
     xyz=zeros(size(geo))
     θ=geo[1,:] # latitude [deg]
     ϕ=geo[2,:] # longitude [deg]
@@ -18,130 +32,141 @@ function geo_to_xyz(geo,earth_radius,earth_eccentricity) # geo (θϕh) is a 3xN 
     return xyz
 end
 
-function xyz_to_geo(xyz,earth_radius,earth_eccentricity)
-    geo=zeros(3)
-    x=xyz[1]
-    y=xyz[2]
-    z=xyz[3]
-    b=earth_radius*(1-earth_eccentricity^2)^0.5
-    if x>=0
-        ϕ=atand(y/x)
-    elseif x<0
-        ϕ=sign(y)*atand(y/x)+180
-    end
-    p=(x^2+y^2)^0.5
-    alpha=atand((z/p)*(1/(1-e^2))^0.5)
-    θ=atand((z+(earth_eccentricity^2/(1-earth_eccentricity^2))*b*sind(alpha)^3)/(p-earth_eccentricity^2*earth_radius*cosd(alpha)^3))
-    re=earth_radius/(1-earth_eccentricity^2*sind(θ)^2)^0.5
-    h=p/cosd(θ)-re
-    geo=[θ, ϕ, h]
+"""
+Converts ECEF XYZ position to Lat/Log/Height
+
+# Arguments
+ - `xyz::3xN Float Array`, ECEF xyz positions (in meters)
+ - `earth_radius::Float64`, optional, earth equatorial radius (in meters)
+ - `earth_eccentricity::Float64`, optional, earth eccentricity
+
+# Output
+ - `geo::3xN Float Array`, Lat/Long/Height (deg,deg,m)
+"""
+function xyz_to_geo(xyz::Array{Float64,},earth_radius::Float64=6.378137e6,earth_eccentricity::Float64=0.08181919084267456)
+    ecc_sq = earth_eccentricity^2; #eccentricity squared
+    geo=zeros(size(xyz))
+    x=xyz[1,:]
+    y=xyz[2,:]
+    z=xyz[3,:]
+
+    #latitude computation
+    semi_minor_axis=earth_radius*sqrt(1-earth_eccentricity^2)
+    p=sqrt.(x.^2+y.^2)
+    α=atan.(z, p*sqrt(1-ecc_sq))
+    θ=atan.(z+ecc_sq/(1-ecc_sq)*semi_minor_axis*sin.(α).^3, p-ecc_sq*earth_radius*cos.(α).^3)
+
+    #longitude
+    ϕ=atan.(y,x)
+
+    #height computation
+    re=earth_radius./sqrt.(1.0.-ecc_sq.*sin.(θ).^2)
+    h=p./cos.(θ)-re
+
+    geo[1,:] = θ*180/π
+    geo[2,:] = ϕ*180/π
+    geo[3,:] = h
     return geo
 end
 
-function peg_calculations(peg,earth_radius,earth_eccentricity)
-    e2  = earth_eccentricity^2 #eccentricity squared
-    #break out peg parameters
-    pegθ  = peg[1]*π/180
-    pegϕ  = peg[2]*π/180
-    peghed  = peg[3]*π/180
-    repeg = earth_radius/sqrt(1-e2*sin(pegθ)^2)
-    rnpeg = earth_radius*(1-e2)/sqrt((1-e2*sin(pegθ)^2)^3)
-    ra = repeg*rnpeg/(repeg*cos(peghed)^2+rnpeg*sin(peghed)^2)
+"""
+Creates a Peg point based on peg coordinates
 
-    #ENU to XYZ transformation matrix
-    Menu_xyz = [-sin(pegϕ) -sin(pegθ)*cos(pegϕ) cos(pegθ)*cos(pegϕ);
-                 cos(pegϕ) -sin(pegθ)*sin(pegϕ) cos(pegθ)*sin(pegϕ);
-                  0            cos(pegθ)             sin(pegθ)]
+# Arguments
+ - `peg::3xN Float Array`, peg coordinates [peglat, pegLon, pegHeading] in (deg,deg,deg)
+ - `earth_radius::Float64`, optional, earth equatorial radius (in meters)
+ - `earth_eccentricity::Float64`, optional, earth eccentricity
 
+# Output
+ - `peg::PegPoint`, in addition to peg coordinates also contains other parameters necessary for peg calculations
+"""
+mutable struct PegPoint
+    pegLat::Float64 # peg latitude (deg)
+    pegLon::Float64 # peg longitude (deg)
+    pegHdg::Float64 # peg heading (deg)
+    eq_rad::Float64 # earth equatorial Radius
+    ecc::Float64 # earth Eccentricity
+    Mxyzprime_xyz::Array{Float64,2} #rotation matrix from xyz prime to xyz
+    O::Array{Float64,2} # translation vector
+    Ra::Float64 # earth radius
+    function PegPoint(pegLat, pegLon,pegHdg,eq_rad::Float64=6.378137e6,ecc::Float64=0.08181919084267456)
+        e2  = ecc^2 #eccentricity squared
+        #break out peg parameters
+        pegθ  = pegLat*π/180
+        pegϕ  = pegLon*π/180
+        peghed  = pegHdg*π/180
+        repeg = eq_rad/sqrt(1-e2*sin(pegθ)^2)
+        rnpeg = eq_rad*(1-e2)/sqrt((1-e2*sin(pegθ)^2)^3)
+        ra = repeg*rnpeg/(repeg*cos(peghed)^2+rnpeg*sin(peghed)^2)
 
-    #X'Y'Z' to ENU transformation matrix
-    Mxyzprime_enu = [0 sin(peghed) -cos(peghed);
-                     0 cos(peghed) sin(peghed);
-                     1    0           0]
-    #Up vector in XYZ
-    Uxyz = Menu_xyz*[0 0 1]';
+        #ENU to XYZ transformation matrix
+        Menu_xyz = [-sin(pegϕ) -sin(pegθ)*cos(pegϕ) cos(pegθ)*cos(pegϕ);
+                     cos(pegϕ) -sin(pegθ)*sin(pegϕ) cos(pegθ)*sin(pegϕ);
+                      0            cos(pegθ)             sin(pegθ)]
 
-    #vector from center of ellipsoid to pegpoint
-    P = [repeg*cos(pegθ)*cos(pegϕ), repeg*cos(pegθ)*sin(pegϕ), repeg*(1-e2)*sin(pegθ)]
+        #X'Y'Z' to ENU transformation matrix
+        Mxyzprime_enu = [0 sin(peghed) -cos(peghed);
+                         0 cos(peghed) sin(peghed);
+                         1    0           0]
+        #Up vector in XYZ
+        Uxyz = Menu_xyz*[0 0 1]';
 
-    #translation vector
-    O = P-ra*Uxyz
-    Mxyzprime_xyz=Menu_xyz*Mxyzprime_enu
-    return Mxyzprime_xyz,O,ra
+        #vector from center of ellipsoid to pegpoint
+        P = [repeg*cos(pegθ)*cos(pegϕ), repeg*cos(pegθ)*sin(pegϕ), repeg*(1-e2)*sin(pegθ)]
+
+        #translation vector
+        O = P-ra*Uxyz
+
+        #rotation vector X'Y'Z' to XYZ
+        Mxyzprime_xyz=Menu_xyz*Mxyzprime_enu
+        new(pegLat, pegLon, pegHdg, eq_rad, ecc, Mxyzprime_xyz, O, ra)
+    end
+
 end
 
-function sch_to_xyz_2(sch,Mxyzprime_xyz,O,ra)
-    xyz = zeros(3)
-    #break out SCH vectors
-    s   = sch[1]
-    c   = sch[2]
-    h   = sch[3]
+
+"""
+Converts SCH coordinates to ECEF XYZ
+
+# Arguments
+ - `SCH::3xN Float Array`, SCH coordinates in meters
+ - `peg::PegPointType`, see PegPoint for more details
+
+# Output
+ - `XYZ:3xN Float Array`, ECEF XYZ coordinates
+"""
+function sch_to_xyz(sch::Array{Float64,1},peg::PegPoint)
+
     #conversion from S,C,H to Stheta, Ctheta, H coordinates
-    Stheta=s/ra
-    Clamda=c/ra
-    #convert [Stheta, Clamda, h] vector to [X',Y',Z'] vector
-    XYZPrime=[(ra+h)*cos(Clamda)*cos(Stheta), (ra+h)*cos(Clamda)*sin(Stheta),(ra+h)*sin(Clamda)]
-    #compute the xyz value
-    xyz=Mxyzprime_xyz*XYZPrime+O;
-    xyz=[xyz[1],xyz[2],xyz[3]]
-    return xyz
-end
+    Stheta=sch[1]/peg.Ra
+    Clamda=sch[2]/peg.Ra
 
-function sch_to_xyz(sch,peg,earth_radius,earth_eccentricity) # works with multiple points (array inputs) #TODO works only for grid
+    #convert [Stheta, Clamda, h] vector to [X',Y',Z'] vector
+    XYZPrime=[(peg.Ra+sch[3])*cos(Clamda)*cos(Stheta), (peg.Ra+sch[3])*cos(Clamda)*sin(Stheta),(peg.Ra+sch[3])*sin(Clamda)]
+
+    #compute and return the xyz value
+    return peg.Mxyzprime_xyz*XYZPrime+peg.O
+end
+function sch_to_xyz(sch::Array{Float64,2},peg::PegPoint)
+    @assert size(sch,1)==3 "SCH vector needs to be 3xN"
+
+    #set up xyz output
     xyz=zeros(size(sch))
-    XYZPrime=zeros(size(sch))
-    e2  = earth_eccentricity^2 #eccentricity squared
-    #break out SCH vectors
-    s   = sch[1,:]
-    c   = sch[2,:]
-    h   = sch[3,:]
-    #break out peg parameters
-    pegθ  = peg[1]*π/180
-    pegϕ  = peg[2]*π/180
-    peghed  = peg[3]*π/180
-    repeg = earth_radius/sqrt(1-e2*sin(pegθ)^2)
-    rnpeg = earth_radius*(1-e2)/sqrt((1-e2*sin(pegθ)^2)^3)
-    ra = repeg*rnpeg/(repeg*cos(peghed)^2+rnpeg*sin(peghed)^2)
 
-    #conversion from S,C,H to Stheta, Ctheta, H coordinates
-    Stheta=s/ra
-    Clamda=c/ra
-
-    #convert [Stheta, Clamda, h] vector to [X',Y',Z'] vector
-    XYZPrime[1,:]=(ra.+h).*cos.(Clamda).*cos.(Stheta)
-    XYZPrime[2,:]=(ra.+h).*cos.(Clamda).*sin.(Stheta)
-    XYZPrime[3,:]=(ra.+h).*sin.(Clamda)
-
-    #ENU to XYZ transformation matrix
-    Menu_xyz = [-sin(pegϕ) -sin(pegθ)*cos(pegϕ) cos(pegθ)*cos(pegϕ);
-                 cos(pegϕ) -sin(pegθ)*sin(pegϕ) cos(pegθ)*sin(pegϕ);
-                  0            cos(pegθ)             sin(pegθ)]
-
-    # X'Y'Z' to ENU transformation matrix
-    Mxyzprime_enu = [0 sin(peghed) -cos(peghed);
-                     0 cos(peghed) sin(peghed);
-                     1    0           0]
-    #Up vector in XYZ
-    Uxyz = Menu_xyz*[0 0 1]';
-
-    #vector from center of ellipsoid to pegpoint
-    P = [repeg*cos(pegθ)*cos(pegϕ), repeg*cos(pegθ)*sin(pegϕ), repeg*(1-e2)*sin(pegθ)]
-
-    #translation vector
-    O = P-ra*Uxyz
-
-    #compute the xyz value
-    for i=1:size(sch)[2]
-        xyz[:,i]=Menu_xyz*Mxyzprime_enu*XYZPrime[:,i]+O;
+    #compute the xyz value per SCH triplet
+    for ipt=1:size(sch)[2]
+        xyz[:,ipt]=sch_to_xyz(sch[:,ipt],peg)
     end
     return xyz
 end
+
+
+
 
 abstract type AbstractFrame end
 abstract type AbstractPlanetFrame <: AbstractFrame end
 abstract type AbstractSpaceCraftFrame <: AbstractPlanetFrame end
 abstract type AbstractAntennaFrame <: AbstractSpaceCraftFrame end
-
 
 mutable struct Planet_frame <:AbstractFrame
     org
@@ -192,7 +217,7 @@ Compute range from ray-ellipse intersection
 # Arguments
 - `P::3x1 Float Array`: position vector
 - `lv::3x1 Float Array`: look vector
-- `Ra::Float`: Ellipsoid Radius at P (usually Earth Radius)
+- `Ra::Float`: Ellipsoid Equatorial Radius
 - `e::Float`: Ellipsoid eccentricity (usually Earth Eccentricity)
 
 # Return
@@ -215,16 +240,16 @@ end
  - Usage: t,c,n = get_tcn(pos, vel)
 
 # Arguments
-- `pos::3x1 Float Array`: position vector (usually satellite position in XYZ)
-- `vel::3x1 Float Array`: velocity vector (usually satellite velocity in XYZ)
+- `pos::3xN Float Array`: position vector (usually satellite position in XYZ)
+- `vel::3xN Float Array`: velocity vector (usually satellite velocity in XYZ)
 
 # Return
-- `t-hat::3x1 Flot Array`: definition of the t_hat (tangential velocity) vector in base frame (usually XYZ)
-- `c-hat::3x1 Float Array`: definition of the c_hat (cross-track) vector in base frame (usually XYZ)
-- `n-hat::3x1 Float Array`: definition of the n_hat (nadir) vector in base frame (usually XYZ)
+- `t-hat::3xN Flot Array`: definition of the t_hat (tangential velocity) vector in base frame (usually XYZ)
+- `c-hat::3xN Float Array`: definition of the c_hat (cross-track) vector in base frame (usually XYZ)
+- `n-hat::3xN Float Array`: definition of the n_hat (nadir) vector in base frame (usually XYZ)
 
  """
-function get_tcn(pos, vel)
+function get_tcn(pos::Array{Float64,1}, vel::Array{Float64,1})
     @assert length(pos)==3 "POS needs to be 3 x 1"
     @assert length(vel)==3 "VEL needs to be 3 x 1"
     @assert size(pos)==size(vel) "POS and VEL need to have same size"
@@ -236,6 +261,22 @@ function get_tcn(pos, vel)
     vtan = vel  - vrad; #tangential velocity
     that = vtan/norm(vtan); #track vector
     chat = cross(nhat, that); #cross-track vector
+    return that, chat, nhat
+end
+function get_tcn(pos::Array{Float64,2}, vel::Array{Float64,2})
+    @assert size(pos,1)==3 "POS needs to be 3 x N"
+    @assert size(vel,1)==3 "VEL needs to be 3 x N"
+    @assert size(pos)==size(vel) "POS and VEL need to have same size"
+
+    #initialize variables
+    that = zeros(size(pos))
+    chat = zeros(size(pos))
+    nhat = zeros(size(pos))
+
+    #compute t,c,n triplet for each position and velocity
+    for itp=1:size(pos)[2]
+        that[:,itp], chat[:,itp], nhat[:,itp] = get_tcn(pos[:,itp], vel[:,itp])
+    end
     return that, chat, nhat
 end
 

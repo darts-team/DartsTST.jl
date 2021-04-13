@@ -1,0 +1,2 @@
+*.nc filter=lfs diff=lfs merge=lfs -text
+inputs/*.nc filter=lfs diff=lfs merge=lfs -text
