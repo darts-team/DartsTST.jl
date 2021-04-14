@@ -15,17 +15,27 @@ end#if
 curr_procs = nprocs()
 println("Current procs: " * "$curr_procs")
 ## includes
-@everywhere include("../darts-simtool/modules/generate_raw_data.jl")
-@everywhere include("../darts-simtool/modules/process_raw_data.jl")
-@everywhere include("../darts-simtool/modules/geometry.jl")
-@everywhere include("../darts-simtool/modules/scene.jl")
-@everywhere include("../darts-simtool/modules/sync.jl")
-@everywhere include("../darts-simtool/modules/range_spread_function.jl") # as RSF
-@everywhere include("../darts-simtool/modules/orbits.jl")
-@everywhere include("../darts-simtool/modules/error_sources.jl")
-@everywhere include("../darts-simtool/modules/performance_metrics.jl")
-
-
+# begin
+include("../darts-simtool/modules/generate_raw_data.jl")
+include("../darts-simtool/modules/process_raw_data.jl")
+include("../darts-simtool/modules/geometry.jl")
+include("../darts-simtool/modules/scene.jl")
+include("../darts-simtool/modules/sync.jl")
+include("../darts-simtool/modules/range_spread_function.jl") # as RSF
+include("../darts-simtool/modules/orbits.jl")
+include("../darts-simtool/modules/error_sources.jl")
+include("../darts-simtool/modules/performance_metrics.jl")
+# end#begin
+@everywhere using Orbits, Performance_Metrics, Generate_Raw_Data, Geometry, Sync, Scene, RSF, Process_Raw_Data, Error_Sources
+# @everywhere include("../darts-simtool/modules/generate_raw_data.jl")
+# @everywhere include("../darts-simtool/modules/process_raw_data.jl")
+# @everywhere include("../darts-simtool/modules/geometry.jl")
+# @everywhere include("../darts-simtool/modules/scene.jl")
+# @everywhere include("../darts-simtool/modules/sync.jl")
+# @everywhere include("../darts-simtool/modules/range_spread_function.jl") # as RSF
+# @everywhere include("../darts-simtool/modules/orbits.jl")
+# @everywhere include("../darts-simtool/modules/error_sources.jl")
+# @everywhere include("../darts-simtool/modules/performance_metrics.jl")
 ## Determining Parameters
 c=299792458 # speed of light (m/s)
 # planetary shape constants
@@ -99,11 +109,11 @@ else
     sigma_freq_offsets = sigma_freq_offsets .* ones(1) # convert to matrix form, one value for each oscillator
 end
 
-sync_fmin = 0.01 # minimum frequency > 0 in Hz to window PSD
-f_osc = 10e6 # local oscillator frequency
+sync_fmin   = 0.01 # minimum frequency > 0 in Hz to window PSD
+f_osc       = 10e6 # local oscillator frequency
 sync_clk_fs = 1e3; # sample rate of clock error process
-master = 1; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
-sync_pri=1 # to be overwritten in loop
+master      = 1 # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
+sync_pri    = 1 # to be overwritten in loop
 
 no_sync_flag = false; # if flag == true, no sync is used. flag == false results in normal sync process estimation
 ## make a struct of important input parameters
