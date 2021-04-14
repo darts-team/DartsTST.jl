@@ -15,18 +15,19 @@ end#if
 curr_procs = nprocs()
 println("Current procs: " * "$curr_procs")
 ## includes
-# begin
-include("../darts-simtool/modules/generate_raw_data.jl")
-include("../darts-simtool/modules/process_raw_data.jl")
-include("../darts-simtool/modules/geometry.jl")
-include("../darts-simtool/modules/scene.jl")
-include("../darts-simtool/modules/sync.jl")
-include("../darts-simtool/modules/range_spread_function.jl") # as RSF
-include("../darts-simtool/modules/orbits.jl")
-include("../darts-simtool/modules/error_sources.jl")
-include("../darts-simtool/modules/performance_metrics.jl")
-# end#begin
-@everywhere using Orbits, Performance_Metrics, Generate_Raw_Data, Geometry, Sync, Scene, RSF, Process_Raw_Data, Error_Sources
+@everywhere begin
+    include("../modules/generate_raw_data.jl")
+    include("../modules/process_raw_data.jl")
+    include("../modules/geometry.jl")
+    include("../modules/scene.jl")
+    include("../modules/sync.jl")
+    include("../modules/range_spread_function.jl") # as RSF
+    include("../modules/orbits.jl")
+    include("../modules/error_sources.jl")
+    include("../modules/performance_metrics.jl")
+end#begin
+# @everywhere using Orbits, Performance_Metrics, Generate_Raw_Data, Geometry, Sync, Scene, RSF, Process_Raw_Data, Error_Sources
+
 # @everywhere include("../darts-simtool/modules/generate_raw_data.jl")
 # @everywhere include("../darts-simtool/modules/process_raw_data.jl")
 # @everywhere include("../darts-simtool/modules/geometry.jl")
