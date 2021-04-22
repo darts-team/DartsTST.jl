@@ -67,12 +67,12 @@ t_θ=7 # deg latitude
 t_ϕ=0 # deg longitude
 t_h=0 # m  heights
 # image/scene pixel coordinates
-s_θ=7-0.0003:0.0000025:7+0.0003 # deg latitude
-s_ϕ=-0.001:0.00001:0.001 # deg longitude
-s_h=-35:0.5:35 # m  heights
-# s_θ=7-0.0002:0.0001:7+0.0002 # deg latitude -- for testing
-# s_ϕ=-0.0008:0.0004:0.0008 # deg longitude
-# s_h=-30:10:30 # m  heights
+# s_θ=7-0.0003:0.0000025:7+0.0003 # deg latitude
+# s_ϕ=-0.001:0.00001:0.001 # deg longitude
+# s_h=-35:0.5:35 # m  heights
+s_θ=7-0.0003:0.00001:7+0.0003 # deg latitude
+s_ϕ=-0.001:0.0001:0.001 # deg longitude
+s_h=-25:0.5:25 # m  heights
 
 # range spread function (RSF) parameters
 enable_fast_time = true # whether to enable or disable fast-time axis, 0:disable, 1: enable
@@ -165,8 +165,8 @@ no_sync_flag)
 
 
 
-Ntrials = 100 # number of trials per SRI in Monte Carlo simulations
-sync_PRIs = [.1 .5 1 2 5 10 20]
+Ntrials = 20 # number of trials per SRI in Monte Carlo simulations
+sync_PRIs = [.1 1 2 5 10]
 numSRI = length(sync_PRIs)
 
 ## RANGE SPREAD FUNCTION (matched filter output)
@@ -308,7 +308,7 @@ else
     freq_text = "wFreq"
 end
 
-outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$osc_type"*"_sync_pri_sweep_"*freq_text* ".jld2" # this is the output filename that the data is saved to using JLD2
+outputfilename = "syncModule2_MonteCarlo_mode_$mode"*"_$osc_type"*"_sync_pri_sweep_"*freq_text* ".jld2" # this is the output filename that the data is saved to using JLD2
 # this saves the data into a JLD2 file. Data includes the estimates
 @save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors
 #println(std(resolutions[1,:]))

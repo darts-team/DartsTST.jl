@@ -14,9 +14,7 @@ using Plots
 using Statistics
 using JLD2 # note: may have to Pkg.add("JLD2")
 
-#pyplot()
-plotly()
-#gr()
+
 ## RANGE SPREAD FUNCTION (matched filter output)
 if enable_fast_time # matched filter gain is included in Srx
     Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
@@ -67,11 +65,11 @@ s_xyz_grid=Geometry.geo_to_xyz(s_geo_grid,earth_radius,earth_eccentricity)
 ## find Ideal case results first
 #PROCESS RAW DATA TO GENERATE IMAGE
 if enable_fast_time # with fastime, with slowtime
-    image_3xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+    image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
 else # without fastime, with slowtime
-    image_3xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc)
+    image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc)
 end
-image_3D=Scene.convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
+image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_θ,Ns_ϕ,Ns_h)
 
 # PERFORMANCE METRICS
 # PSF metrics
@@ -106,11 +104,11 @@ for ntrial = 1 : Ntrials
 
     ## PROCESS RAW DATA TO GENERATE IMAGE
     if enable_fast_time # with fastime, with slowtime
-        image_3xN=Process_Raw_Data.main_RSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+        image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
     else # without fastime, with slowtime
-        image_3xN=Process_Raw_Data.main_noRSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc)
+        image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc)
     end
-    image_3D=Scene.convert_image_3xN_to_3D(image_3xN,Ns_θ,Ns_ϕ,Ns_h)
+    image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_θ,Ns_ϕ,Ns_h)
 
     ## PERFORMANCE METRICS
     # PSF metrics
