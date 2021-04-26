@@ -5,9 +5,9 @@ using LinearAlgebra
 " Create Quaternion based on rotation angle and axis"
 quat(rot_angle, rot_ax) = Quaternion(cosd(rot_angle/2.0), rot_ax*sind(rot_angle/2.0))
 " Rotate frame given a rotation quaternion "
-rotate_frame(v,q) = vect(inv(q)*v*q)
+rotate_frame(v,q) = convert(Array{Float64,1}, vect(inv(q)*v*q))
 " Rotate vector, given a rotation quaternion "
-rotate_vec(v,q) = vect(q*v*inv(q))
+rotate_vec(v,q) = convert(Array{Float64,1}, vect(q*v*inv(q)))
 
 """
 Converts Lat/Log/Height to ECEF XYZ position
@@ -215,15 +215,23 @@ Compute range from ray-ellipse intersection
  - Usage: ρ = get_rho(position, look vector, Earth Radius, Earth Eccentricity)
 
 # Arguments
-- `P::3x1 Float Array`: position vector
-- `lv::3x1 Float Array`: look vector
-- `Ra::Float`: Ellipsoid Equatorial Radius
-- `e::Float`: Ellipsoid eccentricity (usually Earth Eccentricity)
+- `P::3xN Float Array`: position vector
+- `lv::3xN Float Array`: look vector
+- `Ra::Float`: [optional] Ellipsoid Equatorial Radius
+- `e::Float`: [optional] Ellipsoid eccentricity (usually Earth Eccentricity)
 
 # Return
 - `ρ::Float`: range to surface of ellipsoid from P in the direction of lv
 """
-function get_rho(P, lv, Ra, e)
+function get_rho(P::Array{Float64,1}, lv::Array{Float64,1}, Ra::Float64=6.378137e6, e::Float64=0.08181919084267456)
+    @assert size(P,1)==3 "POS vector needs to be 3 x 1"
+    @assert size(lv,1)==3 "Look vector needs to be 3 x 1"
+    @assert size(P)==size(lv) "POS and Look Vector need to have same size"
+
+    #normalize look vector
+    lv = lv./norm(lv);
+
+    #estimate rho based on ray-ellipse intersection
     ra = (((lv[1]^2) + (lv[2]^2)) / (Ra^2)) + ((lv[3]^2) / ((Ra^2) * (1 - (e^2))))
     rb = 2 * ((((lv[1] * P[1]) + (lv[2] * P[2])) / (Ra^2)) + ((lv[3] * P[3]) / ((Ra^2) * (1 - (e^2)))))
     rc = (((P[1]^2) + (P[2]^2)) / (Ra^2)) + ((P[3]^2) / ((Ra^2) * (1 - (e^2)))) - 1
@@ -231,6 +239,20 @@ function get_rho(P, lv, Ra, e)
         error("Cannot compute rho, input correct platform co-ordinates or look vector")
     else
         ρ = (- rb - sqrt((rb^2) - (4 * ra * rc))) / (2 * ra)
+    end
+    return ρ
+end
+function get_rho(pos::Array{Float64,2}, lv::Array{Float64,2}, Ra::Float64=6.378137e6, e::Float64=0.08181919084267456)
+    @assert size(pos,1)==3 "POS vector needs to be 3 x N"
+    @assert size(lv,1)==3 "Look vector needs to be 3 x N"
+    @assert size(pos)==size(lv) "POS and Look Vector need to have same size"
+
+    #initialize variables
+    ρ = zeros(size(pos,2))
+
+    #compute t,c,n triplet for each position and velocity
+    for itp=1:size(pos)[2]
+        ρ[itp] = get_rho(pos[:,itp], lv[:,itp], Ra, e)
     end
     return ρ
 end
@@ -279,6 +301,28 @@ function get_tcn(pos::Array{Float64,2}, vel::Array{Float64,2})
     end
     return that, chat, nhat
 end
+"""
+ Compute look vector based on TCN frame
+ - Usage: look_vector = tcn_lvec(t, c, n, θ, ϕ)
+
+# Arguments
+- `t::3x1 Float Array`: t-axis of the TCN frame in parent frame (typically ECEF)
+- `c::3x1 Float Array`: c-axis of the TCN frame in parent frame (typically ECEF)
+- `n::3x1 Float Array`: n-axis of the TCN frame in parent frame (typically ECEF)
+- `θ::Float`: elevation angle (rad)
+- `ϕ::Float`: azimuth angle (rad)
+
+# Return
+- `look_vec::3x1 Flot Array`: unit look vector in TCN parent frame (typically ECEF)
+ """
+function tcn_lvec(t, c, n, θ_el, ϕ_az)
+    return  t*sin(θ_el)*sin(ϕ_az) + c*sin(θ_el)*cos(ϕ_az) + n*cos(θ_el)
+end
+
+
+
+
+
 
 
 end

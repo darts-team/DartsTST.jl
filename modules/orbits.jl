@@ -1,5 +1,7 @@
 module Orbits
 
+include("geometry.jl")
+
 using SatelliteToolbox
 using NCDatasets
 using Dates
@@ -104,11 +106,12 @@ function get_perp_baselines(pos, vel, θ,refind=1)
 
     for itimes = 1:Ntimes
         #create geocetric TCN frame for reference satellite
-        nhat = -pos[:,refind,itimes]/norm(pos[:,refind,itimes]);
-        vrad = dot(vel[:,refind,itimes], -nhat)*(-nhat); #radial velocity
-        vtan = vel[:,refind,itimes]  - vrad; #tangential velocity
-        that = vtan/norm(vtan); #track vector
-        chat = cross(nhat, that); #cross-track vector
+        #nhat = -pos[:,refind,itimes]/norm(pos[:,refind,itimes]);
+        #vrad = dot(vel[:,refind,itimes], -nhat)*(-nhat); #radial velocity
+        #vtan = vel[:,refind,itimes]  - vrad; #tangential velocity
+        #that = vtan/norm(vtan); #track vector
+        #chat = cross(nhat, that); #cross-track vector
+        that, chat, nhat = Geometry.get_tcn(pos[:,refind,itimes], vel[:,refind,itimes]);
         #get look vector based on TCN-frame and look angle TODO: add azimuth
         lhat = cosd(θ)*nhat + sind(θ)*chat;
         #iterate over platforms and compute full perp-baseline matrix
