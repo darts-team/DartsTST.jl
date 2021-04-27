@@ -2,8 +2,8 @@ include("modules/generate_raw_data.jl")
 include("modules/process_raw_data.jl")
 include("modules/geometry.jl")
 include("modules/scene.jl")
-#include("inputs/input_parameters_nadirlooking.jl")
-include("inputs/input_parameters_slantlooking.jl")
+include("inputs/input_parameters_nadirlooking.jl")
+#include("inputs/input_parameters_slantlooking.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
@@ -29,17 +29,33 @@ p_xyz=1e3*orbit_pos_interp # convert km to m
 Np=size(orbit_pos)[2] # number of platforms
 Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
 ## TARGET LOCATIONS
-t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops
-#t_geo_grid=Scene.form3Dgrid_array(t_θ,t_ϕ,t_h) # using array processing
-t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,earth_radius,earth_eccentricity)
+if target_pos_mode=="grid"
+    t_loc_3xN=Scene.form3Dgrid_for(trg_prm.loc_1,trg_prm.loc_2,trg_prm.loc_3) # using 3 nested for loops
+    #t_loc_3xN=Scene.form3Dgrid_array(trg_prm.loc_1,trg_prm.loc_2,trg_prm.loc_3) # using array processing
+elseif target_pos_mode=="3xN" # input is already in the desired 3xN format
+    t_loc_3xN=trg_prm.loc_3xN
+end
+if trg_prm.coord_sys=="LLH"
+    t_xyz_grid=Geometry.geo_to_xyz(t_loc_3xN,earth_radius,earth_eccentricity)
+elseif trg_prm.coord_sys=="SCH"
+    #TODO
+elseif trg_prm.coord_sys=="XYZ"
+    t_xyz_grid=t_loc_3xN
+end
+## TARGET REFLECTIVITIES
+if target_pos_mode=="grid"
+    t_ref=Scene.convert_3D_to_1xN(trg_prm.ref)
+elseif target_pos_mode=="3xN"
+    t_ref=trg_prm.ref
+end
 ## GENERATE RAW DATA
 ref_range=Generate_Raw_Data.distance(mean(t_xyz_grid,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range
 #rawdata=Generate_Raw_Data.main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc) # without fasttime, without slowtime TODO no longer working, delete?
 #rawdata=Generate_Raw_Data.main_RSF(t_xyz_grid,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range) # with fasttime, without slowtime #TODO no longer working, delete?
 if enable_fast_time # with fastime and slowtime; matched filter gain is included in Srx
-    rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
+    rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range,t_ref) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
 else # without fastime, with slowtime; matched filter gain is included inside the function
-    rawdata=Generate_Raw_Data.main_noRSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc) # rawdata is a: 2D array of size Nst x Np (SAR/SIMO), 3D array of size Nst x Np(RX) x Np(TX) (MIMO)
+    rawdata=Generate_Raw_Data.main_noRSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc,t_ref) # rawdata is a: 2D array of size Nst x Np (SAR/SIMO), 3D array of size Nst x Np(RX) x Np(TX) (MIMO)
 end
 if !enable_fast_time;SNR=SNR*pulse_length*bandwidth;end # SNR increases after matched filter
 if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end # adding random noise based on SNR after range (fast-time) processing

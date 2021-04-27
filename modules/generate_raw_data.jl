@@ -86,7 +86,7 @@ function main_RSF(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,Srx,t_rx,ref_range) # with
     return rawdata
 end
 
-function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range) # with RSF and slow-time
+function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range,t_ref) # with RSF and slow-time
     # TODO add descriptions of inputs and output
     λ=c/fc # wavelength (m)
     Nt=size(t_xyz_grid)[2] # number of targets
@@ -114,7 +114,7 @@ function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range)
                     elseif rel_delay_ind<0
                         Srx_shifted=cat(Srx[1+abs(rel_delay_ind):Nft],zeros(abs(rel_delay_ind)),dims=1)
                     end
-                    rawdata[s,i,:]=rawdata[s,i,:]+exp(-im*4*pi/λ*range_tx)*Srx_shifted
+                    rawdata[s,i,:]=rawdata[s,i,:]+t_ref(j)*exp(-im*4*pi/λ*range_tx)*Srx_shifted
                 elseif mode==2 # SIMO
                     rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
                     rel_delay_ind=Int(round(rel_delay/Δt_ft))
@@ -123,7 +123,7 @@ function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range)
                     elseif rel_delay_ind<0
                         Srx_shifted=[Srx[1+abs(rel_delay_ind):Nft];zeros(abs(rel_delay_ind))]
                     end
-                    rawdata[s,i,:]=rawdata[s,i,:]+exp(-im*2*pi/λ*(range_tx+range_rx))*Srx_shifted
+                    rawdata[s,i,:]=rawdata[s,i,:]+t_ref(j)*exp(-im*2*pi/λ*(range_tx+range_rx))*Srx_shifted
                 elseif mode==3 # MIMO
                     for k=1:Np # TX platform for MIMO
                         range_tx=distance(t_xyz_grid[:,j],p_xyz_3D[:,k,s])
@@ -134,7 +134,7 @@ function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range)
                         elseif rel_delay_ind<0
                             Srx_shifted=[Srx[1+abs(rel_delay_ind):Nft];zeros(abs(rel_delay_ind))]
                         end
-                        rawdata[s,i,k,:]=rawdata[s,i,k,:]+exp(-im*2*pi/λ*(range_tx+range_rx))*Srx_shifted
+                        rawdata[s,i,k,:]=rawdata[s,i,k,:]+t_ref(j)*exp(-im*2*pi/λ*(range_tx+range_rx))*Srx_shifted
                     end
                 end
             end
@@ -143,7 +143,7 @@ function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range)
     return rawdata
 end
 
-function main_noRSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc) # without fast-time and slow-time 
+function main_noRSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_ref) # without fast-time and slow-time
     # TODO add descriptions of inputs and output
     λ=c/fc # wavelength (m)
     Nt=size(t_xyz_grid)[2] # number of targets
@@ -161,13 +161,13 @@ function main_noRSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc) # without fast-t
                 range_rx=distance(t_xyz_grid[:,j],p_xyz_3D[:,i,s])
                 if mode==1 # SAR (ping-pong)
                     range_tx=range_rx
-                    rawdata[s,i]=rawdata[s,i]+exp(-im*4*pi/λ*range_tx)
+                    rawdata[s,i]=rawdata[s,i]+t_ref(j)*exp(-im*4*pi/λ*range_tx)
                 elseif mode==2 # SIMO
-                    rawdata[s,i]=rawdata[s,i]+exp(-im*2*pi/λ*(range_tx+range_rx))
+                    rawdata[s,i]=rawdata[s,i]+t_ref(j)*exp(-im*2*pi/λ*(range_tx+range_rx))
                 elseif mode==3 # MIMO
                     for k=1:Np # TX platform for MIMO
                         range_tx=distance(t_xyz_grid[:,j],p_xyz_3D[:,k,s])
-                        rawdata[s,i,k]=rawdata[s,i,k]+exp(-im*2*pi/λ*(range_tx+range_rx))
+                        rawdata[s,i,k]=rawdata[s,i,k]+t_ref(j)*exp(-im*2*pi/λ*(range_tx+range_rx))
                     end
                 end
             end

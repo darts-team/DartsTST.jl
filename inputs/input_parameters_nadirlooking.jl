@@ -13,14 +13,44 @@ SNR=50 # SNR for single platform and single pulse before fast-time processing dB
 orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
 SAR_duration=3 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
-# target locations (volumetric grid) defined in geo (θϕh)
-t_θ=0 # deg latitude
-t_ϕ=0 # deg longitude
-t_h=0 # m  heights
+# target locations defined in geo (θϕh) and reflectvities
+target_pos_mode="3xN" # whether targets are defined as three 1D arrays forming a volumetric grid ("grid") or as 3xN array ("3xN")
+if target_pos_mode=="grid"
+    t_coord_sys="LLH" # target coordinate system: "LLH", "SCH", "XYZ"
+    t_1=-0.0001:0.0001:0.0001 # deg latitude
+    t_2=-0.0005:0.001:0.0005 # deg longitude
+    t_3=-40:20:40 # m  heights
+    t_ref=rand(Float64,length(t_1),length(t_2),length(t_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
+    mutable struct target_parameters
+        coord_sys::String # target coordinate system: "LLH", "SCH", "XYZ"
+        loc_1 # target locations along axis 1 (latitude if LLH, along-track if SCH, X if XYZ)
+        loc_2 # target locations along axis 2 (longitude if LLH, across-track if SCH, Y if XYZ)
+        loc_3 # target locations along axis 3 (height if LLH, height if SCH, Z if XYZ)
+        ref # target reflectivities: 3D matrix whose size is size(loc_1) x size(loc_2) x size(loc_3)
+    end
+    trg_prm=target_parameters(t_coord_sys,t_1,t_2,t_3,t_ref)
+elseif target_pos_mode=="3xN"
+    t_coord_sys="LLH" # target coordinate system: "LLH", "SCH", "XYZ"
+    t_1=[0 0.0001] # deg latitude, length(t_1)==length(t_2)==length(t_3) should hold
+    t_2=[0 0.0005] # deg longitude
+    t_3=[0 0] # m  heights
+    if length(t_1)==length(t_2)==length(t_3)
+        t_3xN=vcat(t_1,t_2,t_3)
+    else
+        display("each of the 3 target axes should have the same number of targets!")
+    end
+    t_ref=rand(Float64,1,size(t_3xN,2)) # uniform random reflectivities between 0 and 1
+    mutable struct target_parameters
+        coord_sys::String # target coordinate system: "LLH", "SCH", "XYZ"
+        loc_3xN # target locations
+        ref # target reflectivities: 3D matrix whose size is size(loc_1) x size(loc_2) x size(loc_3)
+    end
+    trg_prm=target_parameters(t_coord_sys,t_3xN,t_ref)
+end
 # image/scene pixel coordinates
-s_θ=-0.0001:0.000001:0.0001 # deg latitude
-s_ϕ=-0.0005:0.00001:0.0005 # deg longitude
-s_h=-40:1:40 # m  heights
+s_θ=-0.0002:0.00001:0.0002 # deg latitude
+s_ϕ=-0.001:0.0001:0.001 # deg longitude
+s_h=0 # m  heights
 # range spread function (RSF) parameters
 Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
 pulse_length=10e-6 # s pulse length

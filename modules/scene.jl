@@ -190,11 +190,33 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
       for j=1:Ns2
         for k=1:Ns3
           indx=(i-1)*Ns2*Ns3+(j-1)*Ns3+k
-          image_3D[i,j,k]=image_1xN[indx] # square for power?
+          image_3D[i,j,k]=image_1xN[indx]
         end
       end
     end
     return image_3D
+  end
+
+  """
+  Converts 3D array of size Ns1xNs2xNs3 to 1D array of size 1xN which is used to convert target amplitudes defined in 3D to 1xN for generate_raw_data
+    ## Arguments
+    - array_3D: 3D array of size Ns1xNs2xNs3
+    ## Outputs
+    - array_1xN: 1D array of size 1xN (N=Ns1xNs2xNs3)
+    """
+  function convert_3D_to_1xN(array_3D)
+    N1,N2,N3=size(array_3D)
+    N=N1*N2*N3
+    array_1xN=zeros(Float64,3,N)
+    for i=1:N1
+      for j=1:N2
+        for k=1:N3
+          indx=(i-1)*N2*N3+(j-1)*N3+k
+          array_1xN[indx]=array_3D[i,j,k]
+        end
+      end
+    end
+    return array_1xN
   end
 
   """
