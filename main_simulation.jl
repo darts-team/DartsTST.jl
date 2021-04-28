@@ -8,7 +8,6 @@ include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
 include("modules/error_sources.jl")
-include("modules/performance_metrics.jl")
 using NCDatasets
 using Statistics
 ## RANGE SPREAD FUNCTION (matched filter output)
@@ -77,16 +76,17 @@ end
 image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_θ,Ns_ϕ,Ns_h)
 ## PERFORMANCE METRICS
 # PSF metrics
-if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when there is only one point target
-    target_index1=findall(t_θ .==s_θ)
-    target_index2=findall(t_ϕ .==s_ϕ)
-    target_index3=findall(t_h .==s_h)
+if size(t_xyz_grid,2)==1 # PSF related performance metrics are calculated when there is only one point target
+    target_index1=findall(t_1 .==s_θ)
+    target_index2=findall(t_2 .==s_ϕ)
+    target_index3=findall(t_3 .==s_h)
     if isempty(target_index1) || isempty(target_index2) || isempty(target_index3)
         show("PSF related performance metrics cannot be calculated since target is not inside the scene!")
         PSF_metrics=false
     else
+        include("modules/performance_metrics.jl")
         PSF_metrics=true
-        target_location=[t_θ t_ϕ t_h] # point target location
+        target_location=[t_1 t_2 t_3] # point target location
         resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h,PSF_peak_target) # resolutions in each of the 3 axes
     end
 else

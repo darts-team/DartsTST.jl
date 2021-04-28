@@ -20,7 +20,7 @@ Converts Lat/Log/Height to ECEF XYZ position
 # Output
  - `xyz::3x1 Float Array`, ECEF xyz positions (in meters)
 """
-function geo_to_xyz(geo::Array{Float64,},earth_radius::Float64=6.378137e6,earth_eccentricity::Float64=0.08181919084267456)
+function geo_to_xyz(geo,earth_radius::Float64=6.378137e6,earth_eccentricity::Float64=0.08181919084267456)
     xyz=zeros(size(geo))
     θ=geo[1,:] # latitude [deg]
     ϕ=geo[2,:] # longitude [deg]

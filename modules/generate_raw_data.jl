@@ -89,10 +89,10 @@ end
 function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,Srx,t_rx,ref_range,t_ref) # with RSF and slow-time
     # TODO add descriptions of inputs and output
     λ=c/fc # wavelength (m)
-    Nt=size(t_xyz_grid)[2] # number of targets
-    Np=size(p_xyz_3D)[2] # number of platforms
+    Nt=size(t_xyz_grid,2) # number of targets
+    Np=size(p_xyz_3D,2) # number of platforms
     Nft=length(t_rx) # number of fast-time samples
-    Nst=size(p_xyz_3D)[3] # number of slow-time samples
+    Nst=size(p_xyz_3D,3) # number of slow-time samples
     Δt_ft=t_rx[2]-t_rx[1] # fast-time resolution
     if mode==1 || mode==2 # SAR (ping-pong) or SIMO
         rawdata=zeros(ComplexF64,Nst,Np,Nft)
