@@ -15,37 +15,17 @@ SAR_duration=2 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations defined in geo (θϕh) and reflectvities
 target_pos_mode="3xN" # whether targets are defined as three 1D arrays forming a volumetric grid ("grid") or as 3xN array ("3xN")
+t_coord_sys="LLH" # target coordinate system: "LLH", "SCH", "XYZ"
 if target_pos_mode=="grid"
-    t_coord_sys="LLH" # target coordinate system: "LLH", "SCH", "XYZ"
-    t_1=-0.0001:0.0001:0.0001 # deg latitude
-    t_2=-0.0005:0.001:0.0005 # deg longitude
-    t_3=-40:20:40 # m  heights
-    t_ref=rand(Float64,length(t_1),length(t_2),length(t_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
-    mutable struct target_parameters
-        coord_sys::String # target coordinate system: "LLH", "SCH", "XYZ"
-        loc_1 # target locations along axis 1 (latitude if LLH, along-track if SCH, X if XYZ)
-        loc_2 # target locations along axis 2 (longitude if LLH, across-track if SCH, Y if XYZ)
-        loc_3 # target locations along axis 3 (height if LLH, height if SCH, Z if XYZ)
-        ref # target reflectivities: 3D matrix whose size is size(loc_1) x size(loc_2) x size(loc_3)
-    end
-    trg_prm=target_parameters(t_coord_sys,t_1,t_2,t_3,t_ref)
+    t_loc_1=-0.0001:0.0001:0.0001 # deg latitude if LLH
+    t_loc_2=-0.0005:0.001:0.0005 # deg longitude if LLH
+    t_loc_3=-40:20:40 # m  heights if LLH or SCH
+    t_ref=rand(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
 elseif target_pos_mode=="3xN"
-    t_coord_sys="LLH" # target coordinate system: "LLH", "SCH", "XYZ"
-    t_1=[0.0001 -0.0001] # deg latitude, length(t_1)==length(t_2)==length(t_3) should hold
-    t_2=[-0.001 0.001] # deg longitude
-    t_3=[0 0] # m  heights
-    if length(t_1)==length(t_2)==length(t_3)
-        t_3xN=vcat(t_1,t_2,t_3)
-    else
-        display("each of the 3 target axes should have the same number of targets!")
-    end
+    t_loc_1=[0.0001 -0.0001] # deg latitude if LLH, length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
+    t_loc_2=[-0.001 0.001] # deg longitude if LLH
+    t_loc_3=[0 0] # m  heights if LLH or SCH
     t_ref=[1 2] # reflectivities
-    mutable struct target_parameters
-        coord_sys::String # target coordinate system: "LLH", "SCH", "XYZ"
-        loc_3xN # target locations
-        ref # target reflectivities: 3D matrix whose size is size(loc_1) x size(loc_2) x size(loc_3)
-    end
-    trg_prm=target_parameters(t_coord_sys,t_3xN,t_ref)
 end
 # image/scene pixel coordinates
 s_θ=-0.0006:0.00001:0.0006 # deg latitude

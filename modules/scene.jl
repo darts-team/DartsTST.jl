@@ -6,6 +6,29 @@ using ..Geometry
 using LinearAlgebra
 using Optim
 
+mutable struct target_str
+  loc # target location
+  ref # target reflectivity
+end
+function construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref)
+  if target_pos_mode=="grid"
+      t_loc_3xN=Scene.form3Dgrid_for(t_loc_1,t_loc_2,t_loc_3) # using 3 nested for loops
+      #t_loc_3xN=Scene.form3Dgrid_array(trg_prm.loc_1,trg_prm.loc_2,trg_prm.loc_3) # using array processing
+      t_ref_1xN=Scene.convert_3D_to_1xN(t_ref)
+  elseif target_pos_mode=="3xN" # input is already in the desired 3xN format
+      if length(t_loc_1)==length(t_loc_1)==length(t_loc_1)
+          t_loc_3xN=vcat(t_loc_1,t_loc_2,t_loc_3)
+          t_ref_1xN=t_ref
+      else;display("each of the 3 target axes should have the same number of targets!");end
+  end
+  Nt=size(t_loc_3xN,2) # number of targets
+  targets=Array{target_str}(undef,Nt)
+  for i=1:Nt
+    targets[i]=target_str(t_loc_3xN[:,i],t_ref_1xN[i])
+  end
+  return targets, Nt
+end
+
 """
 Generates 3D (volumetric) grid from three 1D (linear) arrays using nested for-loops
 ## Arguments
