@@ -14,14 +14,14 @@ orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
 SAR_duration=2 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations defined in geo (θϕh) and reflectvities
-target_pos_mode="3xN" # whether targets are defined as three 1D arrays forming a volumetric grid ("grid") or as 3xN array ("3xN")
+target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
 t_coord_sys="LLH" # target coordinate system: "LLH", "SCH", "XYZ"
-if target_pos_mode=="grid"
+if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
     t_loc_1=-0.0001:0.0001:0.0001 # deg latitude if LLH
     t_loc_2=-0.0005:0.001:0.0005 # deg longitude if LLH
     t_loc_3=-40:20:40 # m  heights if LLH or SCH
     t_ref=rand(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
-elseif target_pos_mode=="3xN"
+elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are defined as 3xN array (useful for a few discrete targets)
     t_loc_1=[0.0001 -0.0001] # deg latitude if LLH, length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
     t_loc_2=[-0.001 0.001] # deg longitude if LLH
     t_loc_3=[0 0] # m  heights if LLH or SCH
