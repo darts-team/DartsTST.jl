@@ -1,4 +1,4 @@
-
-.DS_Store
-*.nc
 *.jld2
+*.png
+*.nc
+.DS_Store

@@ -5,7 +5,7 @@ using Statistics
 using JLD2 # note: may have to Pkg.add("JLD2")
 using Distributed, SharedArrays
 
-maxprocs = 20 # maximum number of cores to use
+maxprocs = 81 # maximum number of cores to use
 curr_procs = nprocs()
 if curr_procs < maxprocs
     addprocs(maxprocs - curr_procs)
@@ -70,14 +70,14 @@ t_h=0 # m  heights
 # s_θ=7-0.0003:0.0000025:7+0.0003 # deg latitude
 # s_ϕ=-0.001:0.00001:0.001 # deg longitude
 # s_h=-35:0.5:35 # m  heights
-s_θ=7-0.0003:0.00001:7+0.0003 # deg latitude
-s_ϕ=-0.001:0.0001:0.001 # deg longitude
+s_θ=7-0.0005:0.00001:7+0.0005 # deg latitude
+s_ϕ=-0.002:0.0001:0.002 # deg longitude
 s_h=-25:0.5:25 # m  heights
 
 # range spread function (RSF) parameters
 enable_fast_time = true # whether to enable or disable fast-time axis, 0:disable, 1: enable
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
-disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
+disable_freq_offset = false # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
@@ -93,8 +93,8 @@ sync_fc = 1e9 # waveform center frequency
 sync_fs = 25e6; # sync receiver sampling rate
 sync_fbw = sync_fs # LFM bandwidth
 
-osc_type = "USO" # putting a oscillator type variable here to auto-name save files
-# osc_type = "USRP"
+# osc_type = "USO" # putting a oscillator type variable here to auto-name save files
+osc_type = "USRP"
 #defines oscillator quality. Either leave as single row to use across all platforms, or define values for each platform as a new row
 if osc_type == "USO"
     a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
@@ -165,7 +165,7 @@ no_sync_flag)
 
 
 
-Ntrials = 20 # number of trials per SRI in Monte Carlo simulations
+Ntrials = 80 # number of trials per SRI in Monte Carlo simulations
 sync_PRIs = [.1 1 2 5 10]
 numSRI = length(sync_PRIs)
 
@@ -308,9 +308,9 @@ else
     freq_text = "wFreq"
 end
 
-outputfilename = "syncModule2_MonteCarlo_mode_$mode"*"_$osc_type"*"_sync_pri_sweep_"*freq_text* ".jld2" # this is the output filename that the data is saved to using JLD2
+outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$osc_type"*"_sync_pri_sweep_"*freq_text* ".jld2" # this is the output filename that the data is saved to using JLD2
 # this saves the data into a JLD2 file. Data includes the estimates
-@save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors
+@save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs s_θ s_ϕ s_h
 #println(std(resolutions[1,:]))
 # Note: JLD2 can be read using "@load filename var1 var2...
 println("Run Complete, and file saved to " *outputfilename)
