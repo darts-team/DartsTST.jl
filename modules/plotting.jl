@@ -42,7 +42,7 @@ function plot_geometry(orbit_time,orbit_pos,p_xyz,t_xyz_grid,s_geo_grid,s_xyz_gr
     display(scatter(s_xyz_grid[1,:],s_xyz_grid[2,:],s_xyz_grid[3,:],leg=false,camera=(20,40),markersize=0.3,xlabel="x (m)",ylabel="y (m)",zlabel="z (m)",title="Scene Pixel Locations in XYZ",size=(1600,900))) #display grid in 3D
 end
 
-function plot_tomogram(display_tomograms,image_3D,s_θ,s_ϕ,s_h,s_geo_grid,s_xyz_grid)
+function plot_tomogram(display_tomograms,image_1xN,image_3D,s_θ,s_ϕ,s_h,s_geo_grid,s_xyz_grid)
     brightest=maximum(image_3D)
     faintest=minimum(image_3D)
     Ns_θ=length(s_θ)

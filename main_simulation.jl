@@ -96,5 +96,5 @@ if display_geometry || display_RSF_rawdata || display_tomograms!=0
     include("modules/plotting.jl")
     if display_RSF_rawdata;Plotting.plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata);end
     if display_geometry;Plotting.plot_geometry(orbit_time,orbit_pos,p_xyz,t_xyz_grid,s_geo_grid,s_xyz_grid);end
-    if display_tomograms!=0;Plotting.plot_tomogram(display_tomograms,image_3D,s_θ,s_ϕ,s_h,s_geo_grid,s_xyz_grid);end
+    if display_tomograms!=0;Plotting.plot_tomogram(display_tomograms,image_1xN,image_3D,s_θ,s_ϕ,s_h,s_geo_grid,s_xyz_grid);end
 end
