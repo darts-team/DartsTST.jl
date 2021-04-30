@@ -28,28 +28,15 @@ orbit_pos_interp=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time) # interpola
 p_xyz=1e3*orbit_pos_interp # convert km to m
 Np=size(orbit_pos)[2] # number of platforms
 Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
-## TARGET LOCATIONS and REFLECTIVITIES
+## TARGET/SCENE LOCATIONS
 targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
-if ts_coord_sys=="LLH" # convert LLH to XYZ
-    t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
-elseif ts_coord_sys=="SCH" # convert SCH to XYZ
-    p_avg_xyz=mean(mean(p_xyz,dims=2),dims=3) # average XYZ of platforms over platforms and slow-time locations
-    p_avg_geo=Geometry.xyz_to_geo(p_avg_xyz)
-    # TODO p_avg_heading=? # average heading of platforms, due North is 0, due East is 90 (deg)
-    peg=Geometry.PegPoint(p_avg_geo[1],p_avg_geo[2],p_avg_heading)
-    slant_range,ground_range=Scene.lookangle_to_range(look_angle,p_avg_geo[3],0,peg.Ra) # slant_range (equal to ref_range?)
-    targets_loc_sch=targets_loc
-    targets_loc_sch[2,:]=targets_loc_sch[2,:].+ground_range
-    t_xyz_3xN=Geometry.sch_to_xyz(targets_loc_sch,peg)
-elseif ts_coord_sys=="XYZ" # no conversion needed
-    t_xyz_3xN=targets_loc
-end
+s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loops
+t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,p_xyz,look_angle,p_avg_heading,earth_radius,earth_eccentricity)
+## TARGET REFLECTIVITIES
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
 ## GENERATE RAW DATA
 ref_range=Generate_Raw_Data.distance(mean(t_xyz_3xN,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range (equal to slant_range in sch?)
-#rawdata=Generate_Raw_Data.main(t_xyz_3xN,p_xyz_grid,mode,tx_el,fc) # without fasttime, without slowtime TODO no longer working, delete?
-#rawdata=Generate_Raw_Data.main_RSF(t_xyz_3xN,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range) # with fasttime, without slowtime #TODO no longer working, delete?
 if enable_fast_time # with fastime and slowtime; matched filter gain is included in Srx
     rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range,targets_ref) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
 else # without fastime, with slowtime; matched filter gain is included inside the function
@@ -57,18 +44,6 @@ else # without fastime, with slowtime; matched filter gain is included inside th
 end
 if !enable_fast_time;SNR=SNR*pulse_length*bandwidth;end # SNR increases after matched filter
 if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end # adding random noise based on SNR after range (fast-time) processing
-## IMAGE SCENE
-s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loops
-#s_loc_3xN=Scene.form3Dgrid_array(s_loc_1,s_loc_2,s_loc_3) # using array processing
-if ts_coord_sys=="LLH" # convert LLH to XYZ
-    s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)
-elseif ts_coord_sys=="SCH" # convert SCH to XYZ
-    scene_loc_sch=s_loc_3xN
-    scene_loc_sch[2,:]=scene_loc_sch[2,:].+ground_range
-    s_xyz_3xN=Geometry.sch_to_xyz(scene_loc_sch,peg)
-elseif ts_coord_sys=="XYZ" # no conversion needed
-    s_xyz_3xN=s_loc_3xN
-end
 ## PROCESS RAW DATA TO GENERATE IMAGE
 #image_3xN=Process_Raw_Data.main(rawdata,s_xyz_3xN,p_xyz_grid,mode,tx_el,fc) # without fastime, without slowtime
 #image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)  # with fastime, without slowtime
