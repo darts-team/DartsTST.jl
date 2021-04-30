@@ -2,8 +2,9 @@ include("modules/generate_raw_data.jl")
 include("modules/process_raw_data.jl")
 include("modules/geometry.jl")
 include("modules/scene.jl")
-include("inputs/input_parameters_nadirlooking.jl")
+#include("inputs/input_parameters_nadirlooking.jl")
 #include("inputs/input_parameters_slantlooking.jl")
+include("inputs/input_parameters_SCH_lookangle.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
@@ -29,48 +30,61 @@ Np=size(orbit_pos)[2] # number of platforms
 Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
 ## TARGET LOCATIONS and REFLECTIVITIES
 targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
-targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end
-if t_coord_sys=="LLH" # convert LLH to XYZ
-    t_xyz_grid=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
-elseif t_coord_sys=="SCH" # convert SCH to XYZ
-    #TODO
-elseif t_coord_sys=="XYZ" # no conversion needed
-    t_xyz_grid=targets_loc
+targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
+if ts_coord_sys=="LLH" # convert LLH to XYZ
+    t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
+elseif ts_coord_sys=="SCH" # convert SCH to XYZ
+    p_avg_xyz=mean(mean(p_xyz,dims=2),dims=3) # average XYZ of platforms over platforms and slow-time locations
+    p_avg_geo=Geometry.xyz_to_geo(p_avg_xyz)
+    # TODO p_avg_heading=? # average heading of platforms, due North is 0, due East is 90 (deg)
+    peg=Geometry.PegPoint(p_avg_geo[1],p_avg_geo[2],p_avg_heading)
+    slant_range,ground_range=Scene.lookangle_to_range(look_angle,p_avg_geo[3],0,peg.Ra) # slant_range (equal to ref_range?)
+    targets_loc_sch=targets_loc
+    targets_loc_sch[2,:]=targets_loc_sch[2,:].+ground_range
+    t_xyz_3xN=Geometry.sch_to_xyz(targets_loc_sch,peg)
+elseif ts_coord_sys=="XYZ" # no conversion needed
+    t_xyz_3xN=targets_loc
 end
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
 ## GENERATE RAW DATA
-ref_range=Generate_Raw_Data.distance(mean(t_xyz_grid,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range
-#rawdata=Generate_Raw_Data.main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc) # without fasttime, without slowtime TODO no longer working, delete?
-#rawdata=Generate_Raw_Data.main_RSF(t_xyz_grid,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range) # with fasttime, without slowtime #TODO no longer working, delete?
+ref_range=Generate_Raw_Data.distance(mean(t_xyz_3xN,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range (equal to slant_range in sch?)
+#rawdata=Generate_Raw_Data.main(t_xyz_3xN,p_xyz_grid,mode,tx_el,fc) # without fasttime, without slowtime TODO no longer working, delete?
+#rawdata=Generate_Raw_Data.main_RSF(t_xyz_3xN,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range) # with fasttime, without slowtime #TODO no longer working, delete?
 if enable_fast_time # with fastime and slowtime; matched filter gain is included in Srx
-    rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range,targets_ref) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
+    rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range,targets_ref) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
 else # without fastime, with slowtime; matched filter gain is included inside the function
-    rawdata=Generate_Raw_Data.main_noRSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc,targets_ref) # rawdata is a: 2D array of size Nst x Np (SAR/SIMO), 3D array of size Nst x Np(RX) x Np(TX) (MIMO)
+    rawdata=Generate_Raw_Data.main_noRSF_slowtime(t_xyz_3xN,p_xyz,mode,tx_el,fc,targets_ref) # rawdata is a: 2D array of size Nst x Np (SAR/SIMO), 3D array of size Nst x Np(RX) x Np(TX) (MIMO)
 end
 if !enable_fast_time;SNR=SNR*pulse_length*bandwidth;end # SNR increases after matched filter
 if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end # adding random noise based on SNR after range (fast-time) processing
 ## IMAGE SCENE
-Ns_θ=length(s_θ)
-Ns_ϕ=length(s_ϕ)
-Ns_h=length(s_h)
-s_geo_grid=Scene.form3Dgrid_for(s_θ,s_ϕ,s_h) # using 3 nested for loops
-#s_geo_grid=Scene.form3Dgrid_array(s_θ,s_ϕ,s_h) # using array processing
-s_xyz_grid=Geometry.geo_to_xyz(s_geo_grid,earth_radius,earth_eccentricity)
-## PROCESS RAW DATA TO GENERATE IMAGE
-#image_3xN=Process_Raw_Data.main(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc) # without fastime, without slowtime
-#image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)  # with fastime, without slowtime
-if enable_fast_time # with fastime, with slowtime
-    image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
-else # without fastime, with slowtime
-    image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc)
+s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loops
+#s_loc_3xN=Scene.form3Dgrid_array(s_loc_1,s_loc_2,s_loc_3) # using array processing
+if ts_coord_sys=="LLH" # convert LLH to XYZ
+    s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)
+elseif ts_coord_sys=="SCH" # convert SCH to XYZ
+    scene_loc_sch=s_loc_3xN
+    scene_loc_sch[2,:]=scene_loc_sch[2,:].+ground_range
+    s_xyz_3xN=Geometry.sch_to_xyz(scene_loc_sch,peg)
+elseif ts_coord_sys=="XYZ" # no conversion needed
+    s_xyz_3xN=s_loc_3xN
 end
-image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_θ,Ns_ϕ,Ns_h)
+## PROCESS RAW DATA TO GENERATE IMAGE
+#image_3xN=Process_Raw_Data.main(rawdata,s_xyz_3xN,p_xyz_grid,mode,tx_el,fc) # without fastime, without slowtime
+#image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)  # with fastime, without slowtime
+if enable_fast_time # with fastime, with slowtime
+    image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+else # without fastime, with slowtime
+    image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc)
+end
+Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
+image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
 ## PERFORMANCE METRICS
 # PSF metrics
-if size(t_xyz_grid,2)==1 # PSF related performance metrics are calculated when there is only one point target
-    target_index1=findall(t_loc_1 .==s_θ)
-    target_index2=findall(t_loc_2 .==s_ϕ)
-    target_index3=findall(t_loc_3 .==s_h)
+if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when there is only one point target
+    target_index1=findall(t_loc_1 .==s_loc_1)
+    target_index2=findall(t_loc_2 .==s_loc_2)
+    target_index3=findall(t_loc_3 .==s_loc_3)
     if isempty(target_index1) || isempty(target_index2) || isempty(target_index3)
         show("PSF related performance metrics cannot be calculated since target is not inside the scene!")
         PSF_metrics=false
@@ -78,7 +92,7 @@ if size(t_xyz_grid,2)==1 # PSF related performance metrics are calculated when t
         include("modules/performance_metrics.jl")
         PSF_metrics=true
         target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
-        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h,PSF_peak_target) # resolutions in each of the 3 axes
+        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_peak_target) # resolutions in each of the 3 axes
     end
 else
     PSF_metrics=false
@@ -94,7 +108,8 @@ end
 ## PLOTS (1D PSF cuts are displayed by default in the performance.metrics module)
 if display_geometry || display_RSF_rawdata || display_tomograms!=0
     include("modules/plotting.jl")
+    coords=Plotting.coordinates(ts_coord_sys)
     if display_RSF_rawdata;Plotting.plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata);end
-    if display_geometry;Plotting.plot_geometry(orbit_time,orbit_pos,p_xyz,t_xyz_grid,s_geo_grid,s_xyz_grid);end
-    if display_tomograms!=0;Plotting.plot_tomogram(display_tomograms,image_1xN,image_3D,s_θ,s_ϕ,s_h,s_geo_grid,s_xyz_grid);end
+    if display_geometry;Plotting.plot_geometry(orbit_time,orbit_pos,p_xyz,t_xyz_3xN,s_loc_3xN,s_xyz_3xN,coords);end
+    if display_tomograms!=0;Plotting.plot_tomogram(display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,s_xyz_3xN,coords);end
 end
