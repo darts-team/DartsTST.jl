@@ -33,7 +33,6 @@ s_loc_1=-0.0006:0.00001:0.0006 # deg latitude
 s_loc_2=-0.004:0.00004:0.004 # deg longitude
 s_loc_3=0 # m  heights
 # range spread function (RSF) parameters
-Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
 bandwidth=10e6 # bandwidth (Hz)
