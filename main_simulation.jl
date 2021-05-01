@@ -11,11 +11,6 @@ include("modules/sync.jl")
 include("modules/error_sources.jl")
 using NCDatasets
 using Statistics
-## RANGE SPREAD FUNCTION (matched filter output)
-if enable_fast_time # matched filter gain is included in Srx
-    Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
-    # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
-end
 ## PLATFORM LOCATIONS
 orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
 t12_orbits=orbit_dataset["time"][1:2] # first two time samples
@@ -35,8 +30,15 @@ s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loo
 t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,p_xyz,look_angle,p_avg_heading,earth_radius,earth_eccentricity)
 ## TARGET REFLECTIVITIES
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
+## RANGE SPREAD FUNCTION (matched filter output)
+min_range,max_range=Geometry.find_min_max_range(t_xyz_grid,p_xyz)
+Trx=2*(max_range-min_range)/c+2*pulse_length # s duration of RX window
+if enable_fast_time # matched filter gain is included in Srx
+    Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
+    # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
+end
 ## GENERATE RAW DATA
-ref_range=Generate_Raw_Data.distance(mean(t_xyz_3xN,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range (equal to slant_range in sch?)
+ref_range=Geometry.distance(mean(t_xyz_3xN,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range (equal to slant_range in sch?)
 if enable_fast_time # with fastime and slowtime; matched filter gain is included in Srx
     rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range,targets_ref) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
 else # without fastime, with slowtime; matched filter gain is included inside the function

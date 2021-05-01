@@ -37,7 +37,6 @@ s_loc_1=-40:2:40 # deg latitude if LLH, along-track if SCH, X if XYZ
 s_loc_2=-60:2:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
 s_loc_3=  0:2:80 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
-Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
 bandwidth=10e6 # bandwidth (Hz)
