@@ -32,6 +32,26 @@ function geo_to_xyz(geo::Array{Float64,},earth_radius::Float64=6.378137e6,earth_
     return xyz
 end
 
+function find_min_max_range(t_xyz_grid,p_xyz)
+    ranges=zeros(1,size(t_xyz_grid,2)*size(p_xyz,2)*size(p_xyz,3))
+    m=1;
+    for i=1:size(t_xyz_grid,2)
+        for j=1:size(p_xyz,2)
+            for k=1:size(p_xyz,3)
+                ranges[m]=distance(t_xyz_grid[:,i],p_xyz[:,j,k])
+                m=m+1;
+            end
+        end
+    end
+    min_range=minimum(ranges)
+    max_range=maximum(ranges)
+    return min_range,max_range
+end
+
+function distance(xyz1,xyz2)
+    dist=((xyz1[1]-xyz2[1]).^2+(xyz1[2]-xyz2[2]).^2+(xyz1[3]-xyz2[3]).^2).^0.5
+end
+
 """
 Converts ECEF XYZ position to Lat/Log/Height
 

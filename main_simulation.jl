@@ -11,11 +11,6 @@ include("modules/error_sources.jl")
 include("modules/performance_metrics.jl")
 using NCDatasets
 using Statistics
-## RANGE SPREAD FUNCTION (matched filter output)
-if enable_fast_time # matched filter gain is included in Srx
-    Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
-    # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
-end
 ## PLATFORM LOCATIONS
 orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
 t12_orbits=orbit_dataset["time"][1:2] # first two time samples
@@ -32,10 +27,15 @@ Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
 t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops
 #t_geo_grid=Scene.form3Dgrid_array(t_θ,t_ϕ,t_h) # using array processing
 t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,earth_radius,earth_eccentricity)
+## RANGE SPREAD FUNCTION (matched filter output)
+min_range,max_range=Geometry.find_min_max_range(t_xyz_grid,p_xyz)
+Trx=2*(max_range-min_range)/c+2*pulse_length # s duration of RX window
+if enable_fast_time # matched filter gain is included in Srx
+    Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
+    # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
+end
 ## GENERATE RAW DATA
-ref_range=Generate_Raw_Data.distance(mean(t_xyz_grid,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range
-#rawdata=Generate_Raw_Data.main(t_xyz_grid,p_xyz_grid,mode,tx_el,fc) # without fasttime, without slowtime TODO no longer working, delete?
-#rawdata=Generate_Raw_Data.main_RSF(t_xyz_grid,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range) # with fasttime, without slowtime #TODO no longer working, delete?
+ref_range=Geometry.distance(mean(t_xyz_grid,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range
 if enable_fast_time # with fastime and slowtime; matched filter gain is included in Srx
     rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
 else # without fastime, with slowtime; matched filter gain is included inside the function
