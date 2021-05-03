@@ -1,4 +1,5 @@
+
+sync data/.DS_Store
 *.jld2
 *.png
 *.nc
-.DS_Store

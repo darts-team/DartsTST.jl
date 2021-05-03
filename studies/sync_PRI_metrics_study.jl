@@ -47,7 +47,7 @@ mode=3 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
 tx_el=1 # which element transmits for SIMO (max value N)
 # radar parameters
 fc=1e9 # center frequency (Hz)
-fp=100 # pulse repetition frequency (Hz)
+fp=10 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz taken from orbits (including slow-time)
 orbit_filename="inputs/orbitOutput_082020.nc" # position in km, time in sec
@@ -77,7 +77,7 @@ s_h=-25:0.5:25 # m  heights
 # range spread function (RSF) parameters
 enable_fast_time = true # whether to enable or disable fast-time axis, 0:disable, 1: enable
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
-disable_freq_offset = false # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
+disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
@@ -103,7 +103,7 @@ elseif osc_type == "USRP"
 end
 osc_coeffs = 0 # temporary holding value, will get overwritten
 
-if disable_freq_offset == 1 # option to remove linear phase drift due to osc frequency offset
+if disable_freq_offset == true # option to remove linear phase drift due to osc frequency offset
     sigma_freq_offsets = zeros(1)
 else
     sigma_freq_offsets = 1.5e-3 # Hz - std. dev. of the frequency offset of the oscillator. This is the linear phase ramp value
