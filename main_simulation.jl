@@ -31,7 +31,7 @@ t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3
 ## TARGET REFLECTIVITIES
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
 ## RANGE SPREAD FUNCTION (matched filter output)
-min_range,max_range=Geometry.find_min_max_range(t_xyz_grid,p_xyz)
+min_range,max_range=Geometry.find_min_max_range(t_xyz_3xN,p_xyz)
 Trx=2*(max_range-min_range)/c+2*pulse_length # s duration of RX window
 if enable_fast_time # matched filter gain is included in Srx
     Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
