@@ -5,6 +5,50 @@ module Scene
 using ..Geometry
 using LinearAlgebra
 using Optim
+using Statistics
+
+mutable struct target_str
+  loc # target location
+  ref # target reflectivity
+end
+function construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref)
+  if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
+      t_loc_3xN=Scene.form3Dgrid_for(t_loc_1,t_loc_2,t_loc_3) # using 3 nested for loops
+      #t_loc_3xN=Scene.form3Dgrid_array(trg_prm.loc_1,trg_prm.loc_2,trg_prm.loc_3) # using array processing
+      t_ref_1xN=Scene.convert_3D_to_1xN(t_ref)
+  elseif target_pos_mode=="CR" # target positions are defined as 3xN (useful for a few discrete targets)
+      @assert length(t_loc_1)==length(t_loc_1)==length(t_loc_1) "each of the 3 target axes should have the same number of targets in the CR mode!"
+      t_loc_3xN=vcat(t_loc_1,t_loc_2,t_loc_3)
+      t_ref_1xN=t_ref
+  end
+  Nt=size(t_loc_3xN,2) # number of targets
+  targets=Array{target_str}(undef,Nt)
+  for i=1:Nt;targets[i]=target_str(t_loc_3xN[:,i],t_ref_1xN[i]);end
+  return targets, Nt
+end
+
+function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,p_xyz,look_angle,p_avg_heading,earth_radius,earth_eccentricity)
+  if ts_coord_sys=="LLH" # convert LLH to XYZ
+      t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
+      s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)
+  elseif ts_coord_sys=="SCH" # convert SCH to XYZ
+      p_avg_xyz=mean(mean(p_xyz,dims=2),dims=3) # average XYZ of platforms over platforms and slow-time locations
+      p_avg_geo=Geometry.xyz_to_geo(p_avg_xyz)
+      # TODO p_avg_heading=? # average heading of platforms, due North is 0, due East is 90 (deg)
+      peg=Geometry.PegPoint(p_avg_geo[1],p_avg_geo[2],p_avg_heading)
+      slant_range,ground_range=Scene.lookangle_to_range(look_angle,p_avg_geo[3],0,peg.Ra) # slant_range (equal to ref_range?)
+      targets_loc_sch=targets_loc
+      targets_loc_sch[2,:]=targets_loc_sch[2,:].+ground_range
+      t_xyz_3xN=Geometry.sch_to_xyz(targets_loc_sch,peg)
+      scene_loc_sch=s_loc_3xN
+      scene_loc_sch[2,:]=scene_loc_sch[2,:].+ground_range
+      s_xyz_3xN=Geometry.sch_to_xyz(scene_loc_sch,peg)
+  elseif ts_coord_sys=="XYZ" # no conversion needed
+      t_xyz_3xN=targets_loc
+      s_xyz_3xN=s_loc_3xN
+  end
+  return t_xyz_3xN,s_xyz_3xN
+end
 
 """
 Generates 3D (volumetric) grid from three 1D (linear) arrays using nested for-loops
@@ -190,11 +234,33 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
       for j=1:Ns2
         for k=1:Ns3
           indx=(i-1)*Ns2*Ns3+(j-1)*Ns3+k
-          image_3D[i,j,k]=image_1xN[indx] # square for power?
+          image_3D[i,j,k]=image_1xN[indx]
         end
       end
     end
     return image_3D
+  end
+
+  """
+  Converts 3D array of size Ns1xNs2xNs3 to 1D array of size 1xN which is used to convert target amplitudes defined in 3D to 1xN for generate_raw_data
+    ## Arguments
+    - array_3D: 3D array of size Ns1xNs2xNs3
+    ## Outputs
+    - array_1xN: 1D array of size 1xN (N=Ns1xNs2xNs3)
+    """
+  function convert_3D_to_1xN(array_3D)
+    N1,N2,N3=size(array_3D)
+    N=N1*N2*N3
+    array_1xN=zeros(Float64,3,N)
+    for i=1:N1
+      for j=1:N2
+        for k=1:N3
+          indx=(i-1)*N2*N3+(j-1)*N3+k
+          array_1xN[indx]=array_3D[i,j,k]
+        end
+      end
+    end
+    return array_1xN
   end
 
   """
