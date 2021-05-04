@@ -20,11 +20,10 @@ println("GEO2: ", geo2)
 
 sch=[-19766.4,23.145535442,9748.895229822]
 println(sch)
-peg=[35.2117072245,-111.8112805579,179.8535529463]
-xyz2=Geometry.sch_to_xyz(sch,peg,a,e)
+peg=Geometry.PegPint(35.2117072245,-111.8112805579,179.8535529463)
+xyz2=Geometry.sch_to_xyz(sch,peg)
 println("SCH to XYZ: ", xyz2)
 
-Mxyzprime_xyz,O,ra=Geometry.peg_calculations(peg,a,e) # TODO use structure
 xyz3=Geometry.sch_to_xyz_2(sch,Mxyzprime_xyz,O,ra)
 println("SCH to XYZ: ", xyz3)
 ## rotations

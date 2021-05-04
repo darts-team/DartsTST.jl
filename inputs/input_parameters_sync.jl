@@ -1,7 +1,7 @@
 using NCDatasets
 
 use_orbits_flag = true # true if using an orbit file to inform number of platforms
-disable_freq_offset = false # false = frequency mismatch + phase ramp. true = no phase ramp
+disable_freq_offset = true # false = frequency mismatch + phase ramp. true = no phase ramp
 
 if !use_orbits_flag
     setNumPlatforms = 3 # manually select number of Rx platforms
@@ -14,8 +14,8 @@ sync_fc = 1e9 # waveform center frequency
 sync_fs = 25e6; # sync receiver sampling rate
 sync_fbw = sync_fs # LFM bandwidth
 
-# osc_type = "USO" # putting a oscillator type variable here to auto-name save files
-osc_type = "USRP"
+osc_type = "USO" # putting a oscillator type variable here to auto-name save files
+# osc_type = "USRP"
 
 #defines oscillator quality. Either leave as single row to use across all platforms, or define values for each platform as a new row
 
@@ -57,7 +57,7 @@ sync_clk_fs = 1e3; # sample rate of clock error process
 master = 1; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
 
 
-no_sync_flag = false; # if flag == true, no sync is used. flag == false results in normal sync process estimation
+no_sync_flag = true; # if flag == true, no sync is used. flag == false results in normal sync process estimation
 ## make a struct of important input parameters
 #list key parameters in here, they will get passed to most(?) modules
 mutable struct keyParameters

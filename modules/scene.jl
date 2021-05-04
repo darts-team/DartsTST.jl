@@ -1,14 +1,64 @@
 module Scene
 #TODO add function definitions, comments, define input types, remove unused functions
 
-include("geometry.jl")
+#include("geometry.jl")
+using ..Geometry
 using LinearAlgebra
+using Optim
+using Statistics
 
-"generates 3D (volumetric) grid from three 1D (linear) arrays using nested for-loops\n
-Inputs\n
-  array1,array2,array3: three 1D arrays of size N1,N2,N3 representing the principal axes of the 3D volume\n
-Outputs\n
-  vol_grid: coordinates of 3D (volumetric) grid of points as 3xN matrix where N=N1xN2xN3"
+mutable struct target_str
+  loc # target location
+  ref # target reflectivity
+end
+function construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref)
+  if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
+      t_loc_3xN=Scene.form3Dgrid_for(t_loc_1,t_loc_2,t_loc_3) # using 3 nested for loops
+      #t_loc_3xN=Scene.form3Dgrid_array(trg_prm.loc_1,trg_prm.loc_2,trg_prm.loc_3) # using array processing
+      t_ref_1xN=Scene.convert_3D_to_1xN(t_ref)
+  elseif target_pos_mode=="CR" # target positions are defined as 3xN (useful for a few discrete targets)
+      @assert length(t_loc_1)==length(t_loc_1)==length(t_loc_1) "each of the 3 target axes should have the same number of targets in the CR mode!"
+      t_loc_3xN=vcat(t_loc_1,t_loc_2,t_loc_3)
+      t_ref_1xN=t_ref
+  end
+  Nt=size(t_loc_3xN,2) # number of targets
+  targets=Array{target_str}(undef,Nt)
+  for i=1:Nt;targets[i]=target_str(t_loc_3xN[:,i],t_ref_1xN[i]);end
+  return targets, Nt
+end
+
+function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,p_xyz,look_angle,p_avg_heading,earth_radius,earth_eccentricity)
+  if ts_coord_sys=="LLH" # convert LLH to XYZ
+      t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
+      s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)
+  elseif ts_coord_sys=="SCH" # convert SCH to XYZ
+      p_avg_xyz=mean(mean(p_xyz,dims=2),dims=3) # average XYZ of platforms over platforms and slow-time locations
+      p_avg_geo=Geometry.xyz_to_geo(p_avg_xyz)
+      # TODO p_avg_heading=? # average heading of platforms, due North is 0, due East is 90 (deg)
+      peg=Geometry.PegPoint(p_avg_geo[1],p_avg_geo[2],p_avg_heading)
+      slant_range,ground_range=Scene.lookangle_to_range(look_angle,p_avg_geo[3],0,peg.Ra) # slant_range (equal to ref_range?)
+      targets_loc_sch=targets_loc
+      targets_loc_sch[2,:]=targets_loc_sch[2,:].+ground_range
+      t_xyz_3xN=Geometry.sch_to_xyz(targets_loc_sch,peg)
+      scene_loc_sch=s_loc_3xN
+      scene_loc_sch[2,:]=scene_loc_sch[2,:].+ground_range
+      s_xyz_3xN=Geometry.sch_to_xyz(scene_loc_sch,peg)
+  elseif ts_coord_sys=="XYZ" # no conversion needed
+      t_xyz_3xN=targets_loc
+      s_xyz_3xN=s_loc_3xN
+  end
+  return t_xyz_3xN,s_xyz_3xN
+end
+
+"""
+Generates 3D (volumetric) grid from three 1D (linear) arrays using nested for-loops
+## Arguments
+- array1,1D arrays of size N1 representing first principal axes of the 3D volume
+- array2,1D arrays of size N2 representing second principal axes of the 3D volume
+- array3:1D arrays of size N3 representing third principal axes of the 3D volume
+## Outputs
+vol_grid: coordinates of 3D (volumetric) grid of points as 3xN matrix where N=N1xN2xN3
+"""
 function form3Dgrid_for(array1,array2,array3)
   vol_grid=zeros(3,length(array1)*length(array2)*length(array3))
   m=0
@@ -23,11 +73,15 @@ function form3Dgrid_for(array1,array2,array3)
   return vol_grid
 end
 
-"generates 3D (volumetric) grid from three 1D (linear) arrays using array processing\n
-Inputs\n
-  array1,array2,array3: three 1D arrays of size N1,N2,N3 representing the principal axes of the 3D volume\n
-Outputs\n
-  vol_grid: coordinates of 3D (volumetric) grid of points as 3xN matrix where N=N1xN2xN3"
+"""
+Generates 3D (volumetric) grid from three 1D (linear) arrays using array processing
+## Arguments
+- array1,1D arrays of size N1 representing first principal axes of the 3D volume
+- array2,1D arrays of size N2 representing second principal axes of the 3D volume
+- array3:1D arrays of size N3 representing third principal axes of the 3D volume
+## Outputs
+vol_grid: coordinates of 3D (volumetric) grid of points as 3xN matrix where N=N1xN2xN3
+"""
 function form3Dgrid_array(array1,array2,array3)
   array11=Array{Float64}(undef,1,length(array1))
   array22=Array{Float64}(undef,1,length(array2))
@@ -42,33 +96,37 @@ function form3Dgrid_array(array1,array2,array3)
   return vol_grid
 end
 
-"look angle to slant/ground range conversion (spherical planet assumed)\n
-Inputs\n
-  θ_l: look angles
-  p_h: platform height\n
-  ra: radius of spherical planet\n
-  t_h: target heights vector\n
-Outputs\n
-  rs: slant ranges to the targets\n
-  rg: ground ranges to the targets"
-function lookangle_to_range(ra,θ_l,p_h,t_h)
-    ra=ra.+t_h
-    p_h=p_h.-t_h
-    inc=asind.(sind.(θ_l).*(ra+p_h)./ra) # deg incidence angle
-    α=inc-θ_l # deg planet-central angle
-    rg=ra.*α*pi/180 # ground range
-    rs=(((ra+p_h).*sind.(α)).^2+((ra.+p_h).*cosd.(α).-ra).^2).^0.5 # slant range
-    return rs, rg
+"""
+Convert look angle to slant/ground range (spherical planet assumed)
+## Inputs
+- θ_l: look angles (deg)
+- p_h: platform height (m)
+- ra: radius of spherical planet (m)
+- t_h: target heights vector (m)
+## Outputs
+- rs: slant ranges to the targets
+- rg: ground ranges to the targets
+"""
+function lookangle_to_range(θ_l,p_h,t_h, ra)
+  ra=ra.+t_h
+  p_h=p_h.-t_h
+  inc=asind.(sind.(θ_l).*(ra+p_h)./ra) # deg incidence angle
+  α=inc-θ_l # deg planet-central angle
+  rg=ra.*α*pi/180 # ground range
+  rs=(((ra+p_h).*sind.(α)).^2+((ra.+p_h).*cosd.(α).-ra).^2).^0.5 # slant range
+  return rs, rg
 end
 
-"slant range to look angle and ground range conversion (spherical planet assumed)\n
-Inputs\n
-  p_h: platform height\n
-  ra: radius of spherical planet\n
-  rs: slant ranges to the targets\n
-Outputs\n
-  θ_l: look angles to the targets\n
-  rg: ground ranges to the targets"
+"""
+Slant range to look angle and ground range conversion (spherical planet assumed)
+## Inputs
+- p_h: platform height
+- ra: radius of spherical planet
+- rs: slant ranges to the targets
+## Outputs
+- θ_l: look angles to the targets
+- rg: ground ranges to the targets
+"""
 function slantrange_to_lookangle(ra,rs,p_h) # target height is assumed 0 TODO add target height
   θ_l=acos.((rs.^2+(ra+p_h).^2-ra^2)./(2*rs.*(ra+p_h))) # rad look angle
   inc=asin.((ra+p_h)./ra.*sin.(θ_l)) # rad incidence angle
@@ -77,14 +135,16 @@ function slantrange_to_lookangle(ra,rs,p_h) # target height is assumed 0 TODO ad
   return rg,θ_l*180/pi
 end
 
-"ground range to look angle and slant range conversion (spherical planet assumed)\n
-Inputs\n
-  p_h: platform height\n
-  ra: radius of spherical planet\n
-  rg: ground ranges to the targets\n
-Outputs\n
-  θ_l: look angles to the targets\n
-  rs: slant ranges to the targets"
+"""
+Ground range to look angle and slant range conversion (spherical planet assumed)
+## Arguments
+p_h: platform height
+ra: radius of spherical planet
+rg: ground ranges to the targets
+## Outputs
+- θ_l: look angles to the targets
+- rs: slant ranges to the targets
+"""
 function groundrange_to_lookangle(ra,rg,p_h) # # target height is assumed 0 TODO add target height
   α=rg/ra # rad planet-central angle
   rs=(((ra+p_h)*sind.(α)).^2+((ra+p_h).*cosd.(α)-ra).^2).^0.5 # slant range
@@ -92,58 +152,62 @@ function groundrange_to_lookangle(ra,rg,p_h) # # target height is assumed 0 TODO
   return rs,θ_l*180/pi
 end
 
-"look angles and target heights to target xyz conversion (spherical approximation)\n
-Inputs\n
-  earth_radius: radius of earth \n
-  earth_eccentricity: eccentricity of earth\n
-  peg: peg point coordinates for sch to xyz conversion \n
-  p_θϕh: platform location in geographic coordinates (lat/lon/height)\n
-  lookh: 3xN array for N point targets (1st dimension: azimuth look angles, 2nd dimension: elevation look angles, 3rd dimension: target heights) \n
-Outputs\n
-  vT_xyz: target positions in xyz"
-function lookh_to_xyz(lookh,p_θϕh,peg,earth_radius,earth_eccentricity)
-    vL2_sch=zeros(size(lookh))
-    peg_xyz_grid=zeros(size(lookh))
-    vL_xyz=zeros(size(lookh))
-    vT=zeros(size(lookh))
-    ϕ_l=lookh[1,:] # deg  azimuth angles
-    θ_l=lookh[2,:] # deg elevation angles
-    t_h=lookh[3,:] # target heights
-    p_h=p_θϕh[3] # platform height
-    p_xyz=Geometry.geo_to_xyz(p_θϕh,earth_radius,earth_eccentricity) # platform position in xyz
-    rs,rg=lookangle_to_range(earth_radius,θ_l,p_h,t_h) # slant range between target and platform, assumes spherical planet TODO t_h can be a smaller vector and then repeat
-    vL2_sch[1,:]=sind.(θ_l).*sind.(ϕ_l)
-    vL2_sch[2,:]=sind.(θ_l).*cosd.(ϕ_l) #TODO add d for left/right looking
-    vL2_sch[3,:]=-cosd.(θ_l) # look vectors in geo (for each target at each look angle
-    vL2_xyz=Geometry.sch_to_xyz(vL2_sch,peg,earth_radius,earth_eccentricity) # look vectors in xyz (for each target at each look angle)
-    peg_geo=[peg[1],peg[2],0]
-    peg_xyz=Geometry.geo_to_xyz(peg_geo,earth_radius,earth_eccentricity)
-    peg_xyz_grid=repeat(peg_xyz,1,size(lookh)[2])
-    rs_grid=repeat(rs',3,1)
-    vL_xyz=rs_grid.*(vL2_xyz.-peg_xyz_grid)
-    vT_xyz=vL_xyz.+p_xyz # target vectors in xyz (for azimuth angle of 0 deg)
-    return vT_xyz
+"""
+Convert Azimuth/Elevation look angles and target heights to target xyz (spherical approximation)
+## Arguments
+- lookh: 3xN array for N point targets (1st dimension: azimuth look angles [deg], 2nd dimension: elevation look angles [deg], 3rd dimension: target heights [m])
+- platform_geo: platform location in geographic coordinates (lat/lon/height)
+- peg: peg point struct (see Geometry.PegPoint for details)
+- earth_radius: radius of earth (optional)
+- earth_eccentricity: eccentricity of earth (optional)
+## Outputs
+- T_xyz: vector of target positions in xyz
+"""
+function lookh_to_xyz(lookh,platform_geo,peg::Geometry.PegPoint,earth_radius::Float64=6.378137e6,earth_eccentricity::Float64=0.08181919084267456)
+  vL2_sch=zeros(size(lookh))
+  peg_xyz_grid=zeros(size(lookh))
+  vL_xyz=zeros(size(lookh))
+  vT=zeros(size(lookh))
+  ϕ_l=lookh[1,:] # deg  azimuth angles
+  θ_l=lookh[2,:] # deg elevation angles
+  t_h=lookh[3,:] # target heights
+  p_h=platform_geo[3] # platform height
+  p_xyz=Geometry.geo_to_xyz(platform_geo,earth_radius,earth_eccentricity) # platform position in xyz
+  rs,rg=lookangle_to_range(θ_l,p_h,t_h, earth_radius) # slant range between target and platform, assumes spherical planet TODO t_h can be a smaller vector and then repeat
+  vL2_sch[1,:]=sind.(θ_l).*sind.(ϕ_l)
+  vL2_sch[2,:]=sind.(θ_l).*cosd.(ϕ_l) #TODO add d for left/right looking
+  vL2_sch[3,:]=-cosd.(θ_l) # look vectors in geo (for each target at each look angle
+  #peg_point = Geometry.PegPoint(peg[1], peg[2], peg[3],earth_radius,earth_eccentricity) # create peg point struct
+  vL2_xyz=Geometry.sch_to_xyz(vL2_sch,peg) # look vectors in xyz (for each target at each look angle)
+  peg_geo=[peg.pegLat,peg.pegLon,0]
+  peg_xyz=Geometry.geo_to_xyz(peg_geo,earth_radius,earth_eccentricity)
+  peg_xyz_grid=repeat(peg_xyz,1,size(lookh,2))
+  rs_grid=repeat(rs',3,1)
+  vL_xyz=rs_grid.*(vL2_xyz.-peg_xyz_grid)
+  vT_xyz=vL_xyz.+p_xyz # target vectors in xyz (for azimuth angle of 0 deg)
+  return vT_xyz
 end
 
-#TODO
-"Converts target positions defined in chP (ch of sch, platform position in θϕh and rotation in deg of look angle vector around platform position vector) to xyz\n
-Inputs\n
-  earth_radius: radius of earth \n
-  earth_eccentricity: eccentricity of earth\n
-  peg: peg point coordinates for sch to xyz conversion \n
-  p_θϕh: platform location in geographic coordinates (lat/lon/height)\n
-  t_c: cross-track coordinates of target points \n
-  t_h: height coordinates of target points\n
-  rot_P: amount of rotations (as an array) in degrees of look vector about platform position vector\n
-Outputs\n
-  t_xyz_grid_rot: target positions in xyz as a 3xN array"
-function chP_to_xyz_grid(t_c,t_h,rot_P,p_θϕh,peg,earth_radius,earth_eccentricity)
+"""
+Converts target positions defined in chP (C,H- of SCH) and azimuth angle vector around platform position vector to ECEF xyz
+## Arguments
+- t_c: cross-track coordinates of target points
+- t_h: height coordinates of target points
+- rot_P: amount of rotations (as an array) in degrees of look vector about platform position vector
+- platform_geo: platform location in geographic coordinates (lat/lon/height)
+- peg: peg point coordinates for sch to xyz conversion (see Geometry.PegPoint)
+- earth_radius: radius of earth (optional)
+- earth_eccentricity: eccentricity of earth (optional)
+## Outputs
+- XYZ-grid: target positions in ECEF-xyz as a 3xN array
+"""
+function chP_to_xyz_grid(t_c,t_h,rot_P,platform_geo,peg::Geometry.PegPoint,earth_radius::Float64=6.378137e6,earth_eccentricity::Float64=0.08181919084267456)
   t_s=0 # before rotation around P, targets are at the same along-track position with platform
-  p_xyz=Geometry.geo_to_xyz(p_θϕh,earth_radius,earth_eccentricity) # platform position in xyz
+  p_xyz=Geometry.geo_to_xyz(platform_geo,earth_radius,earth_eccentricity) # platform position in xyz
   p_xyz=p_xyz/norm(p_xyz)
   t_sch_grid=Scene.form3Dgrid_for(t_s,t_c,t_h) # using 3 nested for loops
   #t_geo_grid=Scene.form3Dgrid_array(t_s,t_c,t_h) # using array processing
-  t_xyz_grid=Geometry.sch_to_xyz(t_sch_grid,peg,earth_radius,earth_eccentricity)
+  t_xyz_grid=Geometry.sch_to_xyz(t_sch_grid,peg)
   t_xyz_grid_rot=zeros(3,size(t_c)[1]*size(t_h)[1]*size(rot_P)[1])
   # rotate look vector around platform vector by azimuth degrees
   for i=1:size(rot_P)[1]
@@ -156,23 +220,194 @@ function chP_to_xyz_grid(t_c,t_h,rot_P,p_θϕh,peg,earth_radius,earth_eccentrici
   return t_xyz_grid_rot
 end
 
-"Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which is useful for displaying tomograms\n
-Inputs\n
-  image_1xN: 1D scene array of size 1xN (N=Ns1xNs2xNs3) \n
-  Ns1,Ns2,Ns3: lengths of scene vectors in each principle axis \n
-Outputs\n
-  image_3D: 3D scene array of size Ns1xNs2xNs3"
-function convert_image_1xN_to_3D(image_1xN,Ns1,Ns2,Ns3)
-  image_3D=zeros(Ns1,Ns2,Ns3)
-  for i=1:Ns1
-    for j=1:Ns2
-      for k=1:Ns3
-        indx=(i-1)*Ns2*Ns3+(j-1)*Ns3+k
-        image_3D[i,j,k]=image_1xN[indx] # square for power?
+"""
+Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which is useful for displaying tomograms
+  ## Arguments
+  - image_1xN: 1D scene array of size 1xN (N=Ns1xNs2xNs3)
+  - Ns1,Ns2,Ns3: lengths of scene vectors in each principle axis
+  ## Outputs
+  - image_3D: 3D scene array of size Ns1xNs2xNs3
+  """
+  function convert_image_1xN_to_3D(image_1xN,Ns1,Ns2,Ns3)
+    image_3D=zeros(Ns1,Ns2,Ns3)
+    for i=1:Ns1
+      for j=1:Ns2
+        for k=1:Ns3
+          indx=(i-1)*Ns2*Ns3+(j-1)*Ns3+k
+          image_3D[i,j,k]=image_1xN[indx]
+        end
       end
     end
+    return image_3D
   end
-  return image_3D
-end
 
-end
+  """
+  Converts 3D array of size Ns1xNs2xNs3 to 1D array of size 1xN which is used to convert target amplitudes defined in 3D to 1xN for generate_raw_data
+    ## Arguments
+    - array_3D: 3D array of size Ns1xNs2xNs3
+    ## Outputs
+    - array_1xN: 1D array of size 1xN (N=Ns1xNs2xNs3)
+    """
+  function convert_3D_to_1xN(array_3D)
+    N1,N2,N3=size(array_3D)
+    N=N1*N2*N3
+    array_1xN=zeros(Float64,3,N)
+    for i=1:N1
+      for j=1:N2
+        for k=1:N3
+          indx=(i-1)*N2*N3+(j-1)*N3+k
+          array_1xN[indx]=array_3D[i,j,k]
+        end
+      end
+    end
+    return array_1xN
+  end
+
+  """
+  Compute target points along an iso-range line on the ellipsoid
+  # Arguments
+  - `pos::3x1 Float Array`: Cartesian Position of Spacecraft (typically ECEF)
+  - `vel::3x1 Float Array`: Cartesian Velocity of Spacecraft (typically ECEF)
+  - `ϕ::1xN Float Array`: azimuth angles (rad)
+  - `ρ_0::Float64`: slant range (m)
+  - `θ_0::Float64`: loook angle associated with ρ_0 and ϕ_0 (rad)
+  - `earth_radius::Float64`: radius of earth (optional)
+  - `earth_eccentricity::Float64`: eccentricity of earth (optional)
+
+  # Return
+  - `Targets::3xN Flot Array`: Targets along iso-range line in SC(pos/vel) parent frame (typically ECEF)
+  """
+  function isorange_ellipsoid(pos::Array{Float64,1}, vel::Array{Float64,1},
+    ϕ_in::Array{Float64,1},ρ_0::Float64, θ_0::Float64,
+    ellipsoid_radius::Float64=6.378137e6,ellipsoid_eccentricity::Float64=0.08181919084267456)
+
+    @assert size(pos,1)==3 "POS needs to be 3 x 1"
+    @assert size(vel,1)==3 "VEL needs to be 3 x 1"
+    @assert ρ_0 >0 "Slant Range needs to be positive"
+
+    #get TCN frame from position and velocity
+    that,chat,nhat = Geometry.get_tcn(pos, vel)
+
+    #set aside space for output variable
+    Targ_vec = zeros(3,length(ϕ_in))
+
+    #iterate over various ϕ values, est theta for that that suits
+    for i_ϕ = 1:length(ϕ_in)
+
+      #define function that is difference between slant-range at (θ, ϕ_in) and slant_range at (θ_in, 0)
+      mylhatf(θ) = (Geometry.get_rho(pos, Geometry.tcn_lvec(that, chat, nhat, θ, ϕ_in[i_ϕ]), ellipsoid_radius, ellipsoid_eccentricity) - ρ_0)^2
+
+      #find minimum of that function by iterating over look angle
+      res = optimize(mylhatf, θ_0 - π/180, θ_0 + π/180, Brent(), rel_tol = 1e-10);
+      θ_est = Optim.minimizer(res); #estimated look angle
+
+      #estimate slant range for this look vector
+      ρ_est = Geometry.get_rho(pos, Geometry.tcn_lvec(that, chat, nhat, θ_est, ϕ_in[i_ϕ]), ellipsoid_radius, ellipsoid_eccentricity)
+
+      #compute Target coordinates (using T = P + l)
+      Targ_vec[:,i_ϕ] = pos + Geometry.tcn_lvec(that, chat, nhat, θ_est, ϕ_in[i_ϕ])*ρ_est;
+    end
+
+    return Targ_vec
+  end
+  """
+  Compute target points along an iso-range line on the ellipsoid (at various heights)
+  # Arguments
+  - `pos::3x1 Float Array`: Cartesian Position of Spacecraft (typically ECEF)
+  - `vel::3x1 Float Array`: Cartesian Velocity of Spacecraft (typically ECEF)
+  - `ϕ::1xNϕ Float Array`: azimuth angles (rad)
+  - `hgt::1xNh Float Array`: heights above ellipsoid (m)
+  - `ρ_0::Float64`: slant range (m)
+  - `θ_0::Float64`: loook angle associated with ρ_0 and ϕ_0 (rad)
+  - `earth_radius::Float64`: radius of earth (optional)
+  - `earth_eccentricity::Float64`: eccentricity of earth (optional)
+
+  # Return
+  - `Targets::[3 x Nϕ x Nh] Float Array`: Targets along iso-range line in SC(pos/vel) parent frame (typically ECEF)
+  """
+  function isorange_ellipsoid(pos::Array{Float64,1}, vel::Array{Float64,1},
+    ϕ_in::Array{Float64,1},hgt_in::Array{Float64,1}, ρ_0::Float64, θ_0::Float64,
+    ellipsoid_radius::Float64=6.378137e6,ellipsoid_eccentricity::Float64=0.08181919084267456)
+
+    @assert size(pos,1)==3 "POS needs to be 3 x 1"
+    @assert size(vel,1)==3 "VEL needs to be 3 x 1"
+    @assert ρ_0 >0 "Slant Range needs to be positive"
+
+    #get TCN frame from position and velocity
+    that,chat,nhat = Geometry.get_tcn(pos, vel)
+
+    #look vector at zero azimuth, zero height
+    lhat_0 = Geometry.tcn_lvec(that, chat, nhat, θ_0, 0.0); #unit look vector
+    lvec_0 = lhat_0*ρ_0; #full look vector
+
+    #set aside space for output variable
+    Targ_vec = zeros(3,length(ϕ_in), length(hgt_in))
+
+    #iterate over various ϕ values, est theta for that that suits
+    for i_hgt = 1:length(hgt_in)
+
+      #rotate look_vec about t_hat to get target at ith hgt
+      qr = Geometry.quat(-hgt_in[i_hgt]/ρ_0*180/π, that)
+      lvec_hgt = Geometry.rotate_vec(lvec_0, qr)
+
+      #compute target vector at ith height
+      Targ_hgt = pos + lvec_hgt;
+
+      #Geodetic coordinates at zero azimuth
+      targ_geo_hgt = Geometry.xyz_to_geo(Targ_hgt, ellipsoid_radius,ellipsoid_eccentricity);
+
+      #get targets for various phi
+      # add height rotation to θ_0 and Target geodetic height to ellipsoid
+      # keep slant range (ρ_0) constant
+      Targ_vec[:,:,i_hgt] = isorange_ellipsoid(pos, vel, ϕ_in,
+          ρ_0, θ_0+hgt_in[i_hgt]/ρ_0, ellipsoid_radius+targ_geo_hgt[3], ellipsoid_eccentricity);
+    end
+
+    return Targ_vec
+  end
+  """
+  Compute target points along an iso-range line on the ellipsoid (at various heights and look angles)
+  # Arguments
+  - `pos::3x1 Float Array`: Cartesian Position of Spacecraft (typically ECEF)
+  - `vel::3x1 Float Array`: Cartesian Velocity of Spacecraft (typically ECEF)
+  - `ϕ::1xNϕ Float Array`: azimuth angles (rad)
+  - `hgt::1xNh Float Array`: heights above ellipsoid (m)
+  - `θ::1xNθ Float64 Array`: loook angles to evaluate (rad)
+  - `earth_radius::Float64`: radius of earth (optional)
+  - `earth_eccentricity::Float64`: eccentricity of earth (optional)
+
+  # Return
+  - `Targets::[3 x Nϕ x Nh x Nθ] Float Array`: Targets along iso-range line in SC(pos/vel) parent frame (typically ECEF)
+  """
+  function isorange_ellipsoid(pos::Array{Float64,1}, vel::Array{Float64,1},
+    ϕ_in::Array{Float64,1},hgt_in::Array{Float64,1}, θ_in::Array{Float64,1},
+    ellipsoid_radius::Float64=6.378137e6,ellipsoid_eccentricity::Float64=0.08181919084267456)
+
+    @assert size(pos,1)==3 "POS needs to be 3 x 1"
+    @assert size(vel,1)==3 "VEL needs to be 3 x 1"
+
+    #get TCN frame from position and velocity
+    that,chat,nhat = Geometry.get_tcn(pos, vel)
+
+    #set aside space for output variable
+    Targ_vec = zeros(3,length(ϕ_in), length(hgt_in), length(θ_in))
+
+    #iterate over various ϕ values, est theta for that that suits
+    for i_θ = 1:length(θ_in)
+
+      #look vector at zero azimuth, zero height and the ith look angle
+      lhat_0 = Geometry.tcn_lvec(that, chat, nhat, θ_in[i_θ], 0.0); #unit look vector
+      # slant range to ellipsoid for ith look angle
+      ρ_0 = Geometry.get_rho(pos, lhat_0, ellipsoid_radius,ellipsoid_eccentricity);
+
+      # get targets for various ϕ and heights
+      Targ_vec[:,:,:,i_θ] = isorange_ellipsoid(pos, vel, ϕ_in, hgt_in, ρ_0, θ_in[i_θ],
+          ellipsoid_radius, ellipsoid_eccentricity);
+    end
+
+    return Targ_vec
+  end
+
+
+
+end #end module

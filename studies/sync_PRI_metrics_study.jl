@@ -5,7 +5,7 @@ using Statistics
 using JLD2 # note: may have to Pkg.add("JLD2")
 using Distributed, SharedArrays
 
-maxprocs = 81 # maximum number of cores to use
+maxprocs = 101 # maximum number of cores to use
 curr_procs = nprocs()
 if curr_procs < maxprocs
     addprocs(maxprocs - curr_procs)
@@ -51,41 +51,47 @@ fp=10 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz taken from orbits (including slow-time)
 orbit_filename="inputs/orbitOutput_082020.nc" # position in km, time in sec
-SAR_duration=3 # synthetic aperture duration (s)
+
+SAR_duration=5 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
-# target locations (volumetric grid) defined in geo (θϕh)
-# t_θ=0 # deg latitude
-# t_ϕ=0 # deg longitude
-# t_h=0 # m  heights
-# # image/scene pixel coordinates
-# s_θ=-0.0001:0.000001:0.0001 # deg latitude
-# s_ϕ=-0.0005:0.00001:0.0005 # deg longitude
-# s_h=-40:1:40 # m  heights
+# target locations and reflectvities
 
-# target locations (volumetric grid) defined in geo (θϕh) - for slant looking test
-t_θ=7 # deg latitude
-t_ϕ=0 # deg longitude
-t_h=0 # m  heights
+target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
+ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
+if ts_coord_sys=="SCH" # if SCH, target and scene locations are defined relative to the point where look angle vector intersects the surface
+    look_angle=30 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
+    p_avg_heading=0.1 # average heading of platforms, due North is 0, due East is 90 (deg), required only if SCH coordinates TODO we should get this from orbits!
+end
+if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
+    t_loc_1=-10:10:10 # deg latitude if LLH, along-track if SCH, X if XYZ
+    t_loc_2=-20:20:20 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    t_loc_3=0:30:30 # m  heights if LLH or SCH, Z if XYZ
+    t_ref=rand(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
+elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are defined as 3xN array (useful for a few discrete targets)
+    # length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
+    t_loc_1=[0] # deg latitude if LLH, along-track if SCH, X if XYZ
+    t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    t_loc_3=[40] # m  heights if LLH or SCH, Z if XYZ
+    t_ref=  [1] # reflectivities
+end
 # image/scene pixel coordinates
-# s_θ=7-0.0003:0.0000025:7+0.0003 # deg latitude
-# s_ϕ=-0.001:0.00001:0.001 # deg longitude
-# s_h=-35:0.5:35 # m  heights
-s_θ=7-0.0005:0.00001:7+0.0005 # deg latitude
-s_ϕ=-0.002:0.0001:0.002 # deg longitude
-s_h=-25:0.5:25 # m  heights
-
+s_loc_1=-40:.5:40 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2=-60:.5:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=  0:.5:80 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
-enable_fast_time = true # whether to enable or disable fast-time axis, 0:disable, 1: enable
-enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
-disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
-Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
 bandwidth=40e6 # bandwidth (Hz)
 # performance metrics
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
-PSF_peak_target=2
-
+PSF_peak_target=1 # 1: peak, 2: target
+# simulation options
+enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
+enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
+display_geometry=false # whether to display geometry plots
+display_RSF_rawdata=false # whether to display RSF and rawdata plots
+display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension, 3: display as 3D scatter plot
+disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length
@@ -93,8 +99,8 @@ sync_fc = 1e9 # waveform center frequency
 sync_fs = 25e6; # sync receiver sampling rate
 sync_fbw = sync_fs # LFM bandwidth
 
-# osc_type = "USO" # putting a oscillator type variable here to auto-name save files
-osc_type = "USRP"
+osc_type = "USO" # putting a oscillator type variable here to auto-name save files
+# osc_type = "USRP"
 #defines oscillator quality. Either leave as single row to use across all platforms, or define values for each platform as a new row
 if osc_type == "USO"
     a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
@@ -165,30 +171,25 @@ no_sync_flag)
 
 
 
-Ntrials = 80 # number of trials per SRI in Monte Carlo simulations
-sync_PRIs = [.1 1 2 5 10]
+Ntrials = 100 # number of trials per SRI in Monte Carlo simulations
+sync_PRIs = [.1 1 2 5]
 numSRI = length(sync_PRIs)
-
-## RANGE SPREAD FUNCTION (matched filter output)
-if enable_fast_time # matched filter gain is included in Srx
-    Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
-end
 
 ## PLATFORM LOCATIONS
 orbit_dataset=Dataset(orbit_filename) # Read orbits data in NetCDF format
+orbit_dataset=Dataset(orbit_filename) # Read orbits data in NetCDF format
+
 t12_orbits=orbit_dataset["time"][1:2] # first two time samples
 dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
 orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
 orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
-orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data
-#TODO convert ECI to ECEF
+orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data #TODO convert ECI to ECEF?
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
 orbit_pos_interp=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time) # interpolate orbit to slow time
 p_xyz=1e3*orbit_pos_interp # convert km to m
-
-
 Np=size(orbit_pos)[2] # number of platforms
 Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
+
 parameters.osc_coeffs = repeat(a_coeff_dB,Np) # put together all oscillator coeffs
 if disable_freq_offset == 1 # option to remove linear phase drift due to osc frequency offset
     sigma_freq_offsets = zeros(Np)
@@ -200,54 +201,56 @@ parameters.sigma_freq_offsets=sigma_freq_offsets # overwrite here
 
 orbit_pos_all=reshape(p_xyz,3,Np*Nst) # platform positions in xyz; for each platform, its position at each PRF treated as a different platform; output loops over platforms first, then slow-time
 
-## TARGET LOCATIONS
-t_geo_grid=Scene.form3Dgrid_for(t_θ,t_ϕ,t_h) # using 3 nested for loops
-t_xyz_grid=Geometry.geo_to_xyz(t_geo_grid,earth_radius,earth_eccentricity)
+## TARGET/SCENE LOCATIONS
+targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
+targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
+s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loops
+t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,p_xyz,look_angle,p_avg_heading,earth_radius,earth_eccentricity)
+## TARGET REFLECTIVITIES
+targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
+
+## RANGE SPREAD FUNCTION (matched filter output)
+min_range,max_range=Geometry.find_min_max_range(t_xyz_3xN,p_xyz)
+Trx=2*(max_range-min_range)/c+2*pulse_length # s duration of RX window
+if enable_fast_time # matched filter gain is included in Srx
+    Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
+    # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
+end
 
 ## GENERATE RAW DATA
-ref_range=Generate_Raw_Data.distance(mean(t_xyz_grid,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range
-
+ref_range=Geometry.distance(mean(t_xyz_3xN,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range (equal to slant_range in sch?)
 if enable_fast_time # with fastime and slowtime; matched filter gain is included in Srx
-    rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range)
+    rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range,targets_ref) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
 else # without fastime, with slowtime; matched filter gain is included inside the function
-    rawdata=Generate_Raw_Data.main_noRSF_slowtime(t_xyz_grid,p_xyz,mode,tx_el,fc)
+    rawdata=Generate_Raw_Data.main_noRSF_slowtime(t_xyz_3xN,p_xyz,mode,tx_el,fc,targets_ref) # rawdata is a: 2D array of size Nst x Np (SAR/SIMO), 3D array of size Nst x Np(RX) x Np(TX) (MIMO)
 end
-
-if !enable_fast_time
-    SNR=SNR*pulse_length*bandwidth # SNR increases after matched filter
-end
-
-## IMAGE SCENE
-Ns_θ=length(s_θ)
-Ns_ϕ=length(s_ϕ)
-Ns_h=length(s_h)
-s_geo_grid=Scene.form3Dgrid_for(s_θ,s_ϕ,s_h) # using 3 nested for loops
-s_xyz_grid=Geometry.geo_to_xyz(s_geo_grid,earth_radius,earth_eccentricity)
-
+if !enable_fast_time;SNR=SNR*pulse_length*bandwidth;end # SNR increases after matched filter
+if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end # adding random noise based on SNR after range (fast-time) processing
 
 ## find Ideal case results first
-#PROCESS RAW DATA TO GENERATE IMAGE
+# PROCESS RAW DATA TO GENERATE IMAGE
 if enable_fast_time # with fastime, with slowtime
-    image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+    image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
 else # without fastime, with slowtime
-    image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_grid,p_xyz,mode,tx_el,fc)
+    image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc)
 end
-image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_θ,Ns_ϕ,Ns_h)
+Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
+image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
 
 # PERFORMANCE METRICS
 (ideal_peak, ideal_idx) = findmax(image_3D) # finds maximum and index of max
 
-if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when there is only one point target
-    target_index1=findall(t_θ .==s_θ)
-    target_index2=findall(t_ϕ .==s_ϕ)
-    target_index3=findall(t_h .==s_h)
+if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when there is only one point target
+    target_index1=findall(t_loc_1 .==s_loc_1)
+    target_index2=findall(t_loc_2 .==s_loc_2)
+    target_index3=findall(t_loc_3 .==s_loc_3)
     if isempty(target_index1) || isempty(target_index2) || isempty(target_index3)
         show("PSF related performance metrics cannot be calculated since target is not inside the scene!")
         PSF_metrics=false
     else
         PSF_metrics=true
-        target_location=[t_θ t_ϕ t_h] # point target location
-        ideal_res,ideal_PSLR,ideal_ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h,PSF_peak_target) # resolutions in each of the 3 axes
+        target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
+        ideal_res,ideal_PSLR,ideal_ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_peak_target) # resolutions in each of the 3 axes
     end
 else
     PSF_metrics=false
@@ -275,23 +278,38 @@ loc_errors  = SharedArray{Float64}(3,numSRI,Ntrials)
     
         ## PROCESS RAW DATA TO GENERATE IMAGE
         if enable_fast_time # with fastime, with slowtime
-            image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+            image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata_sync,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
         else # without fastime, with slowtime
-            image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata_sync,s_xyz_grid,p_xyz,mode,tx_el,fc)
+            image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata_sync,s_xyz_3xN,p_xyz,mode,tx_el,fc)
         end
-        image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_θ,Ns_ϕ,Ns_h)
+        Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
+        image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
     
         ## PERFORMANCE METRICS
         # PSF metrics
-        if size(t_xyz_grid)[2]==1 # PSF related performance metrics are calculated when there is only one point target
-            target_location=[t_θ t_ϕ t_h] # point target location
-            resolution,PSLR,ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_θ,s_ϕ,s_h,PSF_peak_target) # resolutions in each of the 3 axes
+        if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when there is only one point target
+            target_index1=findall(t_loc_1 .==s_loc_1)
+            target_index2=findall(t_loc_2 .==s_loc_2)
+            target_index3=findall(t_loc_3 .==s_loc_3)
+            if isempty(target_index1) || isempty(target_index2) || isempty(target_index3)
+                show("PSF related performance metrics cannot be calculated since target is not inside the scene!")
+                PSF_metrics=false
+                resolution=[NaN,NaN,NaN]
+                PSLR=[NaN,NaN,NaN]
+                ISLR=[NaN,NaN,NaN]
+            else
+                PSF_metrics=true
+                target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
+                resolution,PSLR,ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_peak_target) # resolutions in each of the 3 axes
+            end#if
         else
             resolution=[NaN,NaN,NaN]
             PSLR=[NaN,NaN,NaN]
             ISLR=[NaN,NaN,NaN]
-            # println("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
+            PSF_metrics=false
+            show("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
         end
+        
         (peak, idx)             = findmax(image_3D) # finds maximum and index of max
         peaks[k,ntrial]         = peak
         loc_errors[:,k,ntrial]  = loc_error
@@ -310,7 +328,7 @@ end
 
 outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$osc_type"*"_sync_pri_sweep_"*freq_text* ".jld2" # this is the output filename that the data is saved to using JLD2
 # this saves the data into a JLD2 file. Data includes the estimates
-@save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs s_θ s_ϕ s_h
+@save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs s_loc_1 s_loc_2 s_loc_3
 #println(std(resolutions[1,:]))
 # Note: JLD2 can be read using "@load filename var1 var2...
 println("Run Complete, and file saved to " *outputfilename)
