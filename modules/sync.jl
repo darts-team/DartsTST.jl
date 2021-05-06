@@ -342,6 +342,7 @@ f = collect( ( (-N/2) : 1 : (N/2-1) ) ) .* fs ./N
 Sphi_1S = zeros(N)
 idx = findall(f -> f >= 0,f)
 Sphi_1S[idx] = 2 .* Sphi[idx] # one sided with f=0 included
+# A_Sphi = sqrt.(abs.(Sphi_1S.*N))
 A_Sphi = sqrt.(Sphi_1S.*N)
 
 # random phase vector with amplitude of PSD

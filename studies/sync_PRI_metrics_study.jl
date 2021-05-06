@@ -5,7 +5,7 @@ using Statistics
 using JLD2 # note: may have to Pkg.add("JLD2")
 using Distributed, SharedArrays
 
-maxprocs = 101 # maximum number of cores to use
+maxprocs = 65 # maximum number of cores to use
 curr_procs = nprocs()
 if curr_procs < maxprocs
     addprocs(maxprocs - curr_procs)
@@ -43,10 +43,10 @@ c=299792458 # speed of light (m/s)
 earth_radius=6378.137e3 # semi-major axis at equator
 earth_eccentricity=sqrt(0.00669437999015)
 # MIMO parameters
-mode=3 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
+mode=2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
 tx_el=1 # which element transmits for SIMO (max value N)
 # radar parameters
-fc=1e9 # center frequency (Hz)
+fc=1.25e9 # center frequency (Hz)
 fp=10 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz taken from orbits (including slow-time)
@@ -76,8 +76,8 @@ elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are 
 end
 # image/scene pixel coordinates
 s_loc_1=-40:.5:40 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-60:.5:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=  0:.5:80 # m  heights if LLH or SCH, Z if XYZ
+s_loc_2=-60:1:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=  0:1:80 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
@@ -90,8 +90,8 @@ enable_thermal_noise=false # whether to enable or disable random additive noise 
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
 display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
-display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension, 3: display as 3D scatter plot
-disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
+display_tomograms=0 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension, 3: display as 3D scatter plot
+disable_freq_offset = false # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length
@@ -171,8 +171,8 @@ no_sync_flag)
 
 
 
-Ntrials = 100 # number of trials per SRI in Monte Carlo simulations
-sync_PRIs = [.1 1 2 5]
+Ntrials = 64 # number of trials per SRI in Monte Carlo simulations
+sync_PRIs = [.1 1 2 3 4 5]
 numSRI = length(sync_PRIs)
 
 ## PLATFORM LOCATIONS
@@ -293,20 +293,31 @@ loc_errors  = SharedArray{Float64}(3,numSRI,Ntrials)
             target_index3=findall(t_loc_3 .==s_loc_3)
             if isempty(target_index1) || isempty(target_index2) || isempty(target_index3)
                 show("PSF related performance metrics cannot be calculated since target is not inside the scene!")
-                PSF_metrics=false
                 resolution=[NaN,NaN,NaN]
                 PSLR=[NaN,NaN,NaN]
                 ISLR=[NaN,NaN,NaN]
+                PSF_metrics=false
+                loc_error=[NaN,NaN,NaN]
             else
                 PSF_metrics=true
                 target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
-                resolution,PSLR,ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_peak_target) # resolutions in each of the 3 axes
+                try
+                    resolution,PSLR,ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_peak_target) # resolutions in each of the 3 axes
+                catch
+                    resolution=[NaN,NaN,NaN]
+                    PSLR=[NaN,NaN,NaN]
+                    ISLR=[NaN,NaN,NaN]
+                    PSF_metrics=false
+                    loc_error=[NaN,NaN,NaN]
+                    show("PSF related performance metrics cannot be calculated -- error in metric calculation.")
+                end#try
             end#if
         else
             resolution=[NaN,NaN,NaN]
             PSLR=[NaN,NaN,NaN]
             ISLR=[NaN,NaN,NaN]
             PSF_metrics=false
+            loc_error=[NaN,NaN,NaN]
             show("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
         end
         

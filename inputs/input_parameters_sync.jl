@@ -1,12 +1,12 @@
 using NCDatasets
 
 use_orbits_flag = true # true if using an orbit file to inform number of platforms
-disable_freq_offset = true # false = frequency mismatch + phase ramp. true = no phase ramp
+disable_freq_offset = false # false = frequency mismatch + phase ramp. true = no phase ramp
 
 if !use_orbits_flag
     setNumPlatforms = 3 # manually select number of Rx platforms
 end 
-sync_pri = .1 # (s) repetition interval of sync
+sync_pri = 3 # (s) repetition interval of sync
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length
@@ -45,7 +45,7 @@ if disable_freq_offset == true # option to remove linear phase drift due to osc 
 else
     sigma_freq_offsets = 1.5e-3 # Hz - std. dev. of the frequency offset of the oscillator. This is the linear phase ramp value
     # value above comes from: (1.5e-3 * 2*pi * 1sec) * (180/pi rad/deg) ~= .54 deg/s linear phase drift on LO (roughly matching Krieger paper)
-    # at RF: .54 deg/s * (1GHz/10MHz upconversion) = 54 deg/s linear phase drift
+    # at RF: .54 deg/s * (1.25GHz/10MHz upconversion) = 67.5 deg/s linear phase drift
     sigma_freq_offsets = sigma_freq_offsets .* ones(nplat) # convert to matrix form, one value for each oscillator
 end
 
@@ -53,11 +53,11 @@ end
 
 sync_fmin = 0.01 # minimum frequency > 0 in Hz to window PSD
 f_osc = 10e6 # local oscillator frequency
-sync_clk_fs = 1e3; # sample rate of clock error process
-master = 1; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
+sync_clk_fs = 1e3 # sample rate of clock error process
+master = 1 # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
 
 
-no_sync_flag = true; # if flag == true, no sync is used. flag == false results in normal sync process estimation
+no_sync_flag = false # if flag == true, no sync is used. flag == false results in normal sync process estimation
 ## make a struct of important input parameters
 #list key parameters in here, they will get passed to most(?) modules
 mutable struct keyParameters
