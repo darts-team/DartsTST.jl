@@ -1,17 +1,7 @@
 # plot results of Sync PRI Monte Carlo Study
 using JLD2, Plots, SharedArrays, StatsPlots, PyCall, Statistics
-# old code with fewer vars saved
-# filename = "sync data/syncModule2_MonteCarlo_mode_3_USO_sync_pri_sweep_noFreq.jld2"
-# @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors 
-# sync_PRIs = [.1 1 2 5 10]
 
-
-# newer code with updated vars saved
-# filename = "syncModule2_MonteCarlo_mode_3_USO_sync_pri_sweep_wFreq.jld2"
-# filename = "syncModule_MonteCarlo_mode_3_USRP_sync_pri_sweep_wFreq.jld2"
-# @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs s_θ s_ϕ s_h
-
-
+# define a couple functions to filter NaNs and make plots
 function filterNaNs2D(vals)
   #this function filters out the NaNs, but returns an array of vectors. Unfortunately, not helpful for plotting boxplots.
   
@@ -25,35 +15,6 @@ function filterNaNs2D(vals)
 
   return valsF
 end#function
-
-# function makeStdevMeanPlot(SRIs,vals,titleString::String, isdB::Bool) # these don't really work well.
-#   stdevs = Array{Float64,1}(undef, size(vals,1))
-#   means = Array{Float64,1}(undef, size(vals,1))
-#   if isdB # dB unit case
-#     # vals = 10 .^ (vals ./ 10) #convert to linear
-#     # for i = 1 : size(vals,1)
-#     #   stdevs[i] = std(vals[i])
-#     #   means[i] = mean(vals[i])
-#     # end#for
-#     # stdevs = 10 .* log10.(stdevs)
-#     # means = 10 .* log10.(means)
-# 
-#     for i = 1 : size(vals,1)
-#       stdevs[i] = 10 .* log10.( std(10 .^ (vals[i] ./ 10) ) )
-#       means[i] = 10 .* log10.( mean(10 .^ (vals[i] ./ 10) ) )
-#     end#for
-# 
-#   else # linear unit case
-#     for i = 1 : size(vals,1)
-#       stdevs[i] = std(vals[i])
-#       means[i] = mean(vals[i])
-#     end#for
-#   end#if
-# 
-#     p = scatter(SRIs, means',legend = false)
-#     display(scatter!(p, SRIs,stdevs',title=titleString,label = ["Mean" "1σ"],legend = true))
-# 
-# end#function
 
 function makeBoxPlot(SRIs,vals,titleString::String,saveFilename::String)
   len = size(vals,1)
@@ -73,10 +34,10 @@ function makeBoxPlot(SRIs,vals,titleString::String,saveFilename::String)
 end#function
 
 
-
+# run the rest of the code, calling an input .jld2 file with the monte carlo data stored
 begin 
   
-  filename = "sync data/syncModule_MonteCarlo_mode_2_USO_sync_pri_sweep_wFreq.jld2"
+  filename = "sync data/syncModule_MonteCarlo_mode_2_USO_sync_pri_sweep_wFreq.jld2"# this uses sync_data/*, a folder which isn't used on the master branch
   @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs
 
   gr()
@@ -84,65 +45,6 @@ begin
   #matrices are either (numSRI x numTrials) or (3 x numSRI x numTrials)
 
   SRI_plot = sync_PRIs.*ones(size(peaks,2))
-
-  # # ---- Peak loss ------
-  # ideal_peak_dB = 10 .* log10.(ideal_peak)
-  # peakvals = ideal_peak_dB .- (10 .* log10.(peaks))
-  # display(scatter(SRI_plot, peakvals', title = "Peak Power Loss (dB)",
-  #   xlabel = "SRI (s)", legend = false))
-  # savefig("USO_SRI_sweep_no_phase_ramp_peak_loss.png")
-  # 
-  # # ---- ISLR ------
-  # vals1 = ideal_ISLR[1] .- ISLRs[1,:,:]
-  # vals2 = ideal_ISLR[2] .- ISLRs[2,:,:]
-  # vals3 = ideal_ISLR[3] .- ISLRs[3,:,:]
-  # p1 = scatter(SRI_plot, vals1', title = "ISLR Change Lat (dB)",
-  #  xlabel = "SRI (s)", legend = false)
-  # p2 = scatter(SRI_plot, vals2', title = "ISLR Change Lon (dB)",
-  #   xlabel = "SRI (s)", legend = false)
-  # p3 = scatter(SRI_plot, vals3', title = "ISLR Change Height (dB)",
-  #    xlabel = "SRI (s)", legend = false)
-  # display(plot(p1, p2, p3, layout = (3,1), legend = false))
-  # savefig("USO_SRI_sweep_no_phase_ramp_islr_change.png")
-  # 
-  # # ---- PSLR ------
-  # vals1 = ideal_PSLR[1] .- PSLRs[1,:,:]
-  # vals2 = ideal_PSLR[2] .- PSLRs[2,:,:]
-  # vals3 = ideal_PSLR[3] .- PSLRs[3,:,:]
-  # p1 = scatter(SRI_plot, vals1', title = "PSLR Change Lat (dB)",
-  #  xlabel = "SRI (s)", legend = false)
-  # p2 = scatter(SRI_plot, vals2', title = "PSLR Change Lon (dB)",
-  #   xlabel = "SRI (s)", legend = false)
-  # p3 = scatter(SRI_plot, vals3', title = "PSLR Change Height (dB)",
-  #    xlabel = "SRI (s)", legend = false)
-  # display(plot(p1, p2, p3, layout = (3,1), legend = false))
-  # savefig("USO_SRI_sweep_no_phase_ramp_pslr_change.png")
-  # 
-  # # ---- Resolution ------
-  # vals1 = (ideal_res[1] .- resolutions[1,:,:]) 
-  # vals2 = (ideal_res[2] .- resolutions[2,:,:]) 
-  # vals3 = (ideal_res[3] .- resolutions[3,:,:])
-  # p1 = scatter(SRI_plot, vals1', title = "Resolution Change Lat (deg*110km -> m)",
-  #  xlabel = "SRI (s)", legend = false)
-  # p2 = scatter(SRI_plot, vals2', title = "Resolution Change Lon (deg*110km -> m)",
-  #   xlabel = "SRI (s)", legend = false)
-  # p3 = scatter(SRI_plot, vals3', title = "Resolution Change Height (m)",
-  #    xlabel = "SRI (s)", legend = false)
-  # display(plot(p1, p2, p3, layout = (3,1), legend = false, ylims = (0,1)))
-  # savefig("USO_SRI_sweep_no_phase_ramp_resolution_change.png")
-  # 
-  # # ---- Peak location error ------
-  # vals1 = loc_errors[1,:,:] 
-  # vals2 = loc_errors[2,:,:] 
-  # vals3 = loc_errors[3,:,:] 
-  # p1 = scatter(SRI_plot, vals1', title = "Peak Location Error Lat (deg*110km -> m)",
-  #  xlabel = "SRI (s)", legend = false)
-  # p2 = scatter(SRI_plot, vals2', title = "Peak Location Error Lon (deg*110km -> m)",
-  #   xlabel = "SRI (s)", legend = false)
-  # p3 = scatter(SRI_plot, vals3', title = "Peak Location Error Height (m)",
-  #    xlabel = "SRI (s)", legend = false)
-  # display(plot(p1, p2, p3, layout = (3,1), legend = false))
-  # savefig("USO_SRI_sweep_no_phase_ramp_peak_loc.png")
 
 ## trying box plots
   # ---- Peak loss ------
