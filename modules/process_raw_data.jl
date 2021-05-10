@@ -2,7 +2,7 @@ module Process_Raw_Data
 
 c=299792458 # speed of light (m/s)
 
-function main(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc) # no RSF
+function main(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc) # no RSF, no slowtime
     Ns=size(s_xyz_grid)[2] # number of pixels in the scene
     Np=size(p_xyz_grid)[2] # number of platforms
     processed_image=zeros(ComplexF64,Ns) # intensity image vector
@@ -27,7 +27,7 @@ function main(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc) # no RSF
     return abs.(processed_image) # square for power?
 end
 
-function main_RSF(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,t_rx,ref_range) # with RSF
+function main_RSF(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,t_rx,ref_range) # with RSF, no slowtime
     Ns=size(s_xyz_grid)[2] # number of pixels in the scene
     Np=size(p_xyz_grid)[2] # number of platforms
     Nft=length(t_rx) # number of fast-time samples

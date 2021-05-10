@@ -3,7 +3,7 @@ c=299792458 # speed of light (m/s)
 earth_radius=6378.137e3 # semi-major axis at equator
 earth_eccentricity=sqrt(0.00669437999015)
 # MIMO parameters
-mode=3 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
+mode=1 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
 tx_el=1 # which element transmits for SIMO (max value N)
 # radar parameters
 fc=1e9 # center frequency (Hz)
@@ -33,9 +33,9 @@ elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are 
     t_ref=  [1] # reflectivities
 end
 # image/scene pixel coordinates
-s_loc_1=-40:.5:40 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-60:.5:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=  0:.5:80 # m  heights if LLH or SCH, Z if XYZ
+s_loc_1=-40:2:40 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2=-60:2:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=  0:2:80 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)

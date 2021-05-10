@@ -1,6 +1,3 @@
-
-*.nc
-*.png
+**/.DS_Store
 *.jld2
-sync data/.DS_Store
-.DS_Store
+.ipynb_checkpoints
