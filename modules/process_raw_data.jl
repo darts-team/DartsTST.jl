@@ -60,7 +60,6 @@ function main_RSF(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,t_rx,ref_range) # 
     end
     return abs.(processed_image) # square for power?
 end
-
 function main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range) # with RSF and slow-time
     Ns=size(s_xyz_grid)[2] # number of pixels in the scene
     Np=size(p_xyz_3D)[2] # number of platforms
