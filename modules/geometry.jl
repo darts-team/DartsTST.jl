@@ -319,10 +319,89 @@ function tcn_lvec(t, c, n, θ_el, ϕ_az)
     return  t*sin(θ_el)*sin(ϕ_az) + c*sin(θ_el)*cos(ϕ_az) + n*cos(θ_el)
 end
 
+"""
+Compute heading based on lat/long or lat/long/velocity. If only lat/long are provided
+the heading is computed based on difference in successive geodetic points (needs at
+least two geodetic points). Thre resulting heading is of length N-1.
+In case velocity vector (ECEF) is also given heading is computed for every point.
+- Usage:
+    + heading = compute_heading(lat, lon)
+    + heading = compute_heading(lat, lon, velocity)
 
+# Arguments
+    - `lat::N-element Array`: geodetic latitude (deg)
+    - `lon::N-element Array`: geodetic longitude (deg)
+    - `vel::3xN-element Array`: (optional) velocity in ECEF (m/s)
 
-
-
-
-
+# Return
+    - `heading::N (or N-1) element Float Array`: heading relative to north (0 is due north, 90 is due east) (deg)
+"""
+function compute_heading(lat, lon)
+    @assert length(lat) == length(lon) "lat and lon inputs should be same size"
+    @assert length(lat) > 1 "need at least two geodetic points to compute heading"
+    #compute heading based on geographic coordinates
+    Δlon = diff(lon[:]); #difference in longitudes
+    lat_start = lat[1:end-1]; #start latitutde of
+    lat_end   = lat[2:end];
+    X = cosd.(lat_end).*sind.(Δlon);
+    Y = cosd.(lat_start).*sind.(lat_end) - sind.(lat_start).*cosd.(lat_end).*cosd.(Δlon);
+    heading = atan.(X,Y)*180/π;
+    heading[findall(x->x<0.0, heading)] = heading[findall(x->x<0.0, heading)] .+360;
+    return heading
 end
+function compute_heading(lat, lon, vel)
+    @assert length(lat) == length(lon) == size(vel,2) "lat, lon, vel inputs should be same size"
+    @assert size(vel,1)==3 "velocity should be a 3xN vector"
+    @assert size(lat,1)==1 "lat/lon should be 1xN vectors"
+
+    #compute ENU basis for each lat, lon
+    e,n,u = Geometry.enu_from_geo(lat, lon)
+
+    #space for headding
+    heading = zeros(size(lat));
+
+    for ii=1:length(lat)
+        v_enu = cat(e[:,ii],n[:,ii],u[:,ii], dims=2)'*vel[:,ii];
+        v_enu = v_enu./norm(v_enu);
+        heading[ii] = atan(v_enu[1], v_enu[2])*180/π;
+        if heading[ii] < 0
+            heading[ii] = heading[ii] - 360.0;
+        end
+    end
+
+    return heading
+end
+
+
+"""
+Compute ENU basis vectors based on lat, lon
+# Usage
+    - e,n,u = enu_from_geo(lat, lon)
+
+# Arguments
+    - `lat::N-element Array`: geodetic latitude (deg)
+    - `lon::N-element Array`: geodetic longitude (deg)
+
+# Return
+- `E::N-element Array`: Easting axis in ECEF (m)
+- `N::N-element Array`: Northing axis in ECEF (m)
+- `U::N-element Array`: Up axis in ECEF (m)
+"""
+function enu_from_geo(lat, lon)
+    @assert length(lat) == length(lon) "lat and lon inputs should be same size"
+
+    #e, n, u basis vectors
+    e = zeros(3,length(lat));
+    n = zeros(3,length(lat));
+    u = zeros(3,length(lat));
+
+    for ii=1:length(lat)
+        e[:,ii] = cat(-sind.(lon[ii]),                  cosd.(lon[ii]),                 0, dims =1)
+        n[:,ii] = cat(-cosd.(lon[ii]).*sind.(lat[ii]), -sind.(lon[ii]).*sind.(lat[ii]), cosd.(lat[ii]), dims =1)
+        u[:,ii] = cat( cosd.(lon[ii]).*cosd.(lat[ii]),  sind.(lon[ii]).*cosd.(lat[ii]), sind.(lat[ii]), dims =1)
+    end
+    return e,n,u
+end
+
+
+end #end module
