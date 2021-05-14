@@ -20,7 +20,7 @@ Converts Lat/Log/Height to ECEF XYZ position
 # Output
  - `xyz::3x1 Float Array`, ECEF xyz positions (in meters)
 """
-function geo_to_xyz(geo::Array{Float64,},earth_radius::Float64=6.378137e6,earth_eccentricity::Float64=0.08181919084267456)
+function geo_to_xyz(geo,earth_radius::Float64=6.378137e6,earth_eccentricity::Float64=0.08181919084267456)
     xyz=zeros(size(geo))
     θ=geo[1,:] # latitude [deg]
     ϕ=geo[2,:] # longitude [deg]
@@ -30,6 +30,26 @@ function geo_to_xyz(geo::Array{Float64,},earth_radius::Float64=6.378137e6,earth_
     xyz[2,:]=(re+h).*cosd.(θ).*sind.(ϕ)
     xyz[3,:]=(re.*(float(1).-earth_eccentricity^2)+h).*sind.(θ)
     return xyz
+end
+
+function find_min_max_range(t_xyz_grid,p_xyz)
+    ranges=zeros(1,size(t_xyz_grid,2)*size(p_xyz,2)*size(p_xyz,3))
+    m=1;
+    for i=1:size(t_xyz_grid,2)
+        for j=1:size(p_xyz,2)
+            for k=1:size(p_xyz,3)
+                ranges[m]=distance(t_xyz_grid[:,i],p_xyz[:,j,k])
+                m=m+1;
+            end
+        end
+    end
+    min_range=minimum(ranges)
+    max_range=maximum(ranges)
+    return min_range,max_range
+end
+
+function distance(xyz1,xyz2)
+    dist=((xyz1[1]-xyz2[1]).^2+(xyz1[2]-xyz2[2]).^2+(xyz1[3]-xyz2[3]).^2).^0.5
 end
 
 """

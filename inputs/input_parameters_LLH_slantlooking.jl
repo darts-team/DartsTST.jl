@@ -11,18 +11,20 @@ fp=3 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz taken from orbits (including slow-time)
 orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
-SAR_duration=3 # synthetic aperture duration (s)
+SAR_duration=2 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations (volumetric grid) defined in geo (θϕh)
-t_θ=0 # deg latitude
-t_ϕ=0 # deg longitude
-t_h=0 # m  heights
+target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
+ts_coord_sys="LLH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
+t_loc_1=7 # deg latitude
+t_loc_2=0 # deg longitude
+t_loc_3=0 # m  heights
+t_ref=1 # reflectivities
 # image/scene pixel coordinates
-s_θ=-0.0001:0.000001:0.0001 # deg latitude
-s_ϕ=-0.0005:0.00001:0.0005 # deg longitude
-s_h=-40:1:40 # m  heights
+s_loc_1=7-0.0003:0.000025:7+0.0003 # deg latitude
+s_loc_2=-0.0012:0.0001:0.0012 # deg longitude
+s_loc_3=-45:5:45 # m  heights
 # range spread function (RSF) parameters
-Trx=300e-6 # s duration of RX window (may need to be increased if aperture or scene is large) TODO (adjust based on max/min range)
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
 bandwidth=10e6 # bandwidth (Hz)

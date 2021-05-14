@@ -1,6 +1,8 @@
-#include("modules/sync.jl")
 module Error_Sources
 using ..Sync
+
+
+
 
 function random_noise(rawdata,SNR,enable_fast_time,mode)
     Np_RX=size(rawdata)[2] # number of RX platforms
@@ -51,7 +53,6 @@ function synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_t
     phase_err = Sync.get_sync_phase(slow_time,orbit_pos_interp,parameters) # or is this supposed to be "orbit_pos_interp"?
     # note: phase_err is (Nplat x N slow-time) for modes 1 & 2, but (Nplat x Nplat x N slow-time) for MIMO
     # for MIMO, first axis is the transmitting platform number, 2nd is receive platform, 3rd is slow-time number
-    
     
     ## combine with raw data
     if enable_fast_time
