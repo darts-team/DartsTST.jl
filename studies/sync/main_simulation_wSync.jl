@@ -82,7 +82,7 @@ if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when th
         include("modules/performance_metrics.jl")
         PSF_metrics=true
         target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
-        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_peak_target) # resolutions in each of the 3 axes
+        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point) # resolutions in each of the 3 axes
     end
 else
     PSF_metrics=false
@@ -102,5 +102,5 @@ if display_geometry || display_RSF_rawdata || display_tomograms!=0
     coords=Plotting.coordinates(ts_coord_sys)
     if display_RSF_rawdata;Plotting.plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata);end
     if display_geometry;Plotting.plot_geometry(orbit_time,orbit_pos,p_xyz,t_xyz_3xN,s_loc_3xN,s_xyz_3xN,coords);end
-    if display_tomograms!=0;Plotting.plot_tomogram(display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,s_xyz_3xN,coords);end
+    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,s_xyz_3xN,t_loc_1,t_loc_2,t_loc_3,coords);end
 end
