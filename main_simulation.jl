@@ -11,18 +11,27 @@ include("modules/sync.jl")
 include("modules/error_sources.jl")
 using NCDatasets
 using Statistics
-## PLATFORM LOCATIONS
+## PLATFORM LOCATIONS and HEADINGS
 orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
 t12_orbits=orbit_dataset["time"][1:2] # first two time samples
 dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
 orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
 orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
-orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data #TODO convert ECI to ECEF?
+orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt #TODO convert ECI to ECEF?
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
-orbit_pos_interp=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time) # interpolate orbit to slow time
-p_xyz=1e3*orbit_pos_interp # convert km to m
+orbit_pos_interp=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time) # interpolate orbit to slow time, 3 x Np x Nst
+p_xyz=1e3*orbit_pos_interp # convert km to m, 3 x Np x Nst
 Np=size(orbit_pos)[2] # number of platforms
 Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
+# Average Platform Heading
+p_headings=zeros(1,Np)
+for i=1:Np
+    p_xyz_i=p_xyz[:,i,:]
+    p_xyz_i=reshape(p_xyz_i,3,Nst)
+    p_geo=Geometry.xyz_to_geo(p_xyz_i)
+    p_headings[i]=mean(Geometry.compute_heading(p_geo[1,:],p_geo[2,:]))
+end
+p_avg_heading=mean(p_headings)
 ## TARGET/SCENE LOCATIONS
 targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
