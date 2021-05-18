@@ -42,10 +42,10 @@ pulse_length=10e-6 # s pulse length
 bandwidth=40e6 # bandwidth (Hz)
 # performance metrics
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
-PSF_peak_target=2 # 1: peak, 2: target
+PSF_image_point=1 # 1: peak location, 2: target location, 3: center of 3D scene
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
 display_geometry=true # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
-display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension, 3: display as 3D scatter plot
+display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot

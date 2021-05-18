@@ -47,7 +47,6 @@ pulse_length=10e-6 # s pulse length
 bandwidth=40e6 # bandwidth (Hz)
 # performance metrics
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
-PSF_peak_target=1 # 1: peak, 2: target
+PSF_image_point=1 # 1: peak location, 2: target location, 3: center of 3D scene
 
 Ntrials = 1 # number of trials in Monte Carlo simulations
-PSF_peak_target = 1
