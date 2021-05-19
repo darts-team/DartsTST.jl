@@ -1,11 +1,15 @@
 module Scene
 #TODO add function definitions, comments, define input types, remove unused functions
 
-#include("geometry.jl")
-using ..Geometry
+#external packages
 using LinearAlgebra
 using Optim
 using Statistics
+
+#local packages
+include("geometry.jl")
+using .Geometry
+
 
 mutable struct target_str
   loc # target location
