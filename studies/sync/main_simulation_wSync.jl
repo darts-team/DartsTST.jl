@@ -32,7 +32,7 @@ Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
 targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
 s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loops
-t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,p_xyz,look_angle,p_avg_heading,earth_radius,earth_eccentricity)
+t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,p_xyz,look_angle,earth_radius,earth_eccentricity)
 ## TARGET REFLECTIVITIES
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
 
@@ -99,8 +99,41 @@ end
 ## PLOTS (1D PSF cuts are displayed by default in the performance.metrics module)
 if display_geometry || display_RSF_rawdata || display_tomograms!=0
     include("modules/plotting.jl")
-    coords=Plotting.coordinates(ts_coord_sys)
+    display_geometry_coord_txt=Plotting.coordinates(display_geometry_coord)
+    tomogram_coord_txt=Plotting.coordinates(ts_coord_sys)
     if display_RSF_rawdata;Plotting.plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata);end
-    if display_geometry;Plotting.plot_geometry(orbit_time,orbit_pos,p_xyz,t_xyz_3xN,s_loc_3xN,s_xyz_3xN,coords);end
-    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,s_xyz_3xN,t_loc_1,t_loc_2,t_loc_3,coords);end
+    if display_geometry
+        # convert platform and target locations to desired coordinate system
+        p_loc=zeros(3,Np,Nst)
+        t_loc=zeros(3,Nt)
+        s_loc=zeros(size(s_loc_3xN,2))
+        if display_geometry_coord=="LLH"
+            for i=1:Np
+                p_xyz_i=p_xyz[:,i,:]
+                p_xyz_i=reshape(p_xyz_i,3,Nst)
+                p_loc[:,i,:]=Geometry.xyz_to_geo(p_xyz_i)
+            end
+            t_loc=Geometry.xyz_to_geo(t_xyz_3xN)
+            s_loc=Geometry.xyz_to_geo(s_xyz_3xN)
+        elseif display_geometry_coord=="SCH"
+            for i=1:Np
+                p_xyz_i=p_xyz[:,i,:]
+                p_xyz_i=reshape(p_xyz_i,3,Nst)
+                p_loc[:,i,:]=Geometry.xyz_to_sch(p_xyz_i) #TODO function is to be added
+            end
+            if ts_coord_sys=="SCH"
+                t_loc=targets_loc
+                s_loc=s_loc_3xN
+            else # ts_coord_sys == LLH or XYZ
+                t_loc=Geometry.xyz_to_sch(t_xyz_3xN) #TODO function is to be added
+                s_loc=Geometry.xyz_to_sch(s_xyz_3xN) #TODO function is to be added
+            end
+        elseif display_geometry_coord=="XYZ"
+            p_loc=p_xyz
+            t_loc=t_xyz_3xN
+            s_loc=s_xyz_3xN
+        end
+        Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt)
+    end
+    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,tomogram_coord_txt);end
 end

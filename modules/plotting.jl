@@ -22,18 +22,18 @@ function plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata) #
     end
 end
 
-function coordinates(ts_coord_sys)
-    if ts_coord_sys=="LLH"
+function coordinates(coord_sys)
+    if coord_sys=="LLH"
         coords=["latitude","longitude","height"]
-    elseif ts_coord_sys=="SCH"
+    elseif coord_sys=="SCH"
         coords=["along-track","cross-track","height"]
-    elseif ts_coord_sys=="XYZ"
+    elseif coord_sys=="XYZ"
         coords=["ECEF-X","ECEF-Y","ECEF-Z"]
     end
 end
 
-function plot_geometry(orbit_time,orbit_pos,p_xyz,t_xyz_3xN,s_loc_3xN,s_xyz_3xN,coords) #TODO smart plotting for limited set (only platforms, only targets, only scene)
-    orbit_pos_all=reshape(p_xyz,3,size(p_xyz)[2]*size(p_xyz)[3]) # platform positions in xyz; for each platform, its position at each pulse (PRI) is plotted; output loops over platforms first, then slow-time
+function plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,coords) #TODO smart plotting for limited set (only platforms, only targets, only scene)
+    orbit_pos_all=reshape(p_loc,3,size(p_loc)[2]*size(p_loc)[3]) # platform positions in xyz; for each platform, its position at each pulse (PRI) is plotted; output loops over platforms first, then slow-time
     gr()
     platform_labels=Array{String}(undef,1,size(orbit_pos)[2])
     for i=1:size(orbit_pos)[2];platform_labels[i]=string("platform-",i);end
@@ -41,18 +41,20 @@ function plot_geometry(orbit_time,orbit_pos,p_xyz,t_xyz_3xN,s_loc_3xN,s_xyz_3xN,
     display(plot(orbit_time,orbit_pos[2,:,:]',xaxis=("time (sec)"),ylabel=("ECI Y position (km)"),size=(1600,900),labels=platform_labels)) # plot the ECI orbit in the limited time range
     display(plot(orbit_time,orbit_pos[3,:,:]',xaxis=("time (sec)"),ylabel=("ECI Z position (km)"),size=(1600,900),labels=platform_labels)) # plot the ECI orbit in the limited time range
     plotly()
-    display(scatter(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],leg=false,camera=(20,40),markersize=3,xlabel="X (m)",ylabel="Y (m)",zlabel="Z (m)",title="Platform Positions at Each Pulse in XYZ",size=(1600,900))) #display  position of each platform at each pulse in 3D
-    display(scatter(t_xyz_3xN[1,:],t_xyz_3xN[2,:],t_xyz_3xN[3,:],leg=false,camera=(20,40),markersize=3,xlabel="X (m)",ylabel="Y (m)",zlabel="Z (m)",title="Targets in XYZ",size=(1600,900))) #display grid in 3D
+    display(scatter(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],leg=false,camera=(20,40),markersize=3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Platform Positions at Each Pulse",size=(1600,900))) #display  position of each platform at each pulse in 3D
+    display(scatter(t_loc[1,:],t_loc[2,:],t_loc[3,:],leg=false,camera=(20,40),markersize=3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Target Locations",size=(1600,900))) #display grid in 3D
     #DISPLAY PLATFORM AND TARGET LOCATIONS ON THE SAME PLOT
-    (scatter(t_xyz_3xN[1,:],t_xyz_3xN[2,:],t_xyz_3xN[3,:],leg=false,camera=(20,40),markersize=1,size=(1600,900))) #display grid in 3D
-    display(scatter!(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],leg=false,camera=(20,40),markersize=1,xlabel="X (m)",ylabel="Y (m)",zlabel="Z (m)",title="Platforms and Targets in XYZ")) #display grid in 3D
+    scatter(t_loc[1,:],t_loc[2,:],t_loc[3,:],leg=false,camera=(20,40),markersize=1,size=(1600,900)) #display grid in 3D
+    display(scatter!(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],leg=false,camera=(20,40),markersize=1,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Platforms and Targets")) #display grid in 3D
     # DISPLAY SCENE
-    gr()
-    display(scatter(s_loc_3xN[1,:],s_loc_3xN[2,:],s_loc_3xN[3,:],leg=false,camera=(20,40),markersize=0.3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Scene Pixel Locations",size=(1600,900))) #display grid in 3D
-    display(scatter(s_xyz_3xN[1,:],s_xyz_3xN[2,:],s_xyz_3xN[3,:],leg=false,camera=(20,40),markersize=0.3,xlabel="X (m)",ylabel="Y (m)",zlabel="Z (m)",title="Scene Pixel Locations in XYZ",size=(1600,900))) #display grid in 3D
+    display(scatter(s_loc[1,:],s_loc[2,:],s_loc[3,:],leg=false,camera=(20,40),markersize=0.3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Scene Pixel Locations",size=(1600,900))) #display grid in 3D
+    #DISPLAY PLATFORM AND TARGET AND SCENE ON THE SAME PLOT
+    scatter(t_loc[1,:],t_loc[2,:],t_loc[3,:],leg=false,camera=(20,40),markersize=1,size=(1600,900)) #display grid in 3D
+    scatter!(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],markersize=1) #display grid in 3D
+    display(scatter!(s_loc[1,:],s_loc[2,:],s_loc[3,:],markersize=0.3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Platforms and Targets and Scene")) #display grid in 3D
 end
 
-function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,s_xyz_3xN,t_loc_1,t_loc_2,t_loc_3,coords)
+function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,coords)
     brightest=maximum(image_3D)
     faintest=minimum(image_3D)
     Ns_1=length(s_loc_1)
@@ -91,7 +93,6 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_lo
     elseif display_tomograms==3
         plotly()
         display(scatter(s_loc_3xN[1,:],s_loc_3xN[2,:],s_loc_3xN[3,:],marker_z=image_1xN/maximum(image_1xN),leg=false,camera=(20,40),markersize=1,markerstrokewidth=0,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="3D Image",size=(1600,900))) #display grid in 3D
-        display(scatter(s_xyz_3xN[1,:],s_xyz_3xN[2,:],s_xyz_3xN[3,:],marker_z=image_1xN/maximum(image_1xN),leg=false,camera=(20,40),markersize=1,markerstrokewidth=0,xlabel="X (m)",ylabel="Y (m)",zlabel="Z (m)",title="3D Image in XYZ",size=(1600,900))) #display grid in 3D
     end
     #savefig("tomogram.png")
 end

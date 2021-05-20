@@ -16,6 +16,7 @@ SAR_start_time=0 # SAR imaging start time (s)
 # target locations and reflectvities
 target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
 ts_coord_sys="LLH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
+display_geometry_coord="LLH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
 if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
     t_loc_1=-0.0001:0.0001:0.0001 # deg latitude if LLH, along-track if SCH, X if XYZ
     t_loc_2=-0.0005:0.001:0.0005 # deg longitude if LLH, cross-track if SCH, Y if XYZ

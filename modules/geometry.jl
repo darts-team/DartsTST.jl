@@ -1,6 +1,62 @@
 module Geometry
 using ReferenceFrameRotations
 using LinearAlgebra
+using Statistics
+
+"""
+Creates a Peg point based on peg coordinates
+
+# Arguments
+ - `peg::3xN Float Array`, peg coordinates [peglat, pegLon, pegHeading] in (deg,deg,deg)
+ - `earth_radius::Float64`, optional, earth equatorial radius (in meters)
+ - `earth_eccentricity::Float64`, optional, earth eccentricity
+
+# Output
+ - `peg::PegPoint`, in addition to peg coordinates also contains other parameters necessary for peg calculations
+"""
+mutable struct PegPoint
+    pegLat::Float64 # peg latitude (deg)
+    pegLon::Float64 # peg longitude (deg)
+    pegHdg::Float64 # peg heading (deg)
+    eq_rad::Float64 # earth equatorial Radius
+    ecc::Float64 # earth Eccentricity
+    Mxyzprime_xyz::Array{Float64,2} #rotation matrix from xyz prime to xyz
+    O::Array{Float64,2} # translation vector
+    Ra::Float64 # earth radius
+    function PegPoint(pegLat, pegLon,pegHdg,eq_rad::Float64=6.378137e6,ecc::Float64=0.08181919084267456)
+        e2  = ecc^2 #eccentricity squared
+        #break out peg parameters
+        pegθ  = pegLat*π/180
+        pegϕ  = pegLon*π/180
+        peghed  = pegHdg*π/180
+        repeg = eq_rad/sqrt(1-e2*sin(pegθ)^2)
+        rnpeg = eq_rad*(1-e2)/sqrt((1-e2*sin(pegθ)^2)^3)
+        ra = repeg*rnpeg/(repeg*cos(peghed)^2+rnpeg*sin(peghed)^2)
+
+        #ENU to XYZ transformation matrix
+        Menu_xyz = [-sin(pegϕ) -sin(pegθ)*cos(pegϕ) cos(pegθ)*cos(pegϕ);
+                     cos(pegϕ) -sin(pegθ)*sin(pegϕ) cos(pegθ)*sin(pegϕ);
+                      0            cos(pegθ)             sin(pegθ)]
+
+        #X'Y'Z' to ENU transformation matrix
+        Mxyzprime_enu = [0 sin(peghed) -cos(peghed);
+                         0 cos(peghed) sin(peghed);
+                         1    0           0]
+        #Up vector in XYZ
+        Uxyz = Menu_xyz*[0 0 1]';
+
+        #vector from center of ellipsoid to pegpoint
+        P = [repeg*cos(pegθ)*cos(pegϕ), repeg*cos(pegθ)*sin(pegϕ), repeg*(1-e2)*sin(pegθ)]
+
+        #translation vector
+        O = P-ra*Uxyz
+
+        #rotation vector X'Y'Z' to XYZ
+        Mxyzprime_xyz=Menu_xyz*Mxyzprime_enu
+        new(pegLat, pegLon, pegHdg, eq_rad, ecc, Mxyzprime_xyz, O, ra)
+    end
+
+end
 
 " Create Quaternion based on rotation angle and axis"
 quat(rot_angle, rot_ax) = Quaternion(cosd(rot_angle/2.0), rot_ax*sind(rot_angle/2.0))
@@ -10,7 +66,44 @@ rotate_frame(v,q) = convert(Array{Float64,1}, vect(inv(q)*v*q))
 rotate_vec(v,q) = convert(Array{Float64,1}, vect(q*v*inv(q)))
 
 """
-Converts Lat/Log/Height to ECEF XYZ position
+Converts ECEF XYZ coordinates to SCH
+
+# Arguments
+ - `XYZ:3xN Float Array`, ECEF XYZ coordinates
+ - `peg::PegPointType`, see PegPoint for more details
+
+# Output
+ - `SCH::3xN Float Array`, SCH coordinates in meters
+"""
+function xyz_to_sch(xyz::Array{Float64,},peg::PegPoint)
+    sch=xyz # TODO
+end
+
+"""
+Calculates average peg point and average platform heights over all platforms and all slow-time (pulse) locations
+"""
+function avg_peg_h(p_xyz)
+    # Average Platform Heading
+      Np=size(p_xyz)[2] # number of platforms
+      Nst=size(p_xyz)[3] # number of slow-time samples (pulses processed)
+      p_headings=zeros(1,Np)
+      p_geo=zeros(3,Np,Nst)
+      for i=1:Np
+        p_xyz_i=p_xyz[:,i,:]
+        p_xyz_i=reshape(p_xyz_i,3,Nst)
+        p_geo[:,i,:]=xyz_to_geo(p_xyz_i)
+        p_headings[i]=mean(compute_heading(p_geo[1,i,:],p_geo[2,i,:]))
+      end
+      p_avg_heading=mean(p_headings)
+      p_avg_xyz=mean(mean(p_xyz,dims=2),dims=3) # average XYZ of platforms over platforms and slow-time locations
+      p_avg_geo=xyz_to_geo(p_avg_xyz)
+      avg_peg=PegPoint(p_avg_geo[1],p_avg_geo[2],p_avg_heading)
+      p_h_avg=p_avg_geo[3]
+      return avg_peg,p_h_avg
+end
+
+"""
+Converts Lat/Lon/Height to ECEF XYZ position
 
 # Arguments
  - `geo::3x1 Float Array`, Lat/Long/Height (deg,deg,m)
@@ -88,62 +181,6 @@ function xyz_to_geo(xyz::Array{Float64,},earth_radius::Float64=6.378137e6,earth_
     geo[3,:] = h
     return geo
 end
-
-"""
-Creates a Peg point based on peg coordinates
-
-# Arguments
- - `peg::3xN Float Array`, peg coordinates [peglat, pegLon, pegHeading] in (deg,deg,deg)
- - `earth_radius::Float64`, optional, earth equatorial radius (in meters)
- - `earth_eccentricity::Float64`, optional, earth eccentricity
-
-# Output
- - `peg::PegPoint`, in addition to peg coordinates also contains other parameters necessary for peg calculations
-"""
-mutable struct PegPoint
-    pegLat::Float64 # peg latitude (deg)
-    pegLon::Float64 # peg longitude (deg)
-    pegHdg::Float64 # peg heading (deg)
-    eq_rad::Float64 # earth equatorial Radius
-    ecc::Float64 # earth Eccentricity
-    Mxyzprime_xyz::Array{Float64,2} #rotation matrix from xyz prime to xyz
-    O::Array{Float64,2} # translation vector
-    Ra::Float64 # earth radius
-    function PegPoint(pegLat, pegLon,pegHdg,eq_rad::Float64=6.378137e6,ecc::Float64=0.08181919084267456)
-        e2  = ecc^2 #eccentricity squared
-        #break out peg parameters
-        pegθ  = pegLat*π/180
-        pegϕ  = pegLon*π/180
-        peghed  = pegHdg*π/180
-        repeg = eq_rad/sqrt(1-e2*sin(pegθ)^2)
-        rnpeg = eq_rad*(1-e2)/sqrt((1-e2*sin(pegθ)^2)^3)
-        ra = repeg*rnpeg/(repeg*cos(peghed)^2+rnpeg*sin(peghed)^2)
-
-        #ENU to XYZ transformation matrix
-        Menu_xyz = [-sin(pegϕ) -sin(pegθ)*cos(pegϕ) cos(pegθ)*cos(pegϕ);
-                     cos(pegϕ) -sin(pegθ)*sin(pegϕ) cos(pegθ)*sin(pegϕ);
-                      0            cos(pegθ)             sin(pegθ)]
-
-        #X'Y'Z' to ENU transformation matrix
-        Mxyzprime_enu = [0 sin(peghed) -cos(peghed);
-                         0 cos(peghed) sin(peghed);
-                         1    0           0]
-        #Up vector in XYZ
-        Uxyz = Menu_xyz*[0 0 1]';
-
-        #vector from center of ellipsoid to pegpoint
-        P = [repeg*cos(pegθ)*cos(pegϕ), repeg*cos(pegθ)*sin(pegϕ), repeg*(1-e2)*sin(pegθ)]
-
-        #translation vector
-        O = P-ra*Uxyz
-
-        #rotation vector X'Y'Z' to XYZ
-        Mxyzprime_xyz=Menu_xyz*Mxyzprime_enu
-        new(pegLat, pegLon, pegHdg, eq_rad, ecc, Mxyzprime_xyz, O, ra)
-    end
-
-end
-
 
 """
 Converts SCH coordinates to ECEF XYZ

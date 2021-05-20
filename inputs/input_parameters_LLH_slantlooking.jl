@@ -16,6 +16,7 @@ SAR_start_time=0 # SAR imaging start time (s)
 # target locations (volumetric grid) defined in geo (θϕh)
 target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
 ts_coord_sys="LLH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
+display_geometry_coord="XYZ" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
 t_loc_1=7 # deg latitude
 t_loc_2=0 # deg longitude
 t_loc_3=0 # m  heights
