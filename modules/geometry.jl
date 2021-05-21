@@ -91,12 +91,32 @@ function avg_peg_h(p_xyz)
       for i=1:Np
         p_xyz_i=p_xyz[:,i,:]
         p_xyz_i=reshape(p_xyz_i,3,Nst)
-        p_geo[:,i,:]=xyz_to_geo(p_xyz_i)
+        p_geo[:,i,:]=xyz_to_geo(Float64.(p_xyz_i))
         p_headings[i]=mean(compute_heading(p_geo[1,i,:],p_geo[2,i,:]))
       end
       p_avg_heading=mean(p_headings)
-      p_avg_xyz=mean(mean(p_xyz,dims=2),dims=3) # average XYZ of platforms over platforms and slow-time locations
-      p_avg_geo=xyz_to_geo(p_avg_xyz)
+      p_avg_geo=mean(mean(p_geo,dims=2),dims=3) # average LLH of platforms over platforms and slow-time locations
+      avg_peg=PegPoint(p_avg_geo[1],p_avg_geo[2],p_avg_heading)
+      p_h_avg=p_avg_geo[3]
+      return avg_peg,p_h_avg
+end
+function avg_peg_h(p_xyz,p_vel)
+    # Average Platform Heading
+      Np=size(p_xyz)[2] # number of platforms
+      Nst=size(p_xyz)[3] # number of slow-time samples (pulses processed)
+      p_headings=zeros(1,Np)
+      p_geo=zeros(3,Np,Nst)
+      for i=1:Np
+        p_xyz_i=p_xyz[:,i,:]
+        p_xyz_i=reshape(p_xyz_i,3,Nst)
+        p_geo[:,i,:]=xyz_to_geo(Float64.(p_xyz_i))
+        p_vel_i=reshape(p_vel[:,i,:],3,Nst)
+        p_lat=reshape(p_geo[1,i,:],1,Nst)
+        p_lon=reshape(p_geo[2,i,:],1,Nst)
+        p_headings[i]=mean(compute_heading(p_lat,p_lon,p_vel_i))
+      end
+      p_avg_heading=mean(p_headings)
+      p_avg_geo=mean(mean(p_geo,dims=2),dims=3) # average LLH of platforms over platforms and slow-time locations
       avg_peg=PegPoint(p_avg_geo[1],p_avg_geo[2],p_avg_heading)
       p_h_avg=p_avg_geo[3]
       return avg_peg,p_h_avg

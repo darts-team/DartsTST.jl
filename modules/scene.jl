@@ -26,12 +26,46 @@ function construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref)
   return targets, Nt
 end
 
-function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,p_xyz,look_angle,earth_radius,earth_eccentricity)
+"""
+Convert target and scene coordinates to XYZ
+"""
+# calculate avg heading from platform positions
+function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,orbit_vel,look_angle,earth_radius,earth_eccentricity)
   if ts_coord_sys=="LLH" # convert LLH to XYZ
       t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
       s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)
   elseif ts_coord_sys=="SCH" # convert SCH to XYZ
-      avg_peg,p_h_avg=Geometry.avg_peg_h(p_xyz)
+      avg_peg,p_h_avg=Geometry.avg_peg_h(orbit_pos,orbit_vel)
+      println("peg:")
+      println(string(avg_peg.pegLat))
+      println(string(avg_peg.pegLon))
+      println(string(avg_peg.pegHdg))
+      println(string(p_h_avg))
+      slant_range,ground_range=Scene.lookangle_to_range(look_angle,p_h_avg,0,avg_peg.Ra) # slant_range (equal to ref_range?)
+      targets_loc_sch=targets_loc
+      targets_loc_sch[2,:]=targets_loc_sch[2,:].+ground_range
+      t_xyz_3xN=Geometry.sch_to_xyz(targets_loc_sch,avg_peg)
+      scene_loc_sch=s_loc_3xN
+      scene_loc_sch[2,:]=scene_loc_sch[2,:].+ground_range
+      s_xyz_3xN=Geometry.sch_to_xyz(scene_loc_sch,avg_peg)
+  elseif ts_coord_sys=="XYZ" # no conversion needed
+      t_xyz_3xN=targets_loc
+      s_xyz_3xN=s_loc_3xN
+  end
+  return t_xyz_3xN,s_xyz_3xN
+end
+# calculate avg heading from platform velocities
+function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,look_angle,earth_radius,earth_eccentricity)
+  if ts_coord_sys=="LLH" # convert LLH to XYZ
+      t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
+      s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)
+  elseif ts_coord_sys=="SCH" # convert SCH to XYZ
+      avg_peg,p_h_avg=Geometry.avg_peg_h(orbit_pos)
+      println("peg:")
+      println(string(avg_peg.pegLat))
+      println(string(avg_peg.pegLon))
+      println(string(avg_peg.pegHdg))
+      println(string(p_h_avg))
       slant_range,ground_range=Scene.lookangle_to_range(look_angle,p_h_avg,0,avg_peg.Ra) # slant_range (equal to ref_range?)
       targets_loc_sch=targets_loc
       targets_loc_sch[2,:]=targets_loc_sch[2,:].+ground_range
