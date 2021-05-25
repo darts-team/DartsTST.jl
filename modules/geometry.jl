@@ -275,6 +275,42 @@ function get_tcn(pos::Array{Float64,2}, vel::Array{Float64,2})
     end
     return that, chat, nhat
 end
+
+"""
+Compute orientation quaternion based on TCN basis
+- Usage: quat = tcn_quat(pos, vel)
+
+# Arguments
+- `pos::3xN Float Array`: position vector (usually satellite position in XYZ)
+- `vel::3xN Float Array`: velocity vector (usually satellite velocity in XYZ)
+
+# Return
+- `quat::
+
+"""
+function tcn_quat(pos::Array{Float64,1}, vel::Array{Float64,1})
+    #get TCN basis from position and velocity
+    t,c,n = Geometry.get_tcn(pos, vel)
+    return q_tcn = [dcm_to_quat(DCM([t';c';n']))]
+end
+function tcn_quat(pos::Array{Float64,2}, vel::Array{Float64,2})
+    @assert size(pos,1)==3 "POS needs to be 3 x N"
+    @assert size(vel,1)==3 "VEL needs to be 3 x N"
+    @assert size(pos)==size(vel) "POS and VEL need to have same size"
+
+    #initialize variables
+    quat = Array{Quaternion{Float64},1}(undef, size(pos)[2])
+    #quat = zeros(4,size(pos)[2])
+
+    #compute tcn quaternion for each position and velocity
+    for itp=1:size(pos)[2]
+        quat[itp] = tcn_quat(pos[:,itp], vel[:,itp])[1]
+    end
+    return quat
+end
+
+
+
 """
  Compute look vector based on TCN frame
  - Usage: look_vector = tcn_lvec(t, c, n, θ, ϕ)
