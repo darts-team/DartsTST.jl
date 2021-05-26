@@ -65,9 +65,12 @@ elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are 
     t_ref=  [1] # reflectivities
 end
 # image/scene pixel coordinates
-s_loc_1=-40:.5:40 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-60:1:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=  0:1:80 # m  heights if LLH or SCH, Z if XYZ
+# s_loc_1=-40:.5:40 # deg latitude if LLH, along-track if SCH, X if XYZ
+# s_loc_2=-60:1:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+# s_loc_3=  0:1:80 # m  heights if LLH or SCH, Z if XYZ
+s_loc_1=-40:1:40 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2=-60:2:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=  0:2:80 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
@@ -85,7 +88,7 @@ disable_freq_offset = false # true = no linear phase ramp (ideal osc frequency),
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length
-sync_fc = 1e9 # waveform center frequency
+sync_fc = 1.25e9 # waveform center frequency
 sync_fs = 25e6; # sync receiver sampling rate
 sync_fbw = sync_fs # LFM bandwidth
 
@@ -247,11 +250,17 @@ else
     show("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
 end
 
-# Precalculate all the PSDs, do this in parallel
-sync_PSDs = SharedArray{Float64}(numSRI,undef)
+# Precalculate all the PSDs, do this in parallel. First calculate one PSD to determine the output size
+parameters.sync_pri = 0.1 # select a low SRI for quick processing. This is just used to determine the size required for SharedArray
+(phase_error,psds) = Sync.get_sync_phase(slow_time, orbit_pos_interp, parameters)
 
-
-
+sync_PSDs = SharedArray{Float64}(numSRI,Np,size(psds,2),size(psds,3))
+@sync @distributed for nSRI = 1 : numSRI
+    parameters.sync_pri = sync_PRIs[nSRI]
+     (phase_error,psds) = Sync.get_sync_phase(slow_time, orbit_pos_interp, parameters)
+    sync_PSDs[nSRI,:,:,:] = psds
+    
+end#for
 
 #---- Parallel portion -----
 ## Initialize result vectors
@@ -271,7 +280,8 @@ loc_errors  = SharedArray{Float64}(3,numSRI,Ntrials)
         println("Starting SRI value: ", sync_pri)
     
         ## add in error sources
-        rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
+        psds = sync_PSDs[k,:,:,:]
+        rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters,psds)
     
         ## PROCESS RAW DATA TO GENERATE IMAGE
         if enable_fast_time # with fastime, with slowtime

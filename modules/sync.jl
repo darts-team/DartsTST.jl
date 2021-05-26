@@ -140,7 +140,7 @@ end
          pulse_idx = collect(1:length(tx_map))         
      end#if
      platform_pulse_times = tdma_radar[pulse_idx]
-     sync_PSDs   = Array{Float64}(undef, szp[2], length(platform_pulse_times), convert(Int64,clk_args_N)) # Nplatforms x Ntimes x (length of PSD = sync_clk_fs)
+     sync_PSDs   = Array{Float64}(undef, nplat, length(platform_pulse_times), convert(Int64,clk_args_N)) # Nplatforms x Ntimes x (length of PSD = sync_clk_fs)
 
     for i = 1:nplat #for each platform, generate oscillator phase errors at each time point
         
@@ -168,6 +168,8 @@ end
             
             if no_sync_flag # no sync case
                 (r, t)    = osc_timeseries_from_psd_twosided(Sphi, sync_clk_fs)
+                #store PSD
+                sync_PSDs[i,j,:] = Sphi
             else
                 pulse_time = platform_pulse_times[j] # time of current pulse
                 sync_idx = findlast(t_sync-> t_sync <= pulse_time, t_sync) # find most recent sync time index
@@ -185,11 +187,12 @@ end
                 Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs)
                 # generate time series of phase error
                 (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync, sync_clk_fs)
-                
+            
+                #store PSD
+                sync_PSDs[i,j,:] = Sphi_sync    
             end # if no_sync_flag
             
-            #store PSD
-            sync_PSDs[i,j,:] = Sphi_sync
+            
             
             # t and r are longer than PRI, cut to PRI
             idx_pri = findfirst(t -> t >= dt,t)
@@ -391,7 +394,7 @@ end
         platform_pulse_times = tdma_radar[pulse_idx] # this gives the times for each pulse transmitted by given platform
                 
         ## this approach loops over the sync interval times, generates a phase error PSD as each time point
-        # 1) get CRLB value, 2) find post-sync PSD...?
+        # 1) get CRLB value, 2) find post-sync PSD
         for j = 1 : length(platform_pulse_times) # loops over each pulse time
             
             Sphi_sync = sync_PSDs[i,j,:] # load precalculated PSD
@@ -441,7 +444,7 @@ end
                         phase_err_internal[start_idx:stop_idx-1] = phase_vals .- phase_vals[1]
                     end #if stop_idx
                 else
-                    # println("Start idx = nothing, nsync = ", nsync)
+                    
                 end#if start_idx
             end # forloop
         end# no sync_flag

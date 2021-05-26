@@ -62,7 +62,7 @@ function synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_t
     end 
     
     ## Synchronization Effects
-    phase_err = Sync.get_sync_phase(slow_time,orbit_pos_interp,parameters) 
+    (phase_err, sync_PSDs) = Sync.get_sync_phase(slow_time,orbit_pos_interp,parameters) 
     # note: phase_err is (Nplat x N slow-time) for modes 1 & 2, but (Nplat x Nplat x N slow-time) for MIMO
     # for MIMO, first axis is the transmitting platform number, 2nd is receive platform, 3rd is slow-time number
     

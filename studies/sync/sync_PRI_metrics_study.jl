@@ -16,15 +16,15 @@ curr_procs = nprocs()
 println("Current procs: " * "$curr_procs")
 ## includes
 @everywhere begin
-    include("../modules/generate_raw_data.jl")
-    include("../modules/process_raw_data.jl")
-    include("../modules/geometry.jl")
-    include("../modules/scene.jl")
-    include("../modules/sync.jl")
-    include("../modules/range_spread_function.jl") # as RSF
-    include("../modules/orbits.jl")
-    include("../modules/error_sources.jl")
-    include("../modules/performance_metrics.jl")
+    include("../../modules/generate_raw_data.jl")
+    include("../../modules/process_raw_data.jl")
+    include("../../modules/geometry.jl")
+    include("../../modules/scene.jl")
+    include("../../modules/sync.jl")
+    include("../../modules/range_spread_function.jl") # as RSF
+    include("../../modules/orbits.jl")
+    include("../../modules/error_sources.jl")
+    include("../../modules/performance_metrics.jl")
 end#begin
 # @everywhere using Orbits, Performance_Metrics, Generate_Raw_Data, Geometry, Sync, Scene, RSF, Process_Raw_Data, Error_Sources
 
@@ -91,11 +91,11 @@ enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 
 display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
 display_tomograms=0 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension, 3: display as 3D scatter plot
-disable_freq_offset = false # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
+disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length
-sync_fc = 1e9 # waveform center frequency
+sync_fc = 1.25e9 # waveform center frequency
 sync_fs = 25e6; # sync receiver sampling rate
 sync_fbw = sync_fs # LFM bandwidth
 
@@ -122,7 +122,7 @@ sync_clk_fs = 1e3; # sample rate of clock error process
 master      = 1 # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
 sync_pri    = 1 # to be overwritten in loop
 
-no_sync_flag = false; # if flag == true, no sync is used. flag == false results in normal sync process estimation
+no_sync_flag = true; # if flag == true, no sync is used. flag == false results in normal sync process estimation
 ## make a struct of important input parameters
 #list key parameters in here, they will get passed to most(?) modules
 @everywhere mutable struct keyParameters
@@ -172,7 +172,8 @@ no_sync_flag)
 
 
 Ntrials = 64 # number of trials per SRI in Monte Carlo simulations
-sync_PRIs = [.1 1 2 3 4 5]
+# sync_PRIs = [.1 1 2 3 4 5]
+sync_PRIs=0.1
 numSRI = length(sync_PRIs)
 
 ## PLATFORM LOCATIONS
