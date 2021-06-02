@@ -71,51 +71,48 @@ function main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_ra
     λ=c/fc # wavelength (m)
     ref_delay=2*ref_range/c # reference delay
 
-    if mode==1 # SAR (ping-pong)
+    if mode==1 # SAR (ping-pong)  
         for j=1:Ns # for each pixel
-            pixel_j = s_xyz_grid[:,j]
+            pixel_j = @view(s_xyz_grid[:,j])
             pixel_sum = 0.0im;
-            for s=1:Nst # slow-time (pulses)
-                for i=1:Np # TX or RX platform for SAR, RX platform for SIMO, RX platform for MIMO
-                    range_rx=distance(pixel_j,p_xyz_3D[:,i,s])
+            for i=1:Np # TX or RX platform for SAR, RX platform for SIMO, RX platform for MIMO
+                for s=1:Nst # slow-time (pulses)
+                    range_rx=distance(pixel_j,@view(p_xyz_3D[:,i,s]))
                     range_tx=range_rx
                     rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
-                    rel_delay_ind=Int(round(rel_delay/Δt))
-                    # processed_image[j]=processed_image[j]+rawdata[s,i,Int(round(Nft/2))+rel_delay_ind]*exp(im*4*pi/λ*range_tx)
-                    pixel_sum=pixel_sum+rawdata[s,i,Int(round(Nft/2))+rel_delay_ind]*exp(im*4*pi/λ*range_tx)
+                    rel_delay_ind=round(Int,rel_delay/Δt)
+                    pixel_sum=pixel_sum+rawdata[s,i,round(Int,Nft/2)+rel_delay_ind]*exp(im*4*pi/λ*range_tx)
                 end
             end
             processed_image[j] = pixel_sum
         end
     elseif mode==2 # SIMO
         for j=1:Ns # for each pixel
-            pixel_j = s_xyz_grid[:,j]
+            pixel_j = @view(s_xyz_grid[:,j])
             pixel_sum = 0.0im;
             for s=1:Nst # slow-time (pulses)
-                range_tx=distance(pixel_j,p_xyz_3D[:,tx_el,s])
+                range_tx=distance(pixel_j,@view(p_xyz_3D[:,tx_el,s]))
                 for i=1:Np # TX or RX platform for SAR, RX platform for SIMO, RX platform for MIMO
-                    range_rx=distance(pixel_j,p_xyz_3D[:,i,s])
+                    range_rx=distance(pixel_j,@view(p_xyz_3D[:,i,s]))
                     rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
-                    rel_delay_ind=Int(round(rel_delay/Δt))
-                    # processed_image[j]=processed_image[j]+rawdata[s,i,Int(round(Nft/2))+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
-                    pixel_sum=pixel_sum+rawdata[s,i,Int(round(Nft/2))+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
+                    rel_delay_ind=round(Int,rel_delay/Δt)
+                    pixel_sum=pixel_sum+rawdata[s,i,round(Int,Nft/2)+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
                 end
             end
             processed_image[j] = pixel_sum
         end
     elseif mode==3 # MIMO
         for j=1:Ns # for each pixel
-            pixel_j = s_xyz_grid[:,j] # saves time to only grab once
+            pixel_j = @view(s_xyz_grid[:,j])
             pixel_sum = 0.0im;
             for s=1:Nst # slow-time (pulses)
                 for i=1:Np # TX or RX platform for SAR, RX platform for SIMO, RX platform for MIMO
-                    range_rx=distance(pixel_j,p_xyz_3D[:,i,s])
+                    range_rx=distance(pixel_j,@view(p_xyz_3D[:,i,s]))
                     for k=1:Np # TX platform
-                        range_tx=distance(pixel_j,p_xyz_3D[:,k,s])
+                        range_tx=distance(pixel_j,@view(p_xyz_3D[:,k,s]))
                         rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
-                        rel_delay_ind=Int(round(rel_delay/Δt))
-                        # processed_image[j]=processed_image[j]+rawdata[s,i,k,Int(round(Nft/2))+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
-                        pixel_sum=pixel_sum+rawdata[s,i,k,Int(round(Nft/2))+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
+                        rel_delay_ind=round(Int,rel_delay/Δt)
+                        pixel_sum=pixel_sum+rawdata[s,i,k,round(Int,Nft/2)+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
                     end
                 end
             end
