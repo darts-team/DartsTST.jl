@@ -65,19 +65,6 @@ rotate_frame(v,q) = convert(Array{Float64,1}, vect(inv(q)*v*q))
 " Rotate vector, given a rotation quaternion "
 rotate_vec(v,q) = convert(Array{Float64,1}, vect(q*v*inv(q)))
 
-"""
-Converts ECEF XYZ coordinates to SCH
-
-# Arguments
- - `XYZ:3xN Float Array`, ECEF XYZ coordinates
- - `peg::PegPointType`, see PegPoint for more details
-
-# Output
- - `SCH::3xN Float Array`, SCH coordinates in meters
-"""
-function xyz_to_sch(xyz::Array{Float64,},peg::PegPoint)
-    sch=xyz # TODO
-end
 
 """
 Calculates average peg point and average platform heights over all platforms and all slow-time (pulse) locations
@@ -241,8 +228,44 @@ function sch_to_xyz(sch::Array{Float64,2},peg::PegPoint)
     end
     return xyz
 end
+"""
+Converts ECEF XYZ coordinates to SCH
 
+# Arguments
+ - `XYZ::3xN Float Array`, XYZ (ECEF) coordinates in meters
+ - `peg::PegPointType`, see PegPoint for more details
 
+# Output
+ - `SCH:3xN Float Array`, SCH coordinates
+"""
+function xyz_to_sch(xyz::Array{Float64,1},peg::PegPoint)
+
+    #compute x'y'z' coordinates from peg and xyz
+    xyzp = (peg.Mxyzprime_xyz)'*(xyz-peg.O)
+
+    #compute arc-angles and arc-lengths for S and C
+    sθ = atan(xyzp[2], xyzp[1]); #arc-angle along-track
+    s  = sθ * peg.Ra; #arc-length along-track (the s-axis)
+
+    cλ = atan(sin(sθ)*xyzp[3], xyzp[2]); #arc-angle cross-track
+    c  = cλ * peg.Ra; #arc-length cross-track
+
+    #compute height
+    h  = xyzp[1]/cos(cλ)/cos(sθ) - peg.Ra;
+    return [s,c,h]
+end
+function xyz_to_sch(xyz::Array{Float64,2},peg::PegPoint)
+    @assert size(xyz,1)==3 "SCH vector needs to be 3xN"
+
+    #set up xyz output
+    sch=zeros(size(xyz))
+
+    #compute the xyz value per SCH triplet
+    for ipt=1:size(xyz,2)
+        sch[:,ipt]=xyz_to_sch(xyz[:,ipt],peg)
+    end
+    return sch
+end
 
 
 abstract type AbstractFrame end
