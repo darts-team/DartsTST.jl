@@ -86,8 +86,8 @@ function avg_peg_h(p_xyz)
     # Average Platform Heading
       Np=size(p_xyz)[2] # number of platforms
       Nst=size(p_xyz)[3] # number of slow-time samples (pulses processed)
-      p_headings=zeros(1,Np)
       p_geo=zeros(3,Np,Nst)
+      p_headings=zeros(1,Np)
       for i=1:Np
         p_xyz_i=p_xyz[:,i,:]
         p_xyz_i=reshape(p_xyz_i,3,Nst)
@@ -96,8 +96,8 @@ function avg_peg_h(p_xyz)
       end
       p_avg_heading=mean(p_headings)
       p_avg_geo=mean(mean(p_geo,dims=2),dims=3) # average LLH of platforms over platforms and slow-time locations
-      avg_peg=PegPoint(p_avg_geo[1],p_avg_geo[2],p_avg_heading)
       p_h_avg=p_avg_geo[3]
+      avg_peg=PegPoint(p_avg_geo[1],p_avg_geo[2],p_avg_heading)
       return avg_peg,p_h_avg
 end
 function avg_peg_h(p_xyz,p_vel)
@@ -117,8 +117,13 @@ function avg_peg_h(p_xyz,p_vel)
       end
       p_avg_heading=mean(p_headings)
       p_avg_geo=mean(mean(p_geo,dims=2),dims=3) # average LLH of platforms over platforms and slow-time locations
-      avg_peg=PegPoint(p_avg_geo[1],p_avg_geo[2],p_avg_heading)
       p_h_avg=p_avg_geo[3]
+      avg_peg=PegPoint(p_avg_geo[1],p_avg_geo[2],p_avg_heading)
+      # Median heading
+      #p_vel_i=p_vel[:,Int(round(Np/2)),Int(round(Nst/2))]
+      #p_median_heading=compute_heading(p_geo[1,Int(round(Np/2)),Int(round(Nst/2))],p_geo[2,Int(round(Np/2)),Int(round(Nst/2))],p_vel_i)
+      #p_h_avg=p_geo[3,Int(round(Np/2)),Int(round(Nst/2))]
+      #avg_peg=PegPoint(p_geo[1,Int(round(Np/2)),Int(round(Nst/2))],p_geo[2,Int(round(Np/2)),Int(round(Nst/2))],p_median_heading[1])
       return avg_peg,p_h_avg
 end
 
