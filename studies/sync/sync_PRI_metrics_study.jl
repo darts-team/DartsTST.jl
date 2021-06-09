@@ -9,7 +9,7 @@ maxprocs = 65 # maximum number of cores to use
 curr_procs = nprocs()
 if curr_procs < maxprocs
     addprocs(maxprocs - curr_procs)
-    
+
     # not adding the else case where we would remove processes. Possible but not useful
 end#if
 curr_procs = nprocs()
@@ -75,7 +75,7 @@ pulse_length=10e-6 # s pulse length
 bandwidth=40e6 # bandwidth (Hz)
 # performance metrics
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
-PSF_peak_target=1 # 1: peak, 2: target
+PSF_image_point=1 # 1: peak location, 2: target location, 3: center of 3D scene
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
@@ -83,6 +83,7 @@ display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
 display_tomograms=0 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension, 3: display as 3D scatter plot
 disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
+
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length
@@ -242,7 +243,7 @@ if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when th
     else
         PSF_metrics=true
         target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
-        ideal_res,ideal_PSLR,ideal_ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_peak_target) # resolutions in each of the 3 axes
+        ideal_res,ideal_PSLR,ideal_ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point) # resolutions in each of the 3 axes
     end
 else
     PSF_metrics=false
@@ -260,15 +261,15 @@ tomo_data   = SharedArray{Float64}(Ns_1,Ns_2,Ns_3,numSRI,Ntrials)
 @sync @distributed for ntrial = 1 : Ntrials
 # Threads.@threads for ntrial = 1 : Ntrials
     # println("Trial Number: ", ntrial)
-    
+
      for k = 1 : numSRI
         sync_pri = sync_PRIs[k]
         parameters.sync_pri = sync_pri
         println("Starting SRI value: ", sync_pri)
-    
+
         ## add in error sources
         rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
-    
+
         ## PROCESS RAW DATA TO GENERATE IMAGE
         if enable_fast_time # with fastime, with slowtime
             image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata_sync,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
@@ -277,9 +278,10 @@ tomo_data   = SharedArray{Float64}(Ns_1,Ns_2,Ns_3,numSRI,Ntrials)
         end
         Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
         image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
+
         #store 3D image data into shared array
         tomo_data[:,:,:,k,ntrial] = image_3D
-        
+
         ## PERFORMANCE METRICS
         # PSF metrics
         if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when there is only one point target
@@ -297,7 +299,7 @@ tomo_data   = SharedArray{Float64}(Ns_1,Ns_2,Ns_3,numSRI,Ntrials)
                 PSF_metrics=true
                 target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
                 try
-                    resolution,PSLR,ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_peak_target) # resolutions in each of the 3 axes
+                    resolution,PSLR,ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point) # resolutions in each of the 3 axes
                 catch
                     resolution=[NaN,NaN,NaN]
                     PSLR=[NaN,NaN,NaN]
@@ -315,7 +317,7 @@ tomo_data   = SharedArray{Float64}(Ns_1,Ns_2,Ns_3,numSRI,Ntrials)
             loc_error=[NaN,NaN,NaN]
             show("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
         end
-        
+
         (peak, idx)             = findmax(image_3D) # finds maximum and index of max
         peaks[k,ntrial]         = peak
         loc_errors[:,k,ntrial]  = loc_error
@@ -323,7 +325,7 @@ tomo_data   = SharedArray{Float64}(Ns_1,Ns_2,Ns_3,numSRI,Ntrials)
         PSLRs[:,k,ntrial]       = PSLR
         ISLRs[:,k,ntrial]       = ISLR
     end#N SRIs
-    
+
 end#Ntrials
 
 if disable_freq_offset # test to denote frequency error or not in save file name

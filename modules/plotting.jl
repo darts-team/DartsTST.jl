@@ -52,26 +52,40 @@ function plot_geometry(orbit_time,orbit_pos,p_xyz,t_xyz_3xN,s_loc_3xN,s_xyz_3xN,
     display(scatter(s_xyz_3xN[1,:],s_xyz_3xN[2,:],s_xyz_3xN[3,:],leg=false,camera=(20,40),markersize=0.3,xlabel="X (m)",ylabel="Y (m)",zlabel="Z (m)",title="Scene Pixel Locations in XYZ",size=(1600,900))) #display grid in 3D
 end
 
-function plot_tomogram(display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,s_xyz_3xN,coords)
+function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,s_xyz_3xN,t_loc_1,t_loc_2,t_loc_3,coords)
     brightest=maximum(image_3D)
     faintest=minimum(image_3D)
-    Ns_θ=length(s_loc_1)
-    Ns_ϕ=length(s_loc_2)
-    Ns_h=length(s_loc_3)
+    Ns_1=length(s_loc_1)
+    Ns_2=length(s_loc_2)
+    Ns_3=length(s_loc_3)
     if display_tomograms==1
         gr()
-        k=Int(ceil(Ns_h/2));display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k],ylabel=coords[1],xlabel=coords[2],title="2D Image at Loc-3="*string(s_loc_3[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
-        k=Int(ceil(Ns_θ/2));display(heatmap(s_loc_3,s_loc_2,image_3D[k,:,:],ylabel=coords[2],xlabel=coords[3],title="2D Image at Loc-1="*string(s_loc_1[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
-        k=Int(ceil(Ns_ϕ/2));display(heatmap(s_loc_3,s_loc_1,image_3D[:,k,:],ylabel=coords[1],xlabel=coords[3],title="2D Image at Loc-2="*string(s_loc_2[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
+        if PSF_image_point==3 # center of scene
+            k1=Int(ceil(Ns_1/2))
+            k2=Int(ceil(Ns_2/2))
+            k3=Int(ceil(Ns_3/2))
+        elseif PSF_image_point==1 # peak location
+            max_ind=findall(image_3D .==maximum(image_3D))
+            k1=max_ind[1][1]
+            k2=max_ind[1][2]
+            k3=max_ind[1][3]
+        elseif PSF_image_point==2 # target location
+            k1=findall(t_loc_1 .==s_loc_1);k1=k1[1]
+            k2=findall(t_loc_2 .==s_loc_2);k2=k2[1]
+            k3=findall(t_loc_3 .==s_loc_3);k3=k3[1]
+        end
+        display(heatmap(s_loc_3,s_loc_2,image_3D[k1,:,:],ylabel=coords[2],xlabel=coords[3],title="2D Image at Loc-1="*string(s_loc_1[k1]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
+        display(heatmap(s_loc_3,s_loc_1,image_3D[:,k2,:],ylabel=coords[1],xlabel=coords[3],title="2D Image at Loc-2="*string(s_loc_2[k2]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
+        display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],ylabel=coords[1],xlabel=coords[2],title="2D Image at Loc-3="*string(s_loc_3[k3]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
     elseif display_tomograms==2
         gr()
-        for k=1:Ns_h # height slices from the scene
+        for k=1:Ns_3 # height slices from the scene
             display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k],ylabel=coords[1],xlabel=coords[2],title="2D Image at Loc-3="*string(s_loc_3[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
         end
-        for k=1:Ns_θ # latitude slices from the scene
+        for k=1:Ns_1 # latitude slices from the scene
             display(heatmap(s_loc_3,s_loc_2,image_3D[k,:,:],ylabel=coords[2],xlabel=coords[3],title="2D Image at Loc-1="*string(s_loc_1[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
         end
-        for k=1:Ns_ϕ # longitude slices from the scene
+        for k=1:Ns_2 # longitude slices from the scene
             display(heatmap(s_loc_3,s_loc_1,image_3D[:,k,:],ylabel=coords[1],xlabel=coords[3],title="2D Image at Loc-2="*string(s_loc_2[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
         end
     elseif display_tomograms==3

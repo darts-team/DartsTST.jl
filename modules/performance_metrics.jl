@@ -39,6 +39,13 @@ function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene
         slice_index1=findall(target_location[1] .==scene_axis1)
         slice_index2=findall(target_location[2] .==scene_axis2)
         slice_index3=findall(target_location[3] .==scene_axis3)
+    elseif PSF_peak_target==3 # PSF slices from 3D scene center
+        Ns_1=length(scene_axis1)
+        Ns_2=length(scene_axis2)
+        Ns_3=length(scene_axis3)
+        slice_index1=Int(ceil(Ns_1/2))
+        slice_index2=Int(ceil(Ns_2/2))
+        slice_index3=Int(ceil(Ns_3/2))
     end
     if PSF_peak_target==2 && (isempty(slice_index1) || isempty(slice_index2) || isempty(slice_index3))
         image_1D_1=NaN;image_1D_2=NaN;image_1D_3=NaN
