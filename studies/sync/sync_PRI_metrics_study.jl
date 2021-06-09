@@ -28,15 +28,6 @@ println("Current procs: " * "$curr_procs")
 end#begin
 # @everywhere using Orbits, Performance_Metrics, Generate_Raw_Data, Geometry, Sync, Scene, RSF, Process_Raw_Data, Error_Sources
 
-# @everywhere include("../darts-simtool/modules/generate_raw_data.jl")
-# @everywhere include("../darts-simtool/modules/process_raw_data.jl")
-# @everywhere include("../darts-simtool/modules/geometry.jl")
-# @everywhere include("../darts-simtool/modules/scene.jl")
-# @everywhere include("../darts-simtool/modules/sync.jl")
-# @everywhere include("../darts-simtool/modules/range_spread_function.jl") # as RSF
-# @everywhere include("../darts-simtool/modules/orbits.jl")
-# @everywhere include("../darts-simtool/modules/error_sources.jl")
-# @everywhere include("../darts-simtool/modules/performance_metrics.jl")
 ## Determining Parameters
 c=299792458 # speed of light (m/s)
 # planetary shape constants
@@ -237,7 +228,7 @@ else # without fastime, with slowtime
 end
 Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
 image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
-
+ideal_image_3D = image_3D # for saving later
 # PERFORMANCE METRICS
 (ideal_peak, ideal_idx) = findmax(image_3D) # finds maximum and index of max
 
@@ -264,6 +255,7 @@ resolutions = SharedArray{Float64}(3,numSRI,Ntrials)
 PSLRs       = SharedArray{Float64}(3,numSRI,Ntrials)
 ISLRs       = SharedArray{Float64}(3,numSRI,Ntrials)
 loc_errors  = SharedArray{Float64}(3,numSRI,Ntrials)
+tomo_data   = SharedArray{Float64}(Ns_1,Ns_2,Ns_3,numSRI,Ntrials)
 ## run trials
 @sync @distributed for ntrial = 1 : Ntrials
 # Threads.@threads for ntrial = 1 : Ntrials
@@ -285,7 +277,9 @@ loc_errors  = SharedArray{Float64}(3,numSRI,Ntrials)
         end
         Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
         image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
-    
+        #store 3D image data into shared array
+        tomo_data[:,:,:,k,ntrial] = image_3D
+        
         ## PERFORMANCE METRICS
         # PSF metrics
         if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when there is only one point target
@@ -343,6 +337,7 @@ outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$osc_type"*"_sync_pri_swee
 @save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs s_loc_1 s_loc_2 s_loc_3
 #println(std(resolutions[1,:]))
 # Note: JLD2 can be read using "@load filename var1 var2...
+outputfilename_data = "syncModule_MonteCarlo_mode_$mode"*"_$osc_type"*"_sync_pri_sweep_"*freq_text* "_imageData.jld2" # output filename for image data. doesn't save metrics
+@save outputfilename_data ideal_image_3D tomo_data sync_PRIs s_loc_1 s_loc_2 s_loc_3
+
 println("Run Complete, and file saved to " *outputfilename)
-
-
