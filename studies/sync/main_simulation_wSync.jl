@@ -56,7 +56,7 @@ if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fa
 
 ## Add Sync effects
 include("../../inputs/input_parameters_sync.jl")
-@time rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
+rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
 
 ## PROCESS RAW DATA TO GENERATE IMAGE
 #image_3xN=Process_Raw_Data.main(rawdata,s_xyz_3xN,p_xyz_grid,mode,tx_el,fc) # without fastime, without slowtime

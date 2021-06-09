@@ -70,7 +70,8 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     if clk_args_N < 40e3 # enfore a minimum number of points. Needed for PSD accuracy
         clk_args_N = 40e3
     end#if   
-    up_convert =  fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF)
+    up_convert =  1 #fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF) #TODO temporarily commenting out to unity use PSD upscaling instead
+    up_convert_psd = (fc / f_osc)^2 # frequency up-conversion factor (scale factor from LO to RF) for use on PSD
 
     # verify size of position input
     szp = size(pos)
@@ -167,7 +168,8 @@ end
         for j = 1 : length(platform_pulse_times) # loops over each pulse time
             
             if no_sync_flag # no sync case
-                (r, t)    = osc_timeseries_from_psd_twosided(Sphi, sync_clk_fs)
+                Sphi_uc = up_convert_psd .* Sphi
+                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs)
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi
             else
@@ -179,14 +181,13 @@ end
                 if sync_radar_offset < (sync_processing_time*nplat) # enforce minimum sync processing time for offset
                     sync_radar_offset = (sync_processing_time*nplat)
                 end
-                # println("Sync Time: ",sync_time)#testing
-                # println("Sync Radar Offset: ",sync_radar_offset)#testing
                 
                 # calculate post-sync PSD from crlb, sync_radar_offset
                 crlb = itp_crlb(sync_time) # this tells us what the crlb was at the sync
                 Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs)
                 # generate time series of phase error
-                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync, sync_clk_fs)
+                Sphi_sync_uc = up_convert_psd .* Sphi
+                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs)
             
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi_sync    
@@ -399,7 +400,8 @@ end
             
             Sphi_sync = sync_PSDs[i,j,:] # load precalculated PSD
             # generate time series of phase error
-            (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync, sync_clk_fs)
+            Sphi_sync_uc = up_convert_psd .* Sphi
+            (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs)
             
             # t and r are longer than PRI, cut to PRI
             idx_pri = findfirst(t -> t >= dt,t)
