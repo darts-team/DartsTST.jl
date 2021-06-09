@@ -1,12 +1,12 @@
 using NCDatasets
 
 use_orbits_flag = true # true if using an orbit file to inform number of platforms
-disable_freq_offset = false # false = frequency mismatch + phase ramp. true = no phase ramp
+disable_freq_offset = true # false = frequency mismatch + phase ramp. true = no phase ramp
 
 if !use_orbits_flag
     setNumPlatforms = 3 # manually select number of Rx platforms
 end 
-sync_pri = 3 # (s) repetition interval of sync
+sync_pri = 1 # (s) repetition interval of sync
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length
@@ -27,8 +27,6 @@ end
 
 # here we assume all platforms are the same quality. however, we can redefine the osc_coeffs to have different values. (likely scenario in SIMO mode with master transmitter)
 ## TODO need to figure out a way to get the number of platforms without hardcoding this orbit file name - use OrbitFileName variable?
-# ------this is ugly code that needs to be replaced------
-# orbit_dataset=Dataset("inputs/orbitOutput_082020.nc") # Read orbits data in NetCDF format
 if use_orbits_flag
     orbit_dataset=Dataset(orbit_filename) # Read orbits data in NetCDF format
     orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data
@@ -57,7 +55,7 @@ sync_clk_fs = 1e3 # sample rate of clock error process
 master = 1 # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
 
 
-no_sync_flag = false # if flag == true, no sync is used. flag == false results in normal sync process estimation
+no_sync_flag = true # if flag == true, no sync is used. flag == false results in normal sync process estimation
 ## make a struct of important input parameters
 #list key parameters in here, they will get passed to most(?) modules
 mutable struct keyParameters
