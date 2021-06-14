@@ -499,7 +499,7 @@ function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1})
 #     fs = 2000; # max PSD frequency [sample rate of clock phase error process]
 #     N = 600000; # number of PSD sample points
 #     a_coeff_db = [-28 -40 -200 -130 -155]; # coefficients of the noise characteristic asymptotes.
-#     fmin = .1; # minimum frequency .> 0 in Hz to window PSD [optional, default = .1 Hz].
+#     fmin = .1; # minimum frequency .> 0 in Hz to window PSD [optional, default = .01 Hz].
 #
 # OUTPUTS
 #     Sphi_2S: # two sided oscillator phase error PSD
