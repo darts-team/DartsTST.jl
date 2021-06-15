@@ -1,14 +1,14 @@
-include("modules/generate_raw_data.jl")
-include("modules/process_raw_data.jl")
-include("modules/geometry.jl")
-include("modules/scene.jl")
+include("../../modules/generate_raw_data.jl")
+include("../../modules/process_raw_data.jl")
+include("../../modules/geometry.jl")
+include("../../modules/scene.jl")
 #include("inputs/input_parameters_LLH_nadirlooking.jl")
 #include("inputs/input_parameters_LLH_slantlooking.jl")
-include("inputs/input_parameters_SCH_lookangle.jl")
-include("modules/range_spread_function.jl") # as RSF
-include("modules/orbits.jl")
-include("modules/sync.jl")
-include("modules/error_sources.jl")
+include("../../inputs/input_parameters_SCH_lookangle.jl")
+include("../../modules/range_spread_function.jl") # as RSF
+include("../../modules/orbits.jl")
+include("../../modules/sync.jl")
+include("../../modules/error_sources.jl")
 
 using NCDatasets
 using Statistics
@@ -55,8 +55,8 @@ if !enable_fast_time;SNR=SNR*pulse_length*bandwidth;end # SNR increases after ma
 if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end # adding random noise based on SNR after range (fast-time) processing
 
 ## Add Sync effects
-include("inputs/input_parameters_sync.jl")
-@time rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
+include("../../inputs/input_parameters_sync.jl")
+rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
 
 ## PROCESS RAW DATA TO GENERATE IMAGE
 #image_3xN=Process_Raw_Data.main(rawdata,s_xyz_3xN,p_xyz_grid,mode,tx_el,fc) # without fastime, without slowtime
@@ -79,7 +79,7 @@ if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when th
         show("PSF related performance metrics cannot be calculated since target is not inside the scene!")
         PSF_metrics=false
     else
-        include("modules/performance_metrics.jl")
+        include("../../modules/performance_metrics.jl")
         PSF_metrics=true
         target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
         resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point) # resolutions in each of the 3 axes
@@ -98,9 +98,14 @@ end
 
 ## PLOTS (1D PSF cuts are displayed by default in the performance.metrics module)
 if display_geometry || display_RSF_rawdata || display_tomograms!=0
+<<<<<<< HEAD
     include("modules/plotting.jl")
     display_geometry_coord_txt=Plotting.coordinates(display_geometry_coord)
     tomogram_coord_txt=Plotting.coordinates(ts_coord_sys)
+=======
+    include("../../modules/plotting.jl")
+    coords=Plotting.coordinates(ts_coord_sys)
+>>>>>>> master
     if display_RSF_rawdata;Plotting.plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata);end
     if display_geometry
         # convert platform and target locations to desired coordinate system
