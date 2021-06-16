@@ -26,7 +26,6 @@ println("Current procs: " * "$curr_procs")
     include("../../modules/error_sources.jl")
     include("../../modules/performance_metrics.jl")
 end#begin
-# @everywhere using Orbits, Performance_Metrics, Generate_Raw_Data, Geometry, Sync, Scene, RSF, Process_Raw_Data, Error_Sources
 
 ## Determining Parameters
 c=299792458 # speed of light (m/s)
@@ -37,7 +36,9 @@ earth_eccentricity=sqrt(0.00669437999015)
 mode=2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
 tx_el=1 # which element transmits for SIMO (max value N)
 # radar parameters
-fc=1.25e9 # center frequency (Hz)
+# fc=1.25e9 # center frequency (Hz) L-band
+# fc=3e9 # center frequency (Hz) S-band
+fc=6e9 # center frequency (Hz) C-band
 fp=10 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz taken from orbits (including slow-time)
@@ -114,7 +115,7 @@ sync_clk_fs = 1e3; # sample rate of clock error process
 master      = 1 # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
 sync_pri    = 1 # to be overwritten in loop
 
-no_sync_flag = true; # if flag == true, no sync is used. flag == false results in normal sync process estimation
+no_sync_flag = false; # if flag == true, no sync is used. flag == false results in normal sync process estimation
 ## make a struct of important input parameters
 #list key parameters in here, they will get passed to most(?) modules
 @everywhere mutable struct keyParameters
@@ -164,8 +165,8 @@ no_sync_flag)
 
 
 Ntrials = 64 # number of trials per SRI in Monte Carlo simulations
-# sync_PRIs = [.1 1 2 3 4 5]
-sync_PRIs=0.1
+sync_PRIs = [.1 1 2 3 4 5]
+# sync_PRIs=0.1
 numSRI = length(sync_PRIs)
 
 ## PLATFORM LOCATIONS
