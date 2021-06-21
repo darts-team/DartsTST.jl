@@ -242,7 +242,10 @@ function xyz_to_sch(xyz::Array{Float64,1},peg::PegPoint)
     sθ = atan(xyzp[2], xyzp[1]); #arc-angle along-track
     s  = sθ * peg.Ra; #arc-length along-track (the s-axis)
 
-    cλ = atan(sin(sθ)*xyzp[3], xyzp[2]); #arc-angle cross-track
+    cλ = atan(sin(sθ)*xyzp[3]/xyzp[2]); #arc-angle cross-track
+    #if cλ < 0
+    #    cλ = cλ + π
+    #end
     c  = cλ * peg.Ra; #arc-length cross-track
 
     #compute height
