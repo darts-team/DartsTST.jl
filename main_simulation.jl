@@ -17,7 +17,8 @@ t12_orbits=orbit_dataset["time"][1:2] # first two time samples
 dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
 orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
 orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
-orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt #TODO convert ECI to ECEF?
+orbit_pos_ECI=orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
+dcm=orbit_dataset["dcm"];orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm) # ECI to ECEF
 orbit_vel=orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
 p_xyz=1e3*Orbits.interp_orbit(orbit_time,orbit_pos,slow_time) # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
@@ -28,7 +29,7 @@ targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t
 targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
 s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loops
 #t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos*1e3,look_angle,earth_radius,earth_eccentricity) ## calculate avg heading from platform positions
-t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos*1e3,orbit_vel,look_angle,earth_radius,earth_eccentricity) # calculate avg heading from platform velocities
+t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos*1e3,orbit_vel,look_angle,earth_radius,earth_eccentricity) # calculate avg heading from platform velocities
 ## TARGET REFLECTIVITIES
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
 ## RANGE SPREAD FUNCTION (matched filter output)
@@ -106,21 +107,21 @@ if display_geometry || display_RSF_rawdata || display_tomograms!=0
             for i=1:Np
                 p_xyz_i=p_xyz[:,i,:]
                 p_xyz_i=reshape(p_xyz_i,3,Nst)
-                p_loc[:,i,:]=Geometry.xyz_to_sch(p_xyz_i) #TODO function is to be added
+                p_loc[:,i,:]=Geometry.xyz_to_sch(p_xyz_i,avg_peg)
             end
             if ts_coord_sys=="SCH"
                 t_loc=targets_loc
                 s_loc=s_loc_3xN
             else # ts_coord_sys == LLH or XYZ
-                t_loc=Geometry.xyz_to_sch(t_xyz_3xN) #TODO function is to be added
-                s_loc=Geometry.xyz_to_sch(s_xyz_3xN) #TODO function is to be added
+                t_loc=Geometry.xyz_to_sch(t_xyz_3xN,avg_peg)
+                s_loc=Geometry.xyz_to_sch(s_xyz_3xN,avg_peg)
             end
         elseif display_geometry_coord=="XYZ"
             p_loc=p_xyz
             t_loc=t_xyz_3xN
             s_loc=s_xyz_3xN
         end
-        Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt)
+        Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt,avg_peg)
     end
     if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,tomogram_coord_txt);end
 end
