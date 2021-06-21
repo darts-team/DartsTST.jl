@@ -1,6 +1,7 @@
 using NCDatasets
 
 use_orbits_flag = true # true if using an orbit file to inform number of platforms
+disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 if !use_orbits_flag
     setNumPlatforms = 3 # manually select number of Rx platforms
 end 
@@ -12,10 +13,10 @@ sync_fc = 1e9 # waveform center frequency
 sync_fs = 25e6; # sync receiver sampling rate
 sync_fbw = sync_fs # LFM bandwidth
 
-# osc_type = "USO" # putting a oscillator type variable here to auto-name save files
+osc_type = "USO" # putting a oscillator type variable here to auto-name save files
 # osc_type = "USRP"
-osc_type = "Wentzel5MHz"
-# osc_type = "Wentzel100MHz"
+# osc_type = "Wenzel5MHz"
+# osc_type = "Wenzel100MHz"
 
 #defines oscillator quality. Either leave as single row to use across all platforms, or define values for each platform as a new row
 #define oscillator quality and frequency
@@ -25,11 +26,11 @@ if osc_type == "USO"
 elseif osc_type == "USRP"
     a_coeff_dB = [-28 -40 -200 -130 -155] # [USRP E312]
     f_osc = 10e6 # local oscillator frequency
-elseif osc_type == "Wentzel5MHz"
-    a_coeff_dB = [-1000 -128 -1000 -150 -178] # [Wentzel 5MHz oscillator] - NOTE: fractional dB values were rounded up for Wentzel oscillators (to keep as Int64 values)
+elseif osc_type == "Wenzel5MHz"
+    a_coeff_dB = [-1000 -128 -1000 -150 -178] # [Wenzel 5MHz oscillator] - NOTE: fractional dB values were rounded up for Wenzel oscillators (to keep as Int64 values)
     f_osc = 5e6 # local oscillator frequency
-elseif osc_type == "Wentzel100MHz"
-    a_coeff_dB = [-1000 -73 -1000 -104 -181] # [Wentzel 100MHz oscillator]
+elseif osc_type == "Wenzel100MHz"
+    a_coeff_dB = [-1000 -73 -1000 -104 -181] # [Wenzel 100MHz oscillator]
     f_osc = 100e6 # local oscillator frequency
 end
 
@@ -48,13 +49,13 @@ end
 if size(a_coeff_dB)[1] == 1
     osc_coeffs = repeat(a_coeff_dB,nplat)
 end #if
-if disable_freq_offset == 1 # option to remove linear phase drift due to osc frequency offset
+
+if disable_freq_offset == true # option to remove linear phase drift due to osc frequency offset
     sigma_freq_offsets = zeros(nplat)
 else
     sigma_freq_offsets = 1.5e-3 # Hz - std. dev. of the frequency offset of the oscillator. This is the linear phase ramp value
-    sigma_freq_offsets = sigma_freq_offsets .* ones(nplat) # convert to matrix form, one value for each oscillator
+    sigma_freq_offsets = sigma_freq_offsets .* ones(nplats) # convert to matrix form, one value for each oscillator
 end
-
 
 
 sync_fmin = 0.01 # minimum frequency > 0 in Hz to window PSD
