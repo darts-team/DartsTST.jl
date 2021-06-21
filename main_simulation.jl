@@ -17,7 +17,8 @@ t12_orbits=orbit_dataset["time"][1:2] # first two time samples
 dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
 orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
 orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
-orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt #TODO convert ECI to ECEF?
+orbit_pos_ECI=orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
+dcm=orbit_dataset["dcm"];orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm) # ECI to ECEF
 orbit_vel=orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
 p_xyz=1e3*Orbits.interp_orbit(orbit_time,orbit_pos,slow_time) # interpolate orbit to slow time, 3 x Np x Nst, convert km to m

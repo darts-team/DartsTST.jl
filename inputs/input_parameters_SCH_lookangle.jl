@@ -16,7 +16,7 @@ SAR_start_time=0 # SAR imaging start time (s)
 # target locations and reflectvities
 target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
 ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
-display_geometry_coord="SCH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
+display_geometry_coord="XYZ" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
 if ts_coord_sys=="SCH" # if SCH, target and scene locations are defined relative to the point where look angle vector intersects the surface
     look_angle=30 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
     #p_avg_heading=0.1 # average heading of platforms, due North is 0, due East is 90 (deg), required only if SCH coordinates TODO we should get this from orbits!
@@ -47,6 +47,6 @@ PSF_image_point=1 # 1: peak location, 2: target location, 3: center of 3D scene
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
-display_geometry=true # whether to display geometry plots
+display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
 display_tomograms=0 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
