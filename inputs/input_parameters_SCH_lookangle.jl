@@ -16,7 +16,7 @@ orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
 SAR_duration=2 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations and reflectvities
-target_pos_mode="grid" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
+target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
 ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
 display_geometry_coord="SCH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
 if ts_coord_sys=="SCH" # if SCH, target and scene locations are defined relative to the point where look angle vector intersects the surface
@@ -24,21 +24,21 @@ if ts_coord_sys=="SCH" # if SCH, target and scene locations are defined relative
     #p_avg_heading=0.1 # average heading of platforms, due North is 0, due East is 90 (deg), required only if SCH coordinates TODO we should get this from orbits!
 end
 if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
-    t_loc_1=-5:1:5 # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=-60:10:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=35:1:45 # m  heights if LLH or SCH, Z if XYZ
+    t_loc_1=-10:1:10 # deg latitude if LLH, along-track if SCH, X if XYZ
+    t_loc_2=-120:10:120 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    t_loc_3=25:1:55 # m  heights if LLH or SCH, Z if XYZ
     t_ref=ones(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
 elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are defined as 3xN array (useful for a few discrete targets)
     # length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
-    t_loc_1=[0] # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=[40] # m  heights if LLH or SCH, Z if XYZ
-    t_ref=  [1] # reflectivities
+    t_loc_1=[ -5 -5   5  5 0  10   10 -10  -10  0  0] # deg latitude if LLH, along-track if SCH, X if XYZ
+    t_loc_2=[-60 60 -60 60 0 120 -120 120 -120  0  0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    t_loc_3=[ 40 40  40 40 40 40   40  40   40  30 50] # m  heights if LLH or SCH, Z if XYZ
+    t_ref=  ones(length(t_loc_1)) # reflectivities
 end
 # image/scene pixel coordinates
-s_loc_1=-20:1:20 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-240:10:240 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=  20:1:60 # m  heights if LLH or SCH, Z if XYZ
+s_loc_1=-10:0.5:10 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2=-120:5:120 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=  25:0.5:55 # m  heights if LLH or SCH, Z if XYZ
 # s_loc_1=-10:.25:10 # deg latitude if LLH, along-track if SCH, X if XYZ
 # s_loc_2=-40:.5:40 # deg longitude if LLH, cross-track if SCH, Y if XYZ
 # s_loc_3=  (-15:.25:15) .+ 40 # m  heights if LLH or SCH, Z if XYZ

@@ -98,22 +98,7 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_lo
     #savefig("tomogram.png")
 end
 
-function plot_input_scene(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,targets_loc,t_ref,targets_ref,Nt,target_pos_mode,coords)
-    inputscene_3D=zeros(length(s_loc_1),length(s_loc_2),length(s_loc_3))
-    if target_pos_mode=="grid"
-        ind_1=round.(Int64,(targets_loc[1,:].-s_loc_1[1])/(s_loc_1[2]-s_loc_1[1]).+1)
-        ind_2=round.(Int64,(targets_loc[2,:].-s_loc_2[1])/(s_loc_2[2]-s_loc_2[1]).+1)
-        ind_3=round.(Int64,(targets_loc[3,:].-s_loc_3[1])/(s_loc_3[2]-s_loc_3[1]).+1)
-        tref=targets_ref
-    elseif target_pos_mode=="CR"
-        ind_1=round.(Int64,(t_loc_1-s_loc_1[1])/(s_loc_1[2]-s_loc_1[1])+1)
-        ind_2=round.(Int64,(t_loc_2-s_loc_2[1])/(s_loc_2[2]-s_loc_2[1])+1)
-        ind_3=round.(Int64,(t_loc_3-s_loc_3[1])/(s_loc_3[2]-s_loc_3[1])+1)
-        tref=t_ref
-    end
-    for i=1:Nt
-        inputscene_3D[ind_1[i],ind_2[i],ind_3[i]]=tref[i]
-    end
+function plot_input_scene(inputscene_3D,s_loc_1,s_loc_2,s_loc_3,coords)
     brightest=maximum(inputscene_3D)
     faintest=minimum(inputscene_3D)
     Ns_1=length(s_loc_1)

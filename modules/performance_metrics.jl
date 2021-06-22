@@ -1,5 +1,6 @@
 module Performance_Metrics
 using Plots
+using Statistics
 
 #TODO add function definitions, comments, define input types
 function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
@@ -27,6 +28,15 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
     ISLRs=[ISLR_1,ISLR_2,ISLR_3]
     loc_errors=[loc_error_1,loc_error_2,loc_error_3]
     return resolutions,PSLRs,ISLRs,loc_errors
+end
+
+function relative_radiometric_accuracy(inputscene_3D,image_3D)
+    inputscene_3D=inputscene_3D/maximum(inputscene_3D)
+    image_3D=image_3D/maximum(image_3D)
+    diff_image3D=abs.(inputscene_3D.-image_3D)
+    mean_diff_image=mean(diff_image3D)
+    std_diff_image=std(diff_image3D)
+    return diff_image3D,mean_diff_image,std_diff_image
 end
 
 function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
@@ -118,7 +128,6 @@ function sidelobe_1D(image_1D,axis_no,res_ind_1,res_ind_2)
     end
     return PSLR,ISLR
 end
-
 
 """
 `findpeaks(y::Array{T},

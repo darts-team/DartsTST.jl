@@ -9,6 +9,7 @@ include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
 include("modules/error_sources.jl")
+include("modules/performance_metrics.jl")
 using NCDatasets
 using Statistics
 ## PLATFORM LOCATIONS and HEADINGS
@@ -65,17 +66,16 @@ if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when th
     target_index2=findall(t_loc_2 .==s_loc_2)
     target_index3=findall(t_loc_3 .==s_loc_3)
     if isempty(target_index1) || isempty(target_index2) || isempty(target_index3)
-        show("PSF related performance metrics cannot be calculated since target is not inside the scene!")
+        println("PSF related performance metrics cannot be calculated since target is not inside the scene!")
         PSF_metrics=false
     else
-        include("modules/performance_metrics.jl")
         PSF_metrics=true
         target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
         resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point) # resolutions in each of the 3 axes
     end
 else
     PSF_metrics=false
-    show("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
+    println("PSF related performance metrics cannot be calculated since there are more than 1 targets!")
 end
 if PSF_metrics
     println("Resolutions: ",round.(resolutions,digits=8)," in scene axes units")
@@ -84,6 +84,11 @@ if PSF_metrics
     println("ISLRs: ",round.(ISLRs,digits=2)," dB")
     println("PSF Peak Amplitude: ",round(maximum(20*log10.(image_3D)),digits=2)," dB")
 end
+# Relative Radiometric Accuracy (amplitude difference between input 3D scene and output 3D image, max normalized to 1)
+inputscene_3D=Scene.generate_input_scene_3D(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,targets_loc,t_ref,targets_ref,Nt,target_pos_mode)
+diff_image3D,mean_diff_image,std_diff_image=Performance_Metrics.relative_radiometric_accuracy(inputscene_3D,image_3D)
+println("Relative Radiometric Accuracy: Mean: ",round(mean_diff_image,digits=2),", Std: ",round(std_diff_image,digits=2)) # mean=0 & std_dev=0 means perfect result
+Plotting.plot_input_scene(diff_image3D,s_loc_1,s_loc_2,s_loc_3,ts_coord_txt)
 ## PLOTS (1D PSF cuts are displayed by default in the performance.metrics module)
 if display_geometry || display_RSF_rawdata || display_input_scene || display_tomograms!=0
     include("modules/plotting.jl")
@@ -124,5 +129,5 @@ if display_geometry || display_RSF_rawdata || display_input_scene || display_tom
         Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt,avg_peg)
     end
     if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,ts_coord_txt);end
-    if display_input_scene;Plotting.plot_input_scene(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,targets_loc,t_ref,targets_ref,Nt,target_pos_mode,ts_coord_txt);end
+    if display_input_scene;Plotting.plot_input_scene(inputscene_3D,s_loc_1,s_loc_2,s_loc_3,ts_coord_txt);end
 end
