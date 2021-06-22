@@ -5,10 +5,8 @@ using ReferenceFrameRotations
 using LinearAlgebra
 
 #local packages
-include("geometry.jl")
-using .Geometry
-include("antenna.jl")
-using .Antenna
+using ..Geometry
+using ..Antenna
 
 
 """
@@ -43,10 +41,20 @@ mutable struct spacecraft
     vel #velocity relative in ECEF (m/s,m/s, m/s)
     ant # antenna frame defined relative to sc frame
     rot # with respect to the planet
-    function spacecraft(pos, vel; ant = [], rot=Geometry.tcn_quat(pos, vel))
+    look_angle # look angle in degrees (+ve )
+    side # which side is the spacecraft looking
+    function spacecraft(pos, vel; ant = [], rot=Geometry.tcn_quat(pos, vel), look_angle = 35, side = "left")
         @assert size(rot,1) == size(pos,2) "SC rotation quaternion must be N-element vector for a position vector of size 3xN"
         @assert size(pos) == size(vel) "SC position and velocity must have same size"
-        new(pos, vel, ant, rot)
+        @assert side == "left" || side == "l" || side == "right" || side == "r" "side should either be left, l, right, r"
+
+        #set up the antenna with correct orientation
+        lsgn(sd) = (sd == "l" || sd == "left") ? 1 : -1
+        q_ant_look = Geometry.quat(lsgn(side)*look_angle, [0,1,0]) #rotate about antenna y-hat (the long side) to the correct look angle
+        ant = rotate_antenna(ant, q_ant_look)
+
+        #create structure
+        new(pos, vel, ant, rot, look_angle, side)
     end
 end
 
@@ -136,10 +144,43 @@ function rotate_antenna!(ant, quat::Quaternion )
     ant.rot =  ant.rot*quat
 end
 
-function interpolate_antenna(sc::spacecraft, targ_xyz::Array{Float64,}, freq::Float64=1.25)
-    println("SpaceCraft ")
+"""
+Interpolate antenna pattern given spacecraft structure and a set of target points
+ # Usage
+    - cp,xp = interpolate_pattern(sc, targets)
+    cp (co-pol) and xp (cross-pol) antenna patterns
+
+# Arguments
+    - `sc::spacecraft` SimSetup.spacecraft structure
+    - `targ::3xN float array` target points in ECEF xyz
+    - `ind::Int` index of the sc position, quaternion to use
+    - `freq::Float64`, [Optional] antenna freqency to use, in GHz
+
+# Output
+    - `cp` co-pol antenn pattern of size 1xN
+    - `xp` cross-pol antenna pattern of size 1xN
+"""
+function interpolate_pattern(sc, targ::Array{Float64,}, ind::Int = 1, freq::Float64=1.25)
+    @assert size(targ,1) == 3 "targ_xyz must be a 3xN vector"
+    @assert ind <= size(sc.pos,2) "index must be less than the size of the spacecraft position/orientation array"
+
+    #create look vector from targets and spacecraft
+    lvec = targ .- sc.pos;
+    lhat = lvec./norm.(eachcol(lvec))';
+
+    #compute the quaternion to rotate from ECEF to antenna frame
+    q_ecef_ant = sc.rot[ind] * sc.ant.rot
 
 
+    #project look vector onto the antenna frame
+    lhat_ant = zeros(3,size(lhat,2))
+    for ii=1:size(lhat,2)
+        lhat_ant[:,ii] = Geometry.rotate_frame(lhat[:,ii], q_ecef_ant);
+    end
+
+    #inteprolate pattern
+    cp,xp = Antenna.interpolate_pattern(sc.ant.pattern, lhat_ant, freq);
+    return cp,xp
 end
 
 
