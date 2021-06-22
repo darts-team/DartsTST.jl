@@ -85,10 +85,10 @@ if PSF_metrics
     println("PSF Peak Amplitude: ",round(maximum(20*log10.(image_3D)),digits=2)," dB")
 end
 ## PLOTS (1D PSF cuts are displayed by default in the performance.metrics module)
-if display_geometry || display_RSF_rawdata || display_tomograms!=0
+if display_geometry || display_RSF_rawdata || display_input_scene || display_tomograms!=0
     include("modules/plotting.jl")
     display_geometry_coord_txt=Plotting.coordinates(display_geometry_coord)
-    tomogram_coord_txt=Plotting.coordinates(ts_coord_sys)
+    ts_coord_txt=Plotting.coordinates(ts_coord_sys)
     if display_RSF_rawdata;Plotting.plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata);end
     if display_geometry
         # convert platform and target locations to desired coordinate system
@@ -123,5 +123,6 @@ if display_geometry || display_RSF_rawdata || display_tomograms!=0
         end
         Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt,avg_peg)
     end
-    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,tomogram_coord_txt);end
+    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,ts_coord_txt);end
+    if display_input_scene;Plotting.plot_input_scene(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,targets_loc,t_ref,targets_ref,Nt,target_pos_mode,ts_coord_txt);end
 end

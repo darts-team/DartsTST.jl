@@ -98,4 +98,33 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_lo
     #savefig("tomogram.png")
 end
 
+function plot_input_scene(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,targets_loc,t_ref,targets_ref,Nt,target_pos_mode,coords)
+    inputscene_3D=zeros(length(s_loc_1),length(s_loc_2),length(s_loc_3))
+    if target_pos_mode=="grid"
+        ind_1=round.(Int64,(targets_loc[1,:].-s_loc_1[1])/(s_loc_1[2]-s_loc_1[1]).+1)
+        ind_2=round.(Int64,(targets_loc[2,:].-s_loc_2[1])/(s_loc_2[2]-s_loc_2[1]).+1)
+        ind_3=round.(Int64,(targets_loc[3,:].-s_loc_3[1])/(s_loc_3[2]-s_loc_3[1]).+1)
+        tref=targets_ref
+    elseif target_pos_mode=="CR"
+        ind_1=round.(Int64,(t_loc_1-s_loc_1[1])/(s_loc_1[2]-s_loc_1[1])+1)
+        ind_2=round.(Int64,(t_loc_2-s_loc_2[1])/(s_loc_2[2]-s_loc_2[1])+1)
+        ind_3=round.(Int64,(t_loc_3-s_loc_3[1])/(s_loc_3[2]-s_loc_3[1])+1)
+        tref=t_ref
+    end
+    for i=1:Nt
+        inputscene_3D[ind_1[i],ind_2[i],ind_3[i]]=tref[i]
+    end
+    brightest=maximum(inputscene_3D)
+    faintest=minimum(inputscene_3D)
+    Ns_1=length(s_loc_1)
+    Ns_2=length(s_loc_2)
+    Ns_3=length(s_loc_3)
+    k1=Int(ceil(Ns_1/2))
+    k2=Int(ceil(Ns_2/2))
+    k3=Int(ceil(Ns_3/2))
+    display(heatmap(s_loc_3,s_loc_2,inputscene_3D[k1,:,:],ylabel=coords[2],xlabel=coords[3],title="2D Input Scene at Loc-1="*string(s_loc_1[k1]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
+    display(heatmap(s_loc_3,s_loc_1,inputscene_3D[:,k2,:],ylabel=coords[1],xlabel=coords[3],title="2D Input Scene at Loc-2="*string(s_loc_2[k2]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
+    display(heatmap(s_loc_2,s_loc_1,inputscene_3D[:,:,k3],ylabel=coords[1],xlabel=coords[2],title="2D Input Scene at Loc-3="*string(s_loc_3[k3]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900))) #aspect_ratio=:equal
+end
+
 end
