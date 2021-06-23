@@ -250,7 +250,7 @@ function xyz_to_sch(xyz::Array{Float64,1},peg::PegPoint)
     s = peg.Ra*atan(xyzp[2], xyzp[1]);
     c = peg.Ra*asin(xyzp[3]/r);
     h = r - peg.Ra;
-    return [s,c,r]
+    return [s,c,h]
 end
 function xyz_to_sch(xyz::Array{Float64,2},peg::PegPoint)
     @assert size(xyz,1)==3 "SCH vector needs to be 3xN"
