@@ -69,15 +69,15 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_lo
             k1=Int(ceil(Ns_1/2))
             k2=Int(ceil(Ns_2/2))
             k3=Int(ceil(Ns_3/2))
-        elseif PSF_image_point==1 # peak location
-            max_ind=findall(image_3D .==maximum(image_3D))
-            k1=max_ind[1][1]
-            k2=max_ind[1][2]
-            k3=max_ind[1][3]
         elseif PSF_image_point==2 # target location
             k1=findall(t_loc_1 .==s_loc_1);k1=k1[1]
             k2=findall(t_loc_2 .==s_loc_2);k2=k2[1]
             k3=findall(t_loc_3 .==s_loc_3);k3=k3[1]
+        else # PSF_image_point==1 # peak location -- default to peak location
+            max_ind=findall(image_3D .==maximum(image_3D))
+            k1=max_ind[1][1]
+            k2=max_ind[1][2]
+            k3=max_ind[1][3]
         end
         col=[:black,:yellow,:red]
         psize=(900,900)
