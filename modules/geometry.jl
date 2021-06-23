@@ -243,19 +243,14 @@ function xyz_to_sch(xyz::Array{Float64,1},peg::PegPoint)
     #compute x'y'z' coordinates from peg and xyz
     xyzp = (peg.Mxyzprime_xyz)'*(xyz-peg.O)
 
-    #compute arc-angles and arc-lengths for S and C
-    sθ = atan(xyzp[2], xyzp[1]); #arc-angle along-track
-    s  = sθ * peg.Ra; #arc-length along-track (the s-axis)
+    #norm of the x'y'z' vector (this is equal to peg.Ra + h)
+    r = norm(xyzp);
 
-    cλ = atan(sin(sθ)*xyzp[3]/xyzp[2]); #arc-angle cross-track
-    #if cλ < 0
-    #    cλ = cλ + π
-    #end
-    c  = cλ * peg.Ra; #arc-length cross-track
-
-    #compute height
-    h  = xyzp[1]/cos(cλ)/cos(sθ) - peg.Ra;
-    return [s,c,h]
+    #compute s and c coordinates
+    s = peg.Ra*atan(xyzp[2], xyzp[1]);
+    c = peg.Ra*asin(xyzp[3]/r);
+    h = r - peg.Ra;
+    return [s,c,r]
 end
 function xyz_to_sch(xyz::Array{Float64,2},peg::PegPoint)
     @assert size(xyz,1)==3 "SCH vector needs to be 3xN"
