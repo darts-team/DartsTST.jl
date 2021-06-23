@@ -97,37 +97,9 @@ if display_geometry || display_RSF_rawdata || display_input_scene || display_tom
     if display_RSF_rawdata;Plotting.plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata);end
     if display_geometry
         # convert platform and target locations to desired coordinate system
-        p_loc=zeros(3,Np,Nst)
-        t_loc=zeros(3,Nt)
-        s_loc=zeros(size(s_loc_3xN,2))
-        if display_geometry_coord=="LLH"
-            for i=1:Np
-                p_xyz_i=p_xyz[:,i,:]
-                p_xyz_i=reshape(p_xyz_i,3,Nst)
-                p_loc[:,i,:]=Geometry.xyz_to_geo(p_xyz_i)
-            end
-            t_loc=Geometry.xyz_to_geo(t_xyz_3xN)
-            s_loc=Geometry.xyz_to_geo(s_xyz_3xN)
-        elseif display_geometry_coord=="SCH"
-            for i=1:Np
-                p_xyz_i=p_xyz[:,i,:]
-                p_xyz_i=reshape(p_xyz_i,3,Nst)
-                p_loc[:,i,:]=Geometry.xyz_to_sch(p_xyz_i,avg_peg)
-            end
-            if ts_coord_sys=="SCH"
-                t_loc=targets_loc
-                s_loc=s_loc_3xN
-            else # ts_coord_sys == LLH or XYZ
-                t_loc=Geometry.xyz_to_sch(t_xyz_3xN,avg_peg)
-                s_loc=Geometry.xyz_to_sch(s_xyz_3xN,avg_peg)
-            end
-        elseif display_geometry_coord=="XYZ"
-            p_loc=p_xyz
-            t_loc=t_xyz_3xN
-            s_loc=s_xyz_3xN
-        end
+        p_loc,t_loc,s_loc=Geometry.convert_platform_target_scene_coordinates(Np,Nst,Nt,p_xyz,t_xyz_3xN,targets_loc,s_xyz_3xN,s_loc_3xN,avg_peg,display_geometry_coord,ts_coord_sys)
         Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt,avg_peg)
     end
-    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,ts_coord_txt);end
     if display_input_scene;Plotting.plot_input_scene(inputscene_3D,s_loc_1,s_loc_2,s_loc_3,ts_coord_txt);end
+    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,ts_coord_txt);end
 end

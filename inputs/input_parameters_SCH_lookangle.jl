@@ -24,9 +24,9 @@ if ts_coord_sys=="SCH" # if SCH, target and scene locations are defined relative
     #p_avg_heading=0.1 # average heading of platforms, due North is 0, due East is 90 (deg), required only if SCH coordinates TODO we should get this from orbits!
 end
 if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
-    t_loc_1=-10:1:10 # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=-120:10:120 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=25:1:55 # m  heights if LLH or SCH, Z if XYZ
+    t_loc_1=-5:0.5:5 # deg latitude if LLH, along-track if SCH, X if XYZ
+    t_loc_2=-60:5:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    t_loc_3=32.5:0.5:47.5 # m  heights if LLH or SCH, Z if XYZ
     t_ref=ones(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
 elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are defined as 3xN array (useful for a few discrete targets)
     # length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
