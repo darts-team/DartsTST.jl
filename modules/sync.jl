@@ -720,14 +720,17 @@ function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync
 
     # this is the finite offset filter stage
     Sphi_tilde = (2 .* Sphi .* (1 .- cos.(2*pi*sync_radar_offset.*f_psd) ) )
+    
 
     #here is the aliasing error stage from long PRI
-    Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde,sync_clk_fs,sync_prf)
-    
+    # Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde,sync_clk_fs,sync_prf)
+    Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde,round(sync_clk_fs/(2/sync_pri))) .*rect(f,-1/sync_pri,1/sync_pri+(f_psd[2]-f_psd[1]),1) # updated from Sam's code 6/21/21
     
     
     # PSD of AWGN with variance determined by CRLB of sync algorithm
-    S_n =  ( sig_crlb .* sync_fs .*2*pi .* 2 ./ sqrt(2) ) .^2 .*ones(length(Sphi))
+    # S_n =  ( sig_crlb .* sync_fs .*2*pi .* 2 ./ sqrt(2) ) .^2 .*ones(length(Sphi))
+    # updated noise floor power calculation 
+    S_n = (2*(sig_crlb*sync_fs .*2*pi ).^2 ) .* ones(length(Sphi)) .* (sync_clk_fs * sync_pri*1.5) # scale by (clk_args.fs*sync_pri) to account for lower bandwidth/downsampling to conserve PSD power
     
     #debugging negative Sphi
     idx_test = findall(S_n -> S_n < 0,S_n)
@@ -739,7 +742,9 @@ function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync
     end
 
     # PSD of clock phase error after synchronization
-    Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .*rect(f_psd,-sync_prf,sync_prf,1) ) # low pass filter the PSD by the Sync process
+    # Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .*rect(f_psd,-sync_prf,sync_prf,1) ) # low pass filter the PSD by the Sync process
+    # Sphi_sync_alias = abs.( (Sphi_tilde_alias .+ S_n) .* sinc.(f_psd .* sync_pri).^4 )
+    Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .*rect(f_psd,-sync_prf,sync_prf,1) )
     
     return Sphi_sync
 
@@ -828,7 +833,7 @@ function getSensorCRLB_network(pos::Array{Float64,3},N::Int64,fc::Float64,fs::Fl
             
             sigma_2TOF = sqrt( 3/ ( (2*pi*fbw)^2 * snr_avg * (N/fs) * fs ) ) # this may become a useful parameter for the positioning module/task
             
-            sig_crlb[i,j] = sqrt(1 / (3 * sqrt( (nplat-1) * nplat ) ) * sigma_2TOF^2) # latest equation from Sam 01/23/2021
+            sig_crlb[i,j] = sqrt( ( (nplat-1) / nplat ) * sigma_2TOF^2) # latest equation from Sam 06/17/2021
         end # for ntimes
     end #for nplat
 

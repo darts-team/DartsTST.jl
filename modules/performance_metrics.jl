@@ -1,8 +1,13 @@
 module Performance_Metrics
-using Plots
+using Plots, Images
 
 #TODO add function definitions, comments, define input types
 function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
+    if PSF_peak_target==4
+        target_res = 0.25 # hard-coding 0.25m upsampled resolution for now
+        image_3D,scene_axis1,scene_axis2,scene_axis3 = upsampleImage(image_3D,scene_axis1,scene_axis2,scene_axis3,target_res)
+        PSF_peak_target = 1 # proceeed now using upsampled image
+    end
     image_1D_1,image_1D_2,image_1D_3=obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
     if length(image_1D_1)>1
         scene_res1=scene_axis1[2]-scene_axis1[1] # scene resolution along the 1st axis
@@ -74,8 +79,10 @@ function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene
 end
 
 function location_error(image_1D,target_location_1D,scene_axis)
-    target_ind=findall(target_location_1D .==scene_axis);target_ind=target_ind[1]
+    # target_ind=findall(target_location_1D .==scene_axis);target_ind=target_ind[1]
+    target_ind=searchsortednearest(scene_axis,target_location_1D);target_ind=target_ind[1] # new code to find closest value instead of equal value
     max_ind=findall(image_1D .==maximum(image_1D));max_ind=max_ind[1]
+    
     scene_res=scene_axis[2]-scene_axis[1] # scene resolution along the axis
     loc_error=(max_ind-target_ind)*scene_res
 end
@@ -119,6 +126,33 @@ function sidelobe_1D(image_1D,axis_no,res_ind_1,res_ind_2)
     return PSLR,ISLR
 end
 
+function upsampleImage(image_3D,scene_axis1,scene_axis2,scene_axis3,target_res)
+        #here we upsample up to target_res resolution in axis 1. Other dimensions are also upsampled by the same factor
+        scene_axis1_res = scene_axis1[2]-scene_axis1[1]
+        upsample_factor = ceil(Int64, scene_axis1_res/target_res)
+        if upsample_factor < 2 # set minimum upsample factor (in case natural resolution is already greater than 1m)
+            upsample_factor = 2
+        end
+        axis1_len = size(image_3D,1); axis2_len = size(image_3D,2); axis3_len = size(image_3D,3);
+        # upsample the image and 
+        image_3D_upsample = imresize(image_3D, upsample_factor.*(axis1_len, axis2_len, axis3_len) )
+        scene_axis1_upsample = imresize(scene_axis1,upsample_factor*length(scene_axis1))
+        scene_axis2_upsample = imresize(scene_axis2,upsample_factor*length(scene_axis2))
+        scene_axis3_upsample = imresize(scene_axis3,upsample_factor*length(scene_axis3))
+        return image_3D_upsample,scene_axis1_upsample,scene_axis2_upsample,scene_axis3_upsample
+end
+# finds index in array "a" closest to value x. kind of like a find(min(abs(a-x))
+function searchsortednearest(a,x)
+   idx = searchsortedfirst(a,x)
+   if (idx==1); return idx; end
+   if (idx>length(a)); return length(a); end
+   if (a[idx]==x); return idx; end
+   if (abs(a[idx]-x) < abs(a[idx-1]-x))
+      return idx
+   else
+      return idx-1
+   end
+end
 
 """
 `findpeaks(y::Array{T},
