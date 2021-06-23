@@ -110,7 +110,7 @@ function rotate_spacecraft!(sc::spacecraft, rpy::Array{Float64,})
     @assert size(rpy,2) == size(sc.pos,2)
 
     #construct quat
-    quat = Array{Quaternion{Float64},1}(undef, size(pos)[2])
+    quat = Array{Quaternion{Float64},1}(undef, size(sc.pos,2))
     for itp = 1:size(sc.pos,2)
         quat[itp] = Geometry.quat(rpy[1,itp], [1, 0, 0]);
         quat[itp] = quat[itp]*Geometry.quat(rpy[2,itp], [0, 1, 0]);
