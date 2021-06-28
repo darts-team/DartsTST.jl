@@ -184,7 +184,7 @@ end
                 
                 # calculate post-sync PSD from crlb, sync_radar_offset
                 crlb = itp_crlb(sync_time) # this tells us what the crlb was at the sync
-                Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs)
+                Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs, dt)
                 # generate time series of phase error
                 Sphi_sync_uc = up_convert_psd .* Sphi
                 (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs)
@@ -711,10 +711,11 @@ calculates the post-synchronization phase error PSD
 - `sync_prf::Float`: repetition frequency of sync process (1/SRI)
 - `sync_fs::Float`: sync receiver sampling rate
 - `sync_clk_fs::Float`: sample rate of clock error process
+- `PRI::Float`: radar pulse repetition interval
 
 
 """
-function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync_radar_offset::Float64,sig_crlb::Float64,sync_prf::Float64,sync_fs::Float64, sync_clk_fs::Float64)
+function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync_radar_offset::Float64,sig_crlb::Float64,sync_prf::Float64,sync_fs::Float64, sync_clk_fs::Float64,PRI::Float64)
 # Function describes PSD of clk phase after finite offset sync
 # Sphi is input PSD
 
@@ -741,10 +742,8 @@ function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync
         println(f_psd[idx_test])
     end
 
-    # PSD of clock phase error after synchronization
-    # Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .*rect(f_psd,-sync_prf,sync_prf,1) ) # low pass filter the PSD by the Sync process
-    # Sphi_sync_alias = abs.( (Sphi_tilde_alias .+ S_n) .* sinc.(f_psd .* sync_pri).^4 )
-    Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .*rect(f_psd,-sync_prf,sync_prf,1) )
+    # PSD of clock phase error after synchronization assumes SRI and PRI are different, and multiples SRI is a multiple of PRI
+    Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .* ( sinc.(f_psd .* PRI).^4.25 ) ./ sinc.(f_psd.* sync_pri)^0.25 )
     
     return Sphi_sync
 
