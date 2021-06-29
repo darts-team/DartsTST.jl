@@ -1,4 +1,6 @@
 module Geometry
+
+#external packages
 using ReferenceFrameRotations
 using LinearAlgebra
 using Statistics
@@ -57,6 +59,7 @@ mutable struct PegPoint
     end
 
 end
+
 
 " Create Quaternion based on rotation angle and axis"
 quat(rot_angle, rot_ax) = Quaternion(cosd(rot_angle/2.0), rot_ax*sind(rot_angle/2.0))
@@ -258,61 +261,6 @@ function xyz_to_sch(xyz::Array{Float64,2},peg::PegPoint)
     #set up xyz output
     sch=zeros(size(xyz))
 
-    #compute the xyz value per SCH triplet
-    for ipt=1:size(xyz,2)
-        sch[:,ipt]=xyz_to_sch(xyz[:,ipt],peg)
-    end
-    return sch
-end
-
-
-abstract type AbstractFrame end
-abstract type AbstractPlanetFrame <: AbstractFrame end
-abstract type AbstractSpaceCraftFrame <: AbstractPlanetFrame end
-abstract type AbstractAntennaFrame <: AbstractSpaceCraftFrame end
-
-mutable struct Planet_frame <:AbstractFrame
-    org
-    qtrn::Quaternion
-    a
-    e_sqr
-end
-
-mutable struct  SpaceCraft_frame <:AbstractSpaceCraftFrame
-    org #origin relative to planet frame
-    qtrn::Quaternion# with respect to the planet
-    antenna::AbstractAntennaFrame # antenna frame defined relative to sc frame
-end
-
-mutable struct Antenna_frame <:AbstractAntennaFrame
-    org #origin relative to spacecraft frame
-    qtrn::Quaternion # with respect to the SpaceCraft
-end
-
-function rotate_spacecraft(sc_frame, rot_angle, rot_ax )
-    sc_quat = quat(rot_angle, rot_ax)
-    sc_frame.qtrn =  sc_quat * sc_frame.qtrn
-    sc_frame.antenna.qtrn =  sc_frame.qtrn * sc_frame.antenna.qtrn
-    return sc_frame
-end
-
-function rotate_spacecraft(sc_frame, quat::Quaternion )
-    sc_frame.qtrn =  quat * sc_frame.qtrn
-    sc_frame.antenna.qtrn =  sc_frame.qtrn * sc_frame.antenna.qtrn
-    return sc_frame
-end
-
-function rotate_antenna(ant_frame, rot_angle, rot_ax )
-    ant_quat = quat(rot_angle, rot_ax)
-    ant_frame.qtrn =  ant_quat * ant_frame.qtrn
-    return ant_frame
-end
-
-function rotate_antenna(ant_frame, quat::Quaternion )
-    ant_frame.qtrn =  quat * ant_frame.qtrn
-    return ant_frame
-end
-
 """
 Compute range from ray-ellipse intersection
  - Usage: ρ = get_rho(position, look vector, Earth Radius, Earth Eccentricity)
@@ -404,6 +352,42 @@ function get_tcn(pos::Array{Float64,2}, vel::Array{Float64,2})
     end
     return that, chat, nhat
 end
+
+"""
+Compute orientation quaternion based on TCN basis
+- Usage: quat = tcn_quat(pos, vel)
+
+# Arguments
+- `pos::3xN Float Array`: position vector (usually satellite position in XYZ)
+- `vel::3xN Float Array`: velocity vector (usually satellite velocity in XYZ)
+
+# Return
+- `quat::
+
+"""
+function tcn_quat(pos::Array{Float64,1}, vel::Array{Float64,1})
+    #get TCN basis from position and velocity
+    t,c,n = Geometry.get_tcn(pos, vel)
+    return q_tcn = [dcm_to_quat(DCM([t';c';n']))]
+end
+function tcn_quat(pos::Array{Float64,2}, vel::Array{Float64,2})
+    @assert size(pos,1)==3 "POS needs to be 3 x N"
+    @assert size(vel,1)==3 "VEL needs to be 3 x N"
+    @assert size(pos)==size(vel) "POS and VEL need to have same size"
+
+    #initialize variables
+    quat = Array{Quaternion{Float64},1}(undef, size(pos)[2])
+    #quat = zeros(4,size(pos)[2])
+
+    #compute tcn quaternion for each position and velocity
+    for itp=1:size(pos)[2]
+        quat[itp] = tcn_quat(pos[:,itp], vel[:,itp])[1]
+    end
+    return quat
+end
+
+
+
 """
  Compute look vector based on TCN frame
  - Usage: look_vector = tcn_lvec(t, c, n, θ, ϕ)
