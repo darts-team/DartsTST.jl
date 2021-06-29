@@ -6,7 +6,7 @@ earth_eccentricity=sqrt(0.00669437999015)
 mode=1 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
 tx_el=1 # which element transmits for SIMO (max value N)
 # radar parameters
-fc=1e9 # center frequency (Hz)
+fc=1.25e9 # center frequency (Hz)
 fp=3 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz taken from orbits (including slow-time)
@@ -16,6 +16,7 @@ SAR_start_time=0 # SAR imaging start time (s)
 # target locations (volumetric grid) defined in geo (θϕh)
 target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
 ts_coord_sys="LLH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
+display_geometry_coord="XYZ" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
 t_loc_1=7 # deg latitude
 t_loc_2=0 # deg longitude
 t_loc_3=0 # m  heights
@@ -27,10 +28,10 @@ s_loc_3=-45:5:45 # m  heights
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
-bandwidth=10e6 # bandwidth (Hz)
+bandwidth=40e6 # bandwidth (Hz)
 # performance metrics
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
-PSF_peak_target=2 # 1: peak, 2: target
+PSF_image_point=1 # 1: peak location, 2: target location, 3: center of 3D scene
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable

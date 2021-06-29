@@ -1,14 +1,14 @@
-include("modules/generate_raw_data.jl")
-include("modules/process_raw_data.jl")
-include("modules/geometry.jl")
-include("modules/scene.jl")
+include("../../modules/generate_raw_data.jl")
+include("../../modules/process_raw_data.jl")
+include("../../modules/geometry.jl")
+include("../../modules/scene.jl")
 #include("inputs/input_parameters_LLH_nadirlooking.jl")
 #include("inputs/input_parameters_LLH_slantlooking.jl")
-include("inputs/input_parameters_SCH_lookangle.jl")
-include("modules/range_spread_function.jl") # as RSF
-include("modules/orbits.jl")
-include("modules/sync.jl")
-include("modules/error_sources.jl")
+include("../../inputs/input_parameters_SCH_lookangle.jl")
+include("../../modules/range_spread_function.jl") # as RSF
+include("../../modules/orbits.jl")
+include("../../modules/sync.jl")
+include("../../modules/error_sources.jl")
 
 using NCDatasets
 using Statistics
@@ -32,7 +32,7 @@ Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
 targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
 s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loops
-t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,p_xyz,look_angle,p_avg_heading,earth_radius,earth_eccentricity)
+t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,p_xyz,look_angle,earth_radius,earth_eccentricity)
 ## TARGET REFLECTIVITIES
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
 
@@ -55,8 +55,8 @@ if !enable_fast_time;SNR=SNR*pulse_length*bandwidth;end # SNR increases after ma
 if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end # adding random noise based on SNR after range (fast-time) processing
 
 ## Add Sync effects
-include("inputs/input_parameters_sync.jl")
-@time rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
+include("../../inputs/input_parameters_sync.jl")
+rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
 
 ## PROCESS RAW DATA TO GENERATE IMAGE
 #image_3xN=Process_Raw_Data.main(rawdata,s_xyz_3xN,p_xyz_grid,mode,tx_el,fc) # without fastime, without slowtime
@@ -79,10 +79,10 @@ if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when th
         show("PSF related performance metrics cannot be calculated since target is not inside the scene!")
         PSF_metrics=false
     else
-        include("modules/performance_metrics.jl")
+        include("../../modules/performance_metrics.jl")
         PSF_metrics=true
         target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
-        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_peak_target) # resolutions in each of the 3 axes
+        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point) # resolutions in each of the 3 axes
     end
 else
     PSF_metrics=false
@@ -98,9 +98,47 @@ end
 
 ## PLOTS (1D PSF cuts are displayed by default in the performance.metrics module)
 if display_geometry || display_RSF_rawdata || display_tomograms!=0
+<<<<<<< HEAD
     include("modules/plotting.jl")
+    display_geometry_coord_txt=Plotting.coordinates(display_geometry_coord)
+    tomogram_coord_txt=Plotting.coordinates(ts_coord_sys)
+=======
+    include("../../modules/plotting.jl")
     coords=Plotting.coordinates(ts_coord_sys)
+>>>>>>> master
     if display_RSF_rawdata;Plotting.plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata);end
-    if display_geometry;Plotting.plot_geometry(orbit_time,orbit_pos,p_xyz,t_xyz_3xN,s_loc_3xN,s_xyz_3xN,coords);end
-    if display_tomograms!=0;Plotting.plot_tomogram(display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,s_xyz_3xN,coords);end
+    if display_geometry
+        # convert platform and target locations to desired coordinate system
+        p_loc=zeros(3,Np,Nst)
+        t_loc=zeros(3,Nt)
+        s_loc=zeros(size(s_loc_3xN,2))
+        if display_geometry_coord=="LLH"
+            for i=1:Np
+                p_xyz_i=p_xyz[:,i,:]
+                p_xyz_i=reshape(p_xyz_i,3,Nst)
+                p_loc[:,i,:]=Geometry.xyz_to_geo(p_xyz_i)
+            end
+            t_loc=Geometry.xyz_to_geo(t_xyz_3xN)
+            s_loc=Geometry.xyz_to_geo(s_xyz_3xN)
+        elseif display_geometry_coord=="SCH"
+            for i=1:Np
+                p_xyz_i=p_xyz[:,i,:]
+                p_xyz_i=reshape(p_xyz_i,3,Nst)
+                p_loc[:,i,:]=Geometry.xyz_to_sch(p_xyz_i) #TODO function is to be added
+            end
+            if ts_coord_sys=="SCH"
+                t_loc=targets_loc
+                s_loc=s_loc_3xN
+            else # ts_coord_sys == LLH or XYZ
+                t_loc=Geometry.xyz_to_sch(t_xyz_3xN) #TODO function is to be added
+                s_loc=Geometry.xyz_to_sch(s_xyz_3xN) #TODO function is to be added
+            end
+        elseif display_geometry_coord=="XYZ"
+            p_loc=p_xyz
+            t_loc=t_xyz_3xN
+            s_loc=s_xyz_3xN
+        end
+        Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt)
+    end
+    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,tomogram_coord_txt);end
 end
