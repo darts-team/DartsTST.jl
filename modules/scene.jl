@@ -47,7 +47,7 @@ function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,or
       t_xyz_3xN=targets_loc
       s_xyz_3xN=s_loc_3xN
   end
-  return t_xyz_3xN,s_xyz_3xN,avg_peg
+  return t_xyz_3xN,s_xyz_3xN
 end
 # calculate avg heading from platform velocities
 function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,look_angle,earth_radius,earth_eccentricity)

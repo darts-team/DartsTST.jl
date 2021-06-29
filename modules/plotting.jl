@@ -32,7 +32,7 @@ function coordinates(coord_sys)
     end
 end
 
-function plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,coords,avg_peg) #TODO smart plotting for limited set (only platforms, only targets, only scene)
+function plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,coords) #TODO smart plotting for limited set (only platforms, only targets, only scene)
     orbit_pos_all=reshape(p_loc,3,size(p_loc)[2]*size(p_loc)[3]) # platform positions in xyz; for each platform, its position at each pulse (PRI) is plotted; output loops over platforms first, then slow-time
     gr()
     platform_labels=Array{String}(undef,1,size(orbit_pos)[2])
@@ -45,7 +45,7 @@ function plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,coords,avg_peg) #T
     display(scatter(t_loc[1,:],t_loc[2,:],t_loc[3,:],leg=false,camera=(20,40),markersize=3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Target Locations",size=(1600,900))) #display grid in 3D
     #DISPLAY PLATFORM AND TARGET LOCATIONS ON THE SAME PLOT
     scatter(t_loc[1,:],t_loc[2,:],t_loc[3,:],leg=false,camera=(20,40),markersize=3,size=(1600,900)) #display grid in 3D
-    scatter!([avg_peg.pegLat],[avg_peg.pegLon],[0],markersize=3)
+    #scatter!([avg_peg.pegLat],[avg_peg.pegLon],[0],markersize=3)
     display(scatter!(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],leg=false,camera=(20,40),markersize=1,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Platforms and Targets")) #display grid in 3D
     # DISPLAY SCENE
     display(scatter(s_loc[1,:],s_loc[2,:],s_loc[3,:],leg=false,camera=(20,40),markersize=0.3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Scene Pixel Locations",size=(1600,900))) #display grid in 3D

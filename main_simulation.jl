@@ -29,7 +29,7 @@ targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t
 targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
 s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loops
 #t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos*1e3,look_angle,earth_radius,earth_eccentricity) ## calculate avg heading from platform positions
-t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos*1e3,orbit_vel,look_angle,earth_radius,earth_eccentricity) # calculate avg heading from platform velocities
+t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos*1e3,orbit_vel,look_angle,earth_radius,earth_eccentricity) # calculate avg heading from platform velocities
 ## TARGET REFLECTIVITIES
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
 ## RANGE SPREAD FUNCTION (matched filter output)
@@ -121,7 +121,7 @@ if display_geometry || display_RSF_rawdata || display_tomograms!=0
             t_loc=t_xyz_3xN
             s_loc=s_xyz_3xN
         end
-        Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt,avg_peg)
+        Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt)
     end
     if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,tomogram_coord_txt);end
 end
