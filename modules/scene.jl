@@ -34,6 +34,7 @@ function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,or
   if ts_coord_sys=="LLH" # convert LLH to XYZ
       t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
       s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)
+      avg_peg=[]
   elseif ts_coord_sys=="SCH" # convert SCH to XYZ
       avg_peg,p_h_avg=Geometry.avg_peg_h(orbit_pos,orbit_vel)
       slant_range,ground_range=Scene.lookangle_to_range(look_angle,p_h_avg,0,avg_peg.Ra) # slant_range (equal to ref_range?)
@@ -46,14 +47,16 @@ function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,or
   elseif ts_coord_sys=="XYZ" # no conversion needed
       t_xyz_3xN=targets_loc
       s_xyz_3xN=s_loc_3xN
+      avg_peg=[]
   end
-  return t_xyz_3xN,s_xyz_3xN
+  return t_xyz_3xN,s_xyz_3xN,avg_peg
 end
 # calculate avg heading from platform velocities
 function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,look_angle,earth_radius,earth_eccentricity)
   if ts_coord_sys=="LLH" # convert LLH to XYZ
       t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
       s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)
+      avg_peg=[]
   elseif ts_coord_sys=="SCH" # convert SCH to XYZ
       avg_peg,p_h_avg=Geometry.avg_peg_h(orbit_pos)
       slant_range,ground_range=Scene.lookangle_to_range(look_angle,p_h_avg,0,avg_peg.Ra) # slant_range (equal to ref_range?)
@@ -66,8 +69,9 @@ function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,or
   elseif ts_coord_sys=="XYZ" # no conversion needed
       t_xyz_3xN=targets_loc
       s_xyz_3xN=s_loc_3xN
+      avg_peg=[]
   end
-  return t_xyz_3xN,s_xyz_3xN
+  return t_xyz_3xN,s_xyz_3xN,avg_peg
 end
 
 """
