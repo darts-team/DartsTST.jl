@@ -261,6 +261,11 @@ function xyz_to_sch(xyz::Array{Float64,2},peg::PegPoint)
     #set up xyz output
     sch=zeros(size(xyz))
 
+    #compute the sch value per xyz triplet
+    for ipt=1:size(xyz,2)
+        sch[:,ipt]=xyz_to_sch(xyz[:,ipt],peg)
+    end
+    return sch
 """
 Compute range from ray-ellipse intersection
  - Usage: ρ = get_rho(position, look vector, Earth Radius, Earth Eccentricity)
