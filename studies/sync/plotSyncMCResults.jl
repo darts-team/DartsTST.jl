@@ -37,9 +37,12 @@ end#function
 # run the rest of the code, calling an input .jld2 file with the monte carlo data stored
 begin 
   
-  filename = "sync data/syncModule_MonteCarlo_mode_2_USO_sync_pri_sweep_wFreq.jld2"# this uses sync_data/*, a folder which isn't used on the master branch
-  @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs
-
+  # filename = "sync data/syncModule_MonteCarlo_mode_2_USO_sync_pri_sweep_wFreq.jld2"# this uses sync_data/*, a folder which isn't used on the master branch
+  # @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs
+  filename = "sync data/syncModule_MonteCarlo_mode_2_USO_Sband_coeff_number1_sync_osc_sweep_noFreq.jld2"
+  # filename = "sync data/syncModule_MonteCarlo_mode_2_USO_Cband_coeff_number1_sync_osc_sweep_noFreq.jld2"
+  @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors osc_coeff_sweep
+sync_PRIs = osc_coeff_sweep # temporary write over
   gr()
 
   #matrices are either (numSRI x numTrials) or (3 x numSRI x numTrials)
@@ -48,11 +51,12 @@ begin
 
 ## trying box plots
   # ---- Peak loss ------
-  ideal_peak_dB = 10 .* log10.(ideal_peak)
-  peakvals = ideal_peak_dB .- (10 .* log10.(peaks))
+  ideal_peak_dB = 20 .* log10.(ideal_peak)
+  peakvals = ideal_peak_dB .- (20 .* log10.(peaks))
   display(boxplot(SRI_plot, peakvals', title = "Peak Power Loss (dB)",
     xlabel = "Sync Repetition Interval (s)", legend = false))
-  savefig("USO_SIMO_SRI_sweep_with_phase_ramp_peak_loss.png")
+  # savefig("USO_SIMO_SRI_sweep_with_phase_ramp_peak_loss.png")
+  savefig("USO_SIMO_coeff1_sweep_peak_loss.png")
 
   # ---- PSLR ----
   vals1 = filterNaNs2D(PSLRs[1,:,:] .- ideal_PSLR[1])
