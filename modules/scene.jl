@@ -31,21 +31,18 @@ Generate Input Target Scene in 3D (scene limited by input scene arrays)
 """
 function generate_input_scene_3D(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,t_ref,targets_ref,Nt,target_pos_mode)
     inputscene_3D=zeros(length(s_loc_1),length(s_loc_2),length(s_loc_3))
+    # TODO check if target is inside the scene. gives error if target is outside the scene.
+    if length(s_loc_1)>1;ind_1=round.(Int64,(t_loc_1.-s_loc_1[1])/(s_loc_1[2]-s_loc_1[1]).+1);else;ind_1=1;end
+    if length(s_loc_2)>1;ind_2=round.(Int64,(t_loc_2.-s_loc_2[1])/(s_loc_2[2]-s_loc_2[1]).+1);else;ind_2=1;end
+    if length(s_loc_3)>1;ind_3=round.(Int64,(t_loc_3.-s_loc_3[1])/(s_loc_3[2]-s_loc_3[1]).+1);else;ind_3=1;end
     if target_pos_mode=="grid" # TODO check if there are targets outside the scene
-        ind_1=round.(Int64,(t_loc_1.-s_loc_1[1])/(s_loc_1[2]-s_loc_1[1]).+1)
-        ind_2=round.(Int64,(t_loc_2.-s_loc_2[1])/(s_loc_2[2]-s_loc_2[1]).+1)
-        ind_3=round.(Int64,(t_loc_3.-s_loc_3[1])/(s_loc_3[2]-s_loc_3[1]).+1)
         ind_3xN=Int64.(Scene.form3Dgrid_for(ind_1,ind_2,ind_3))
         for i=1:Nt
             inputscene_3D[ind_3xN[1,i],ind_3xN[2,i],ind_3xN[3,i]]=targets_ref[i]
         end
     elseif target_pos_mode=="CR"
-        ind_1=round.(Int64,(t_loc_1.-s_loc_1[1])/(s_loc_1[2]-s_loc_1[1]).+1)
-        ind_2=round.(Int64,(t_loc_2.-s_loc_2[1])/(s_loc_2[2]-s_loc_2[1]).+1)
-        ind_3=round.(Int64,(t_loc_3.-s_loc_3[1])/(s_loc_3[2]-s_loc_3[1]).+1)
-        tref=t_ref
         for i=1:Nt
-            inputscene_3D[ind_1[i],ind_2[i],ind_3[i]]=tref[i]
+            inputscene_3D[ind_1[i],ind_2[i],ind_3[i]]=t_ref[i]
         end
     end
     return inputscene_3D

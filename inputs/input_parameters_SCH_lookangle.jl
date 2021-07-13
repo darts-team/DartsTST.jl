@@ -17,28 +17,39 @@ SAR_duration=2 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations and reflectvities
 target_pos_mode="grid" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
-ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
+ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene,  # if SCH, target and scene locations are defined relative to the point where look angle vector intersects the surface
 display_geometry_coord="SCH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
-if ts_coord_sys=="SCH" # if SCH, target and scene locations are defined relative to the point where look angle vector intersects the surface
-    look_angle=0 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
-    #p_avg_heading=0.1 # average heading of platforms, due North is 0, due East is 90 (deg), required only if SCH coordinates TODO we should get this from orbits!
-end
+look_angle=30 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
 if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
-    t_loc_1=-5:0.5:5 # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=-60:5:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=32.5:0.5:47.5 # m  heights if LLH or SCH, Z if XYZ
-    t_ref=ones(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
+    t_loc_1=-12:2:12 # deg latitude if LLH, along-track if SCH, X if XYZ
+    t_loc_2=0 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    t_loc_3=12:2:28 # m  heights if LLH or SCH, Z if XYZ
+    t_ref=zeros(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
+    t_ref_2D=[0 0 0 0 0 0 1 0 0 0 0 0 0; #9 rows, 13 columns
+              0 0 0 0 0 1 1 1 0 0 0 0 0;
+              0 0 0 0 1 1 1 1 1 0 0 0 0;
+              0 0 0 0 1 1 1 1 1 1 0 0 0;
+              0 0 0 0 0 1 1 1 1 0 0 0 0;
+              0 0 0 0 0 1 1 1 0 0 0 0 0;
+              0 0 0 0 0 0 1 1 0 0 0 0 0;
+              0 0 0 0 0 0 1 1 0 0 0 0 0;
+              1 1 1 1 1 1 1 1 1 1 1 1 1]
+    #t_ref[1,:,:]=t_ref_2D' #x-axis of table (columns) = 2nd dimension, y-axis of table (rows) = 3rd dimension, scene exists only at 1st point in 1st dimension
+    t_ref[:,1,:]=t_ref_2D' #x-axis of table (columns) = 1st dimension, y-axis of table (rows) = 3rd dimension, scene exists only at 1st point in 2nd dimension
 elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are defined as 3xN array (useful for a few discrete targets)
     # length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
     t_loc_1=[ -5 -5   5  5 0  10   10 -10  -10  0  0] # deg latitude if LLH, along-track if SCH, X if XYZ
     t_loc_2=[-60 60 -60 60 0 120 -120 120 -120  0  0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
     t_loc_3=[ 40 40  40 40 40 40   40  40   40  30 50] # m  heights if LLH or SCH, Z if XYZ
-    t_ref=  ones(length(t_loc_1)) # reflectivities
+    t_loc_1=[0]
+    t_loc_2=[0]
+    t_loc_3=[20]
+    t_ref=ones(length(t_loc_1)) # reflectivities
 end
 # image/scene pixel coordinates
-s_loc_1=-10:0.5:10 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-120:5:120 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=  25:0.5:55 # m  heights if LLH or SCH, Z if XYZ
+s_loc_1=-30:2:30 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2=-70:5:70 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=-12:2:52 # m  heights if LLH or SCH, Z if XYZ
 # s_loc_1=-10:.25:10 # deg latitude if LLH, along-track if SCH, X if XYZ
 # s_loc_2=-40:.5:40 # deg longitude if LLH, cross-track if SCH, Y if XYZ
 # s_loc_3=  (-15:.25:15) .+ 40 # m  heights if LLH or SCH, Z if XYZ
@@ -53,7 +64,7 @@ PSF_image_point=3 # 1: peak location, 2: target location, 3: center of 3D scene
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
-display_geometry=true # whether to display geometry plots
+display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
 display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
 display_input_scene=true # display input scene (targets) and delta between input/output scenes (3 slices at the center of scene) with same scene size as output tomogram scene
