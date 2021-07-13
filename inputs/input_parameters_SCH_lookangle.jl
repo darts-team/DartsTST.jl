@@ -23,33 +23,36 @@ look_angle=30 # in cross-track direction, required only if SCH coordinates, usin
 if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
     t_loc_1=-12:2:12 # deg latitude if LLH, along-track if SCH, X if XYZ
     t_loc_2=0 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=12:2:28 # m  heights if LLH or SCH, Z if XYZ
+    t_loc_3=4:1:15 # m  heights if LLH or SCH, Z if XYZ
     t_ref=zeros(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
-    t_ref_2D=[0 0 0 0 0 0 1 0 0 0 0 0 0; #9 rows, 13 columns
-              0 0 0 0 0 1 1 1 0 0 0 0 0;
-              0 0 0 0 1 1 1 1 1 0 0 0 0;
-              0 0 0 0 1 1 1 1 1 1 0 0 0;
-              0 0 0 0 0 1 1 1 1 0 0 0 0;
-              0 0 0 0 0 1 1 1 0 0 0 0 0;
-              0 0 0 0 0 0 1 1 0 0 0 0 0;
-              0 0 0 0 0 0 1 1 0 0 0 0 0;
-              1 1 1 1 1 1 1 1 1 1 1 1 1]
+    t_ref_2D=[0 0 0 0 0 0 3 0 0 0 0 0 0; #12 rows, 13 columns
+              0 0 0 0 0 3 2 2 0 0 0 0 0;
+              0 0 0 0 3 2 2 1 2 0 0 0 0;
+              0 0 0 0 3 2 1 1 1 2 0 0 0;
+              0 0 0 0 0 2 1 1 1 0 0 0 0;
+              0 0 0 0 0 2 1 1 0 0 0 0 0;
+              0 0 0 0 0 0 2 1 0 0 0 0 0;
+              0 0 0 0 0 0 2 1 0 0 0 0 0;
+              0 0 0 0 0 0 2 0 0 0 0 0 0;
+              0 0 0 0 0 0 2 0 0 0 0 0 0;
+              0 0 0 0 0 2 2 1 0 0 0 0 0;
+              4 4 4 4 4 3 3 3 2 2 2 2 2]
     #t_ref[1,:,:]=t_ref_2D' #x-axis of table (columns) = 2nd dimension, y-axis of table (rows) = 3rd dimension, scene exists only at 1st point in 1st dimension
-    t_ref[:,1,:]=t_ref_2D' #x-axis of table (columns) = 1st dimension, y-axis of table (rows) = 3rd dimension, scene exists only at 1st point in 2nd dimension
+    t_ref[:,1,:]=reverse(t_ref_2D',dims=2) #x-axis of table (columns) = 1st dimension, y-axis of table (rows) = 3rd dimension, scene exists only at 1st point in 2nd dimension
 elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are defined as 3xN array (useful for a few discrete targets)
     # length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
-    t_loc_1=[ -5 -5   5  5 0  10   10 -10  -10  0  0] # deg latitude if LLH, along-track if SCH, X if XYZ
+    #=t_loc_1=[ -5 -5   5  5 0  10   10 -10  -10  0  0] # deg latitude if LLH, along-track if SCH, X if XYZ
     t_loc_2=[-60 60 -60 60 0 120 -120 120 -120  0  0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=[ 40 40  40 40 40 40   40  40   40  30 50] # m  heights if LLH or SCH, Z if XYZ
+    t_loc_3=[ 40 40  40 40 40 40   40  40   40  30 50] # m  heights if LLH or SCH, Z if XYZ=#
     t_loc_1=[0]
     t_loc_2=[0]
     t_loc_3=[20]
     t_ref=ones(length(t_loc_1)) # reflectivities
 end
 # image/scene pixel coordinates
-s_loc_1=-30:2:30 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-70:5:70 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=-12:2:52 # m  heights if LLH or SCH, Z if XYZ
+s_loc_1=-20:1:20 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2=-10:10:10 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=0:0.5:25 # m  heights if LLH or SCH, Z if XYZ
 # s_loc_1=-10:.25:10 # deg latitude if LLH, along-track if SCH, X if XYZ
 # s_loc_2=-40:.5:40 # deg longitude if LLH, cross-track if SCH, Y if XYZ
 # s_loc_3=  (-15:.25:15) .+ 40 # m  heights if LLH or SCH, Z if XYZ
