@@ -1,7 +1,7 @@
 using NCDatasets
 
 use_orbits_flag = true # true if using an orbit file to inform number of platforms
-disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
+disable_freq_offset = true  # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 if !use_orbits_flag
     setNumPlatforms = 3 # manually select number of Rx platforms
 end 
@@ -54,7 +54,7 @@ if disable_freq_offset == true # option to remove linear phase drift due to osc 
     sigma_freq_offsets = zeros(nplat)
 else
     sigma_freq_offsets = 1.5e-3 # Hz - std. dev. of the frequency offset of the oscillator. This is the linear phase ramp value
-    sigma_freq_offsets = sigma_freq_offsets .* ones(nplats) # convert to matrix form, one value for each oscillator
+    sigma_freq_offsets = sigma_freq_offsets .* ones(nplat) # convert to matrix form, one value for each oscillator
 end
 
 
@@ -64,7 +64,7 @@ sync_clk_fs = 1e3; # sample rate of clock error process
 master = 1; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
 
 
-no_sync_flag = true; # if flag == true, no sync is used. flag == false results in normal sync process estimation
+no_sync_flag = false; # if flag == true, no sync is used. flag == false results in normal sync process estimation
 ## make a struct of important input parameters
 #list key parameters in here, they will get passed to most(?) modules
 mutable struct keyParameters

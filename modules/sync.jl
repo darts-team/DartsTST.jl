@@ -70,8 +70,8 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     if clk_args_N < 40e3 # enfore a minimum number of points. Needed for PSD accuracy
         clk_args_N = 40e3
     end#if   
-    up_convert =  1 #fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF) #TODO temporarily commenting out to unity use PSD upscaling instead
-    up_convert_psd = (fc / f_osc)^2 # frequency up-conversion factor (scale factor from LO to RF) for use on PSD
+    up_convert =  sqrt(2) * fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF) 
+    up_convert_psd = 1 #2*(fc / f_osc)^2 # frequency up-conversion factor (scale factor from LO to RF) for use on PSD #TODO reverted back to upscaling in phase domain instead of PSD because PSD domain doesn't account for frequency offset error upscaling
 
     # verify size of position input
     szp = size(pos)
@@ -715,17 +715,17 @@ calculates the post-synchronization phase error PSD
 
 
 """
-function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync_radar_offset::Float64,sig_crlb::Float64,sync_prf::Float64,sync_fs::Float64, sync_clk_fs::Float64,PRI::Float64)
+function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync_radar_offset::Float64,sig_crlb::Float64,sync_prf::Float64,sync_fs::Float64, sync_clk_fs::Float64, PRI::Float64)
 # Function describes PSD of clk phase after finite offset sync
 # Sphi is input PSD
-
+    sync_pri = 1 / sync_prf
     # this is the finite offset filter stage
     Sphi_tilde = (2 .* Sphi .* (1 .- cos.(2*pi*sync_radar_offset.*f_psd) ) )
     
 
     #here is the aliasing error stage from long PRI
     # Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde,sync_clk_fs,sync_prf)
-    Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde,round(sync_clk_fs/(2/sync_pri))) .*rect(f,-1/sync_pri,1/sync_pri+(f_psd[2]-f_psd[1]),1) # updated from Sam's code 6/21/21
+    Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde, sync_clk_fs, sync_pri) .*rect(f_psd,-1/sync_pri, 1/sync_pri+(f_psd[2]-f_psd[1]) , 1) # updated from Sam's code 6/21/21
     
     
     # PSD of AWGN with variance determined by CRLB of sync algorithm
@@ -742,8 +742,8 @@ function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync
         println(f_psd[idx_test])
     end
 
-    # PSD of clock phase error after synchronization assumes SRI and PRI are different, and multiples SRI is a multiple of PRI
-    Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .* ( sinc.(f_psd .* PRI).^4.25 ) ./ sinc.(f_psd.* sync_pri)^0.25 )
+    # PSD of clock phase error after synchronization assumes SRI and PRI are different, and SRI is a multiple of PRI
+    Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .* ( abs.(sinc.(f_psd .* PRI)).^4.25 ) ./ abs.(sinc.(f_psd.* sync_pri)).^0.25 )
     
     return Sphi_sync
 
