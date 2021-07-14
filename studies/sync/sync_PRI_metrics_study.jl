@@ -36,9 +36,9 @@ earth_eccentricity=sqrt(0.00669437999015)
 mode=2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
 tx_el=1 # which element transmits for SIMO (max value N)
 # radar parameters
-# fc=1.25e9 # center frequency (Hz) L-band
+fc=1.25e9 # center frequency (Hz) L-band
 # fc=3e9 # center frequency (Hz) S-band
-fc=6e9 # center frequency (Hz) C-band
+# fc=6e9 # center frequency (Hz) C-band
 fp=10 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz taken from orbits (including slow-time)
@@ -83,7 +83,7 @@ enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 
 display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
 display_tomograms=0 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension, 3: display as 3D scatter plot
-disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
+disable_freq_offset = false # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync

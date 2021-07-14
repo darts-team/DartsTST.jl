@@ -169,7 +169,7 @@ no_sync_flag)
 
 Ntrials = 64 # number of trials per SRI in Monte Carlo simulations
 
-coeff_number = 1 # which coefficient to sweep over (1 through 5)
+coeff_number = 5 # which coefficient to sweep over (1 through 5)
 osc_coeff_sweep = [ -100 -90 -80 -70 -60 -50 -40 -30 -20 -10  0 ]
 numCoeffs = length(osc_coeff_sweep)
 
