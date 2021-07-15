@@ -43,6 +43,47 @@ function ecef_orbitpos(eci_pos, dcm)
     #println("Done with it, ", size(ecef_pos))
     return ecef_pos
 end
+"convert eci orbit posoitions to ECEF based using input DCM"
+function ecef_orbitpos(eci_pos, eci_vel, dcm)
+    #eci_pos = 3 x N_plat x N_time
+    #dcm = 3 x 3 x 1 or 3 x 3 x N_time
+    szp = size(eci_pos)
+    szdcm = size(dcm)
+    @assert szp[1]==3 "POS needs to be 3 x Np x Nt"
+    if ndims(eci_pos) == 3
+        nplat = szp[2]
+        ntimes = szp[3]
+    elseif ndims(eci_pos) == 2
+        nplat = 1
+        ntimes = szp[2]
+    end
+
+    if ndims(dcm) == 3 #DCM per time instance in orbit
+        @assert szdcm[3] == ntimes "POS and DCM need to have same no. of entries"
+    elseif ndims(dcm)==2 #A scalar DCM for all times (quasi-fixed ref. frame)
+            @assert szdcm[1]==3 & szdcm[2]==3 "DCM needs to be 3 x 3 matrix"
+            dcm = repeat(dcm,1,1,ntimes)
+    else
+        error("DCM is badly shaped")
+    end
+
+    # Earth rotation rate.
+    w = 7.292115146706979e-5
+
+    #set aside space for ECEF position and velocity
+    ecef_pos = zeros(3,nplat, ntimes);
+    ecef_vel = zeros(3,nplat, ntimes);
+
+    for iplat=1:nplat
+        for itime=1:ntimes
+            ecef_pos[:,iplat,itime] = dcm[:,:,itime]*eci_pos[:,iplat,itime];
+            ecef_vel[:,iplat,itime] = dcm[:,:,itime]*eci_vel[:,iplat,itime] - [0;0;w]*eci_pos[:,iplat,itime];
+        end
+    end
+    #println("Done with it, ", size(ecef_pos))
+    return ecef_pos, ecef_vel
+end
+
 
 "compute DCM to convert ECI to ECEF based on epoch and IERS EOP data"
 function eci_dcm(time::Array{Float32,1}, epoch::DateTime, eop_data)
