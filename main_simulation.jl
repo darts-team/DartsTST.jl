@@ -9,6 +9,8 @@ include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
 include("modules/error_sources.jl")
+include("modules/antenna.jl")
+include("modules/simsetup.jl")
 using NCDatasets
 using Statistics
 ## PLATFORM LOCATIONS and HEADINGS
@@ -18,8 +20,10 @@ dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
 orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
 orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
 orbit_pos_ECI=orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
-dcm=orbit_dataset["dcm"];orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm) # ECI to ECEF
-orbit_vel=orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
+orbit_vel_ECI=orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
+dcm=orbit_dataset["dcm"];
+orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
+orbit_vel=orbit_vel_ECI #; orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF TODO velocity conversion function not ready yet
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
 p_xyz=1e3*Orbits.interp_orbit(orbit_time,orbit_pos,slow_time) # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
 Np=size(orbit_pos)[2] # number of platforms
@@ -32,9 +36,38 @@ s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loo
 t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos*1e3,orbit_vel,look_angle,earth_radius,earth_eccentricity) # calculate avg heading from platform velocities
 ## TARGET REFLECTIVITIES
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
+## ANTENNA PATTERN
+if include_antenna # calculate look angle (average over platforms and slow-time positions)
+    avg_p_xyz=reshape(mean(mean(p_xyz,dims=2),dims=3),3)
+    avg_p_vel=reshape(mean(mean(orbit_vel,dims=2),dims=3),3)
+    if ts_coord_sys=="SCH"
+        look_ang=look_angle
+    elseif ts_coord_sys=="XYZ" || ts_coord_sys=="LLH"
+        platform_heights=zeros(Np);slant_ranges=zeros(Np)
+        avg_t_xyz=mean(t_xyz_3xN,dims=2) # average target location in XYZ
+        avg_rs=Geometry.distance(avg_t_xyz,avg_p_xyz) # average slant range
+        for i=1:Np
+            p_xyz_i=p_xyz[:,i,:] # p_xyz: 3 x Np x Nst
+            p_xyz_i=reshape(p_xyz_i,3,Nst) # p_xyz: 3 x Nst
+            p_LLH=Geometry.xyz_to_geo(p_xyz_i)
+            platform_heights[i]=mean(p_LLH[3,:]) # average platform heights over slow-time for each platform
+        end
+        avg_p_h=mean(platform_heights) # average platform height over platforms and slow-time
+        if avg_rs<avg_p_h;avg_rs=avg_p_h;end
+        avg_rg,look_ang=Scene.slantrange_to_lookangle(earth_radius,avg_rs,avg_p_h,0) # assuming target height is 0 (negligible effect), look_ang: average look angle
+    end
+    vgrid = Antenna.AntGrid("inputs/darts_ant_03192021.nc") # read in vpol grid
+    ant = SimSetup.sc_ant(vgrid); #create antenna structure, additional arguments are rotation and origin
+    sc = SimSetup.spacecraft(avg_p_xyz, Float64.(avg_p_vel), ant = ant, look_angle = look_ang, side = "right"); ##create spacecraft structure; ant, look_angle, side are optional
+    co_pol,cross_pol = SimSetup.interpolate_pattern(sc, t_xyz_3xN);#inteprolate pattern (cp:co-pol, xp: cross-pol), outputs are 1xNt complex vectors
+    targets_ref=targets_ref.*abs.(co_pol)
+    projected_pattern_3D=Scene.convert_image_1xN_to_3D(abs.(co_pol),length(t_loc_1),length(t_loc_2),length(t_loc_3))#take magnitude and reshape to 3D
+    using Plots;gr();display(heatmap(t_loc_1,t_loc_2, 20*log10.(projected_pattern_3D[:,:,1]), xlabel = "Target Coordinates 1", ylabel = "Target Coordinates 2",title = "Antenna Pattern Projected on Targets (V-copol)", fill=false)) #, clim=(-80,40),aspect_ratio=:equal
+    #using Plots;gr();display(heatmap(t_loc_2,t_loc_3, 20*log10.(projected_pattern_3D[1,:,:]), xlabel = "Target Coordinates 2", ylabel = "Target Coordinates 3",title = "Antenna Pattern Projected on Targets (V-copol)", fill=false)) #, clim=(-80,40),aspect_ratio=:equal
+end
 ## RANGE SPREAD FUNCTION (matched filter output)
 min_range,max_range=Geometry.find_min_max_range(t_xyz_3xN,p_xyz)
-Trx=2*(max_range-min_range)/c+2*pulse_length # s duration of RX window
+Trx=2*(max_range-min_range)/c+5*pulse_length # s duration of RX window
 if enable_fast_time # matched filter gain is included in Srx
     Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
     # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing

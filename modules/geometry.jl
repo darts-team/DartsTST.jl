@@ -260,6 +260,7 @@ function xyz_to_sch(xyz::Array{Float64,2},peg::PegPoint)
 
     #set up xyz output
     sch=zeros(size(xyz))
+end
 
 """
 Compute range from ray-ellipse intersection
