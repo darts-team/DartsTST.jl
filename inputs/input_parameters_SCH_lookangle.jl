@@ -22,16 +22,16 @@ display_geometry_coord="SCH" # platform/target/scene geometry (scatter plot) coo
 look_angle=0 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
 if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
     #SCH
-    t_loc_1=-20000:2000:20000 # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=-100000:10000:100000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    t_loc_1=-20000:1000:20000 # deg latitude if LLH, along-track if SCH, X if XYZ
+    t_loc_2=-100000:5000:100000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
     t_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
     # XYZ
     #t_loc_1=earth_radius # deg latitude if LLH, along-track if SCH, X if XYZ
-    #t_loc_2=-70000:7000:70000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    #t_loc_3=-3000:1000:17000 # m  heights if LLH or SCH, Z if XYZ
+    #t_loc_2=-300000:15000:300000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    #t_loc_3=-50000:2500:50000 # m  heights if LLH or SCH, Z if XYZ
     # LLH
-    #t_loc_1=-0.2:0.02:0.2 # deg latitude if LLH, along-track if SCH, X if XYZ
-    #t_loc_2=3:0.2:8 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    #t_loc_1=-0.3:0.015:0.3 # deg latitude if LLH, along-track if SCH, X if XYZ
+    #t_loc_2=-4:0.2:4 # deg longitude if LLH, cross-track if SCH, Y if XYZ
     #t_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
     t_ref=ones(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # a 3D input array (e.g. 3D image) can be used instead
 elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are defined as 3xN array (useful for a few discrete targets)
@@ -42,18 +42,9 @@ elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are 
     t_ref=  [1] # reflectivities
 end
 # image/scene pixel coordinates
-#SCH
-s_loc_1=-20000:2000:20000 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-100000:10000:100000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
-# XYZ
-#s_loc_1=earth_radius # deg latitude if LLH, along-track if SCH, X if XYZ
-#s_loc_2=-70000:7000:70000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-#s_loc_3=-3000:1000:17000 # m  heights if LLH or SCH, Z if XYZ
-# LLH
-#s_loc_1=-0.2:0.02:0.2 # deg latitude if LLH, along-track if SCH, X if XYZ
-#s_loc_2=3:0.2:8 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-#s_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
+s_loc_1=t_loc_1 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2=t_loc_2 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=t_loc_3 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
