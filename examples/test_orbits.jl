@@ -16,7 +16,7 @@ orbit_time = ds["time"][read_samps];
 orbit_pos  = ds["position"][:,:,read_samps];
 
 # plot the ECI orbit
-plot(orbit_time, orbit_pos[:,1,:]', xaxis=("time (sec)"), ylabel=("ECEF position (km)"))
+plot(orbit_time, orbit_pos[:,1,:]', xaxis=("time (sec)"), ylabel=("ECI position (km)"))
 
 # read in the DCM and convert to ECEF position and plot
 dcm = ds["dcm"];
