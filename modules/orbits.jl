@@ -77,7 +77,7 @@ function ecef_orbitpos(eci_pos, eci_vel, dcm)
     for iplat=1:nplat
         for itime=1:ntimes
             ecef_pos[:,iplat,itime] = dcm[:,:,itime]*eci_pos[:,iplat,itime];
-            ecef_vel[:,iplat,itime] = dcm[:,:,itime]*eci_vel[:,iplat,itime] - [0;0;w]*eci_pos[:,iplat,itime];
+            ecef_vel[:,iplat,itime] = dcm[:,:,itime]*eci_vel[:,iplat,itime] - cross([0;0;w],ecef_pos[:,iplat,itime]);
         end
     end
     #println("Done with it, ", size(ecef_pos))
