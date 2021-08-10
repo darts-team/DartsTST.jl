@@ -40,7 +40,7 @@ t_ref_2D=[0 0 0 0 0 0 3 0 0 0 0 0 0; #12 rows, 13 columns
 t_ref[:,1,:]=reverse(t_ref_2D',dims=2) #x-axis of table (columns) = 1st dimension, y-axis of table (rows) = 3rd dimension, scene exists only at 1st point in 2nd dimension
 # image/scene pixel coordinates
 s_loc_1=-20:1:20 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-10:10:10 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_2=0 # deg longitude if LLH, cross-track if SCH, Y if XYZ
 s_loc_3=0:0.5:25 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
@@ -56,3 +56,4 @@ display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
 display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
 display_input_scene=true # display input scene (targets) and delta between input/output scenes (3 slices at the center of scene) with same scene size as output tomogram scene
+include_antenna=true # whether to include projected antenna pattern

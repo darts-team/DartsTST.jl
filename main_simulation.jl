@@ -2,8 +2,8 @@ include("modules/generate_raw_data.jl")
 include("modules/process_raw_data.jl")
 include("modules/geometry.jl")
 include("modules/scene.jl")
-include("inputs/input_parameters_SCH_tree.jl")
-#include("inputs/input_parameters_antenna_pattern_grid.jl")
+#include("inputs/input_parameters_SCH_tree.jl")
+include("inputs/input_parameters_antenna_pattern_grid.jl")
 #include("inputs/input_parameters_antenna_pattern_CRs.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
@@ -60,11 +60,18 @@ if include_antenna # calculate look angle (average over platforms and slow-time 
     ant = SimSetup.sc_ant(vgrid); #create antenna structure, additional arguments are rotation and origin
     sc = SimSetup.spacecraft(avg_p_xyz, Float64.(avg_p_vel), ant = ant, look_angle = look_ang, side = "right"); ##create spacecraft structure; ant, look_angle, side are optional
     co_pol,cross_pol = SimSetup.interpolate_pattern(sc, t_xyz_3xN);#inteprolate pattern (cp:co-pol, xp: cross-pol), outputs are 1xNt complex vectors
-    targets_ref=targets_ref.*co_pol.^2/maximum(abs.(co_pol))^2 #TODO separate TX and RX, include range effect?
-    projected_pattern_3D=Scene.convert_image_1xN_to_3D(abs.(co_pol),length(t_loc_1),length(t_loc_2),length(t_loc_3))#take magnitude and reshape to 3D
-    include("modules/plotting.jl");coords_txt=Plotting.coordinates(ts_coord_sys)
-    using Plots;gr();display(heatmap(t_loc_2,t_loc_1, 20*log10.(projected_pattern_3D[:,:,1]), ylabel=coords_txt[1],xlabel=coords_txt[2],title = "Antenna Pattern Projected on Targets (V-copol)", fill=true,size=(1600,900))) #, clim=(-80,40),aspect_ratio=:equal
-    #using Plots;gr();display(heatmap(t_loc_3,t_loc_2, 20*log10.(projected_pattern_3D[1,:,:]),ylabel=coords_txt[2],xlabel=coords_txt[3],title = "Antenna Pattern Projected on Targets (V-copol)", fill=false,size=(1600,900))) #, clim=(-80,40),aspect_ratio=:equal
+    targets_ref=targets_ref.*transpose(co_pol).^2/maximum(abs.(co_pol))^2 #TODO separate TX and RX, include range effect?
+    if target_pos_mode=="grid" # plotting projected pattern only for grid type target distribution
+        projected_pattern_3D=Scene.convert_image_1xN_to_3D(abs.(co_pol),length(t_loc_1),length(t_loc_2),length(t_loc_3))#take magnitude and reshape to 3D
+        include("modules/plotting.jl");coords_txt=Plotting.coordinates(ts_coord_sys)
+        Nt_1=length(t_loc_1)
+        Nt_2=length(t_loc_2)
+        Nt_3=length(t_loc_3)
+        using Plots;gr()
+        if Nt_2>1 && Nt_1>1;display(heatmap(t_loc_2,t_loc_1, 20*log10.(projected_pattern_3D[:,:,1]), ylabel=coords_txt[1],xlabel=coords_txt[2],title = "Antenna Pattern Projected on Targets (V-copol)", fill=true,size=(1600,900)));end #, clim=(-80,40),aspect_ratio=:equal
+        if Nt_3>1 && Nt_2>1;display(heatmap(t_loc_3,t_loc_2, 20*log10.(projected_pattern_3D[1,:,:]),ylabel=coords_txt[2],xlabel=coords_txt[3],title = "Antenna Pattern Projected on Targets (V-copol)", fill=false,size=(1600,900)));end #, clim=(-80,40),aspect_ratio=:equal
+        if Nt_3>1 && Nt_1>1;display(heatmap(t_loc_3,t_loc_1, 20*log10.(projected_pattern_3D[:,1,:]),ylabel=coords_txt[1],xlabel=coords_txt[3],title = "Antenna Pattern Projected on Targets (V-copol)", fill=false,size=(1600,900)));end #, clim=(-80,40),aspect_ratio=:equal
+    end
 end
 ## RANGE SPREAD FUNCTION (matched filter output)
 min_range,max_range=Geometry.find_min_max_range(t_xyz_3xN,p_xyz)
