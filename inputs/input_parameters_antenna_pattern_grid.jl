@@ -20,27 +20,19 @@ target_pos_mode="grid" #  targets are defined as three 1D arrays forming either 
 ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
 display_geometry_coord="SCH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
 look_angle=0 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
-if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
-    #SCH
-    t_loc_1=-20000:1000:20000 # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=-100000:5000:100000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
-    # XYZ
-    #t_loc_1=earth_radius # deg latitude if LLH, along-track if SCH, X if XYZ
-    #t_loc_2=-300000:15000:300000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    #t_loc_3=-50000:2500:50000 # m  heights if LLH or SCH, Z if XYZ
-    # LLH
-    #t_loc_1=-0.3:0.015:0.3 # deg latitude if LLH, along-track if SCH, X if XYZ
-    #t_loc_2=-4:0.2:4 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    #t_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
-    t_ref=ones(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # a 3D input array (e.g. 3D image) can be used instead
-elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are defined as 3xN array (useful for a few discrete targets)
-    # length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
-    t_loc_1=[0] # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=[40] # m  heights if LLH or SCH, Z if XYZ
-    t_ref=  [1] # reflectivities
-end
+#SCH
+t_loc_1=-20000:1000:20000 # deg latitude if LLH, along-track if SCH, X if XYZ
+t_loc_2=-100000:5000:100000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+t_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
+# XYZ
+#t_loc_1=earth_radius # deg latitude if LLH, along-track if SCH, X if XYZ
+#t_loc_2=-300000:15000:300000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+#t_loc_3=-50000:2500:50000 # m  heights if LLH or SCH, Z if XYZ
+# LLH
+#t_loc_1=-0.3:0.015:0.3 # deg latitude if LLH, along-track if SCH, X if XYZ
+#t_loc_2=-4:0.2:4 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+#t_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
+t_ref=ones(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # a 3D input array (e.g. 3D image) can be used instead
 # image/scene pixel coordinates
 s_loc_1=t_loc_1 # deg latitude if LLH, along-track if SCH, X if XYZ
 s_loc_2=t_loc_2 # deg longitude if LLH, cross-track if SCH, Y if XYZ
