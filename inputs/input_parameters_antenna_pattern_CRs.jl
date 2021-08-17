@@ -20,31 +20,15 @@ target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a 
 ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
 display_geometry_coord="SCH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
 look_angle=0 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
-if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
-    #SCH
-    t_loc_1=-20000:1000:20000 # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=-100000:5000:100000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
-    # XYZ
-    #t_loc_1=earth_radius # deg latitude if LLH, along-track if SCH, X if XYZ
-    #t_loc_2=-300000:15000:300000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    #t_loc_3=-50000:2500:50000 # m  heights if LLH or SCH, Z if XYZ
-    # LLH
-    #t_loc_1=-0.3:0.015:0.3 # deg latitude if LLH, along-track if SCH, X if XYZ
-    #t_loc_2=-4:0.2:4 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    #t_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
-    t_ref=ones(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # a 3D input array (e.g. 3D image) can be used instead
-elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are defined as 3xN array (useful for a few discrete targets)
-    # length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
-    t_loc_1=[0] # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=[40] # m  heights if LLH or SCH, Z if XYZ
-    t_ref=  [1] # reflectivities
-end
+# length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
+t_loc_1=[0] # deg latitude if LLH, along-track if SCH, X if XYZ
+t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
+t_loc_3=[40] # m  heights if LLH or SCH, Z if XYZ
+t_ref=  [1] # reflectivities
 # image/scene pixel coordinates
-s_loc_1=t_loc_1 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=t_loc_2 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=t_loc_3 # m  heights if LLH or SCH, Z if XYZ
+s_loc_1=-100:1:100 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2=-1000:10:1000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=40 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
@@ -58,4 +42,4 @@ enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 
 display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
 display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
-include_antenna=false # whether to include projected antenna pattern
+include_antenna=true # whether to include projected antenna pattern
