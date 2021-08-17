@@ -37,9 +37,9 @@ function plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,coords) #TODO smar
     gr()
     platform_labels=Array{String}(undef,1,size(orbit_pos)[2])
     for i=1:size(orbit_pos)[2];platform_labels[i]=string("platform-",i);end
-    display(plot(orbit_time,orbit_pos[1,:,:]',xaxis=("time (sec)"),ylabel=("ECI X position (km)"),size=(1600,900),labels=platform_labels)) # plot the ECI orbit in the limited time range
-    display(plot(orbit_time,orbit_pos[2,:,:]',xaxis=("time (sec)"),ylabel=("ECI Y position (km)"),size=(1600,900),labels=platform_labels)) # plot the ECI orbit in the limited time range
-    display(plot(orbit_time,orbit_pos[3,:,:]',xaxis=("time (sec)"),ylabel=("ECI Z position (km)"),size=(1600,900),labels=platform_labels)) # plot the ECI orbit in the limited time range
+    display(plot(orbit_time,orbit_pos[1,:,:]'/1e3,xaxis=("time (sec)"),ylabel=("ECI X position (km)"),size=(1600,900),labels=platform_labels)) # plot the ECI orbit in the limited time range
+    display(plot(orbit_time,orbit_pos[2,:,:]'/1e3,xaxis=("time (sec)"),ylabel=("ECI Y position (km)"),size=(1600,900),labels=platform_labels)) # plot the ECI orbit in the limited time range
+    display(plot(orbit_time,orbit_pos[3,:,:]'/1e3,xaxis=("time (sec)"),ylabel=("ECI Z position (km)"),size=(1600,900),labels=platform_labels)) # plot the ECI orbit in the limited time range
     plotly()
     display(scatter(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],leg=false,camera=(20,40),markersize=3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Platform Positions at Each Pulse",size=(1600,900))) #display  position of each platform at each pulse in 3D
     display(scatter(t_loc[1,:],t_loc[2,:],t_loc[3,:],leg=false,camera=(20,40),markersize=2,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Target Locations",size=(1600,900))) #display grid in 3D
@@ -77,10 +77,9 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_lo
             k2=findall(t_loc_2 .==s_loc_2);k2=k2[1]
             k3=findall(t_loc_3 .==s_loc_3);k3=k3[1]
         end
-        #display(scatter(image_3D,size=(1600,1200)))
-        display(heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',ylabel=coords[3],xlabel=coords[2],title="2D Image at Loc-1="*string(s_loc_1[k1]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
-        display(heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',ylabel=coords[3],xlabel=coords[1],title="2D Image at Loc-2="*string(s_loc_2[k2]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
-        display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],ylabel=coords[1],xlabel=coords[2],title="2D Image at Loc-3="*string(s_loc_3[k3]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
+        if Ns_2>1 && Ns_3>1;display(heatmap(s_loc_3,s_loc_2,image_3D[k1,:,:],ylabel=coords[2],xlabel=coords[3],title="2D Image at Loc-1="*string(s_loc_1[k1]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900)));end #aspect_ratio=:equal
+        if Ns_1>1 && Ns_3>1;display(heatmap(s_loc_3,s_loc_1,image_3D[:,k2,:],ylabel=coords[1],xlabel=coords[3],title="2D Image at Loc-2="*string(s_loc_2[k2]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900)));end #aspect_ratio=:equal
+        if Ns_1>1 && Ns_2>1;display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],ylabel=coords[1],xlabel=coords[2],title="2D Image at Loc-3="*string(s_loc_3[k3]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900)));end #aspect_ratio=:equal
     elseif display_tomograms==2
         gr()
         for k=1:Ns_3 # height slices from the scene

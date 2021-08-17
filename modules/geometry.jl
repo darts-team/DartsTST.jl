@@ -293,6 +293,7 @@ function xyz_to_sch(xyz::Array{Float64,2},peg::PegPoint)
 
     #set up xyz output
     sch=zeros(size(xyz))
+end
 
     #compute the sch value per xyz triplet
     for ipt=1:size(xyz,2)
@@ -492,7 +493,7 @@ function compute_heading(lat, lon, vel)
         v_enu = v_enu./norm(v_enu);
         heading[ii] = atan(v_enu[1], v_enu[2])*180/π;
         if heading[ii] < 0
-            heading[ii] = heading[ii] - 360.0;
+            heading[ii] = heading[ii] + 360.0;
         end
     end
 

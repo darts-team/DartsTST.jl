@@ -177,7 +177,9 @@ Slant range to look angle and ground range conversion (spherical planet assumed)
 - θ_l: look angles to the targets
 - rg: ground ranges to the targets
 """
-function slantrange_to_lookangle(ra,rs,p_h) # target height is assumed 0 TODO add target height
+function slantrange_to_lookangle(ra,rs,p_h,t_h) # t_h: target height
+  ra=ra.+t_h
+  p_h=p_h.-t_h
   θ_l=acos.((rs.^2+(ra+p_h).^2-ra^2)./(2*rs.*(ra+p_h))) # rad look angle
   inc=asin.((ra+p_h)./ra.*sin.(θ_l)) # rad incidence angle
   α=inc-θ_l # rad planet-central anglesin
