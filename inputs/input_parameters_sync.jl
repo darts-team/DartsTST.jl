@@ -5,7 +5,7 @@ disable_freq_offset = true  # true = no linear phase ramp (ideal osc frequency),
 if !use_orbits_flag
     setNumPlatforms = 3 # manually select number of Rx platforms
 end 
-sync_pri = 5 # (s) repetition interval of sync
+sync_pri = .1 # (s) repetition interval of sync
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length

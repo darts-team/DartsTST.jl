@@ -51,7 +51,8 @@ SAR_start_time=0 # SAR imaging start time (s)
 target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
 ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
 if ts_coord_sys=="SCH" # if SCH, target and scene locations are defined relative to the point where look angle vector intersects the surface
-    look_angle=30 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
+    # look_angle=30 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
+    look_angle=0 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
     p_avg_heading=0.1 # average heading of platforms, due North is 0, due East is 90 (deg), required only if SCH coordinates TODO we should get this from orbits!
 end
 if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
@@ -67,9 +68,12 @@ elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are 
     t_ref=  [1] # reflectivities
 end
 # image/scene pixel coordinates
-s_loc_1=-40:.5:40 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-60:1:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=  0:1:80 # m  heights if LLH or SCH, Z if XYZ
+# s_loc_1=-40:.5:40 # deg latitude if LLH, along-track if SCH, X if XYZ
+# s_loc_2=-60:1:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+# s_loc_3=  0:1:80 # m  heights if LLH or SCH, Z if XYZ
+s_loc_1= (-40:.5:40) .+ t_loc_1  # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2= (-40:1:40)  .+ t_loc_2 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3= (-15:.5:15)  .+ t_loc_3 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
@@ -83,7 +87,7 @@ enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 
 display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
 display_tomograms=0 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension, 3: display as 3D scatter plot
-disable_freq_offset = false # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
+disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
@@ -109,7 +113,8 @@ else
     sigma_freq_offsets = sigma_freq_offsets .* ones(1) # convert to matrix form, one value for each oscillator
 end
 
-sync_fmin   = 0.01 # minimum frequency > 0 in Hz to window PSD
+# sync_fmin   = 0.01 # minimum frequency > 0 in Hz to window PSD
+sync_fmin   = 1 # Hz new fmin value
 f_osc       = 10e6 # local oscillator frequency
 sync_clk_fs = 1e3; # sample rate of clock error process
 master      = 1 # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)

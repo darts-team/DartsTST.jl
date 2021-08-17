@@ -3,7 +3,7 @@ c=299792458 # speed of light (m/s)
 earth_radius=6378.137e3 # semi-major axis at equator
 earth_eccentricity=sqrt(0.00669437999015)
 # MIMO parameters
-mode=3 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
+mode=1 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
 tx_el=1 # which element transmits for SIMO (max value N)
 # radar parameters
 fc=1.25e9 # center frequency (Hz) L-band
@@ -35,12 +35,12 @@ elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are 
     t_ref=  [1] # reflectivities
 end
 # image/scene pixel coordinates
-s_loc_1=-40:2:40 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-60:2:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=  0:2:80 # m  heights if LLH or SCH, Z if XYZ
-# s_loc_1=-10:.25:10 # deg latitude if LLH, along-track if SCH, X if XYZ
-# s_loc_2=-40:.5:40 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-# s_loc_3=  (-15:.25:15) .+ 40 # m  heights if LLH or SCH, Z if XYZ
+# s_loc_1=-40:2:40 # deg latitude if LLH, along-track if SCH, X if XYZ
+# s_loc_2=-60:2:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+# s_loc_3=  0:2:80 # m  heights if LLH or SCH, Z if XYZ
+s_loc_1=-10:.5:10 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2=-40:2:40 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=  (-15:1:15) .+ 40 # m  heights if LLH or SCH, Z if XYZ
 
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
@@ -48,7 +48,7 @@ pulse_length=10e-6 # s pulse length
 bandwidth=40e6 # bandwidth (Hz)
 # performance metrics
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
-PSF_image_point=4 # 1: peak location, 2: target location, 3: center of 3D scene, 4: peak location (upsample image)
+PSF_image_point=1 # 1: peak location, 2: target location, 3: center of 3D scene, 4: peak location (upsample image)
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
