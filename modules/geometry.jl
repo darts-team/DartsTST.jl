@@ -293,7 +293,6 @@ function xyz_to_sch(xyz::Array{Float64,2},peg::PegPoint)
 
     #set up xyz output
     sch=zeros(size(xyz))
-end
 
     #compute the sch value per xyz triplet
     for ipt=1:size(xyz,2)

@@ -77,9 +77,9 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_lo
             k2=findall(t_loc_2 .==s_loc_2);k2=k2[1]
             k3=findall(t_loc_3 .==s_loc_3);k3=k3[1]
         end
-        if Ns_2>1 && Ns_3>1;display(heatmap(s_loc_3,s_loc_2,image_3D[k1,:,:],ylabel=coords[2],xlabel=coords[3],title="2D Image at Loc-1="*string(s_loc_1[k1]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900)));end #aspect_ratio=:equal
-        if Ns_1>1 && Ns_3>1;display(heatmap(s_loc_3,s_loc_1,image_3D[:,k2,:],ylabel=coords[1],xlabel=coords[3],title="2D Image at Loc-2="*string(s_loc_2[k2]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900)));end #aspect_ratio=:equal
-        if Ns_1>1 && Ns_2>1;display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],ylabel=coords[1],xlabel=coords[2],title="2D Image at Loc-3="*string(s_loc_3[k3]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,900)));end #aspect_ratio=:equal
+        if Ns_2>1 && Ns_3>1;display(heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',ylabel=coords[3],xlabel=coords[2],title="2D Image at Loc-1="*string(s_loc_1[k1]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200)));end #aspect_ratio=:equal
+        if Ns_1>1 && Ns_3>1;display(heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',ylabel=coords[3],xlabel=coords[1],title="2D Image at Loc-2="*string(s_loc_2[k2]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200)));end #aspect_ratio=:equal
+        if Ns_1>1 && Ns_2>1;display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],ylabel=coords[1],xlabel=coords[2],title="2D Image at Loc-3="*string(s_loc_3[k3]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200)));end #aspect_ratio=:equal
     elseif display_tomograms==2
         gr()
         for k=1:Ns_3 # height slices from the scene
@@ -111,9 +111,9 @@ function plot_input_scene(inputscene_3D,s_loc_1,s_loc_2,s_loc_3,coords)
     k3=Int(ceil(Ns_3/2))
     gr()
     #display(scatter(inputscene_3D,size=(1600,1200)))
-    display(heatmap(s_loc_2,s_loc_3,inputscene_3D[k1,:,:]',ylabel=coords[3],xlabel=coords[2],title="2D Input Scene at Loc-1="*string(s_loc_1[k1]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
-    display(heatmap(s_loc_1,s_loc_3,inputscene_3D[:,k2,:]',ylabel=coords[3],xlabel=coords[1],title="2D Input Scene at Loc-2="*string(s_loc_2[k2]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
-    display(heatmap(s_loc_2,s_loc_1,inputscene_3D[:,:,k3],ylabel=coords[1],xlabel=coords[2],title="2D Input Scene at Loc-3="*string(s_loc_3[k3]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
+    if Ns_2>1 && Ns_3>1;display(heatmap(s_loc_2,s_loc_3,inputscene_3D[k1,:,:]',ylabel=coords[3],xlabel=coords[2],title="2D Input Scene at Loc-1="*string(s_loc_1[k1]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200)));end #aspect_ratio=:equal
+    if Ns_1>1 && Ns_3>1;display(heatmap(s_loc_1,s_loc_3,inputscene_3D[:,k2,:]',ylabel=coords[3],xlabel=coords[1],title="2D Input Scene at Loc-2="*string(s_loc_2[k2]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200)));end #aspect_ratio=:equal
+    if Ns_1>1 && Ns_2>1;display(heatmap(s_loc_2,s_loc_1,inputscene_3D[:,:,k3],ylabel=coords[1],xlabel=coords[2],title="2D Input Scene at Loc-3="*string(s_loc_3[k3]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200)));end #aspect_ratio=:equal
 end
 
 end

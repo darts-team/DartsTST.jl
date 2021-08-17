@@ -2,9 +2,9 @@ include("modules/generate_raw_data.jl")
 include("modules/process_raw_data.jl")
 include("modules/geometry.jl")
 include("modules/scene.jl")
-#include("inputs/input_parameters_SCH_tree.jl")
-include("inputs/input_parameters_antenna_pattern_grid.jl")
-#include("inputs/input_parameters_antenna_pattern_CRs.jl")
+include("inputs/input_parameters_SCH_tree.jl")
+#include("inputs/input_parameters_antenna_pattern_grid.jl")
+#include("inputs/input_parameters_CRs.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
@@ -126,7 +126,7 @@ if PSF_metrics
     println("PSF Peak Amplitude: ",round(maximum(20*log10.(image_3D)),digits=2)," dB")
 end
 # Relative Radiometric Accuracy (amplitude difference between input 3D scene and output 3D image, max normalized to 1)
-inputscene_3D=Scene.generate_input_scene_3D(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,t_ref,targets_ref,Nt,target_pos_mode)
+inputscene_3D=Scene.generate_input_scene_3D(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,targets_ref,Nt,target_pos_mode)
 diff_image3D,mean_diff_image,std_diff_image=Performance_Metrics.relative_radiometric_accuracy(inputscene_3D,image_3D)
 println("Relative Radiometric Accuracy: Mean: ",round(mean_diff_image,digits=2),", Std: ",round(std_diff_image,digits=2)) # mean=0 & std_dev=0 means perfect result
 ## PLOTS (1D PSF cuts are displayed by default in the performance.metrics module)
