@@ -169,7 +169,7 @@ end
             
             if no_sync_flag # no sync case
                 Sphi_uc = up_convert_psd .* Sphi
-                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs)
+                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs,no_sync_flag)
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi
             else
@@ -187,7 +187,7 @@ end
                 Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs, dt)
                 # generate time series of phase error
                 Sphi_sync_uc = up_convert_psd .* Sphi
-                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs)
+                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,no_sync_flag)
             
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi_sync    
@@ -401,7 +401,7 @@ end
             Sphi_sync = sync_PSDs[i,j,:] # load precalculated PSD
             # generate time series of phase error
             Sphi_sync_uc = up_convert_psd .* Sphi
-            (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs)
+            (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,no_sync_flag)
             
             # t and r are longer than PRI, cut to PRI
             idx_pri = findfirst(t -> t >= dt,t)
@@ -510,7 +510,7 @@ function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1})
     temp = 0.1 .* a_coeff_db
     a_coeff = [ 10^temp[1], 10^temp[2], 10^temp[3], 10^temp[4], 10^temp[5] ]
 
-    fmin = .01 # minimum PSD frequency. Zeros out PSD below this value
+    fmin = .1 # minimum PSD frequency. Reduces PSD below this value
 
 
     Sphi_2S = a_coeff' * [f.^(-4), f.^(-3), f.^(-2), f.^(-1), f.^0]
@@ -519,21 +519,31 @@ function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1})
     idx0 = findall(f -> f == 0,f)
     Sphi_2S[idx0] .= 0
 
-    idx = findall(f -> f > 0,f)
-    fmin1 = f[idx[1]] # takes first index of frequency vector that is greater than 0, grabs frequency value
+    # Previous code 7/15/21 This code set frequency values below fmin to the PSD amplitude at fmin.
+    # idx = findall(f -> f > 0,f)
+    # fmin1 = f[idx[1]] # takes first index of frequency vector that is greater than 0, grabs frequency value
+    # 
+    # if fmin1<fmin
+    #     idx = findall(f -> abs(f) < fmin,f)
+    #       #Sphi_2S[idx] .=  a_coeff[1].*fmin^(-4).+a_coeff[2]*fmin^(-3).+a_coeff[3]*fmin^(-2).+a_coeff[4]*fmin^(-1).+a_coeff[5]*fmin^0
+    #     temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)]
+    #     Sphi_2S[idx] .= temp
+    # else
+    #     # conserve power around dc
+    #     idx = findall(f -> abs(f) < fmin,f)
+    #     Sphi_2S[idx] .= sum([a_coeff[1]*fmin.^(-4) a_coeff[2]*fmin.^(-3) a_coeff[3]*fmin.^(-2) a_coeff[4]*fmin.^(-1) a_coeff[5]*fmin.^0 ]).*(fmin/fmin1)
+    # end#if
 
-    if fmin1<fmin
-        idx = findall(f -> abs(f) < fmin,f)
-          #Sphi_2S[idx] .=  a_coeff[1].*fmin^(-4).+a_coeff[2]*fmin^(-3).+a_coeff[3]*fmin^(-2).+a_coeff[4]*fmin^(-1).+a_coeff[5]*fmin^0
-        temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)]
-        Sphi_2S[idx] .= temp
-    else
-        # conserve power around dc
-        idx = findall(f -> abs(f) < fmin,f)
-        Sphi_2S[idx] .= sum([a_coeff[1]*fmin.^(-4) a_coeff[2]*fmin.^(-3) a_coeff[3]*fmin.^(-2) a_coeff[4]*fmin.^(-1) a_coeff[5]*fmin.^0 ]).*(fmin/fmin1)
-    end#if
+    # new code 7/15/21, This creates a "high-pass filter" with fmin as the cutoff frequency
+    # create a roll-off from fmin to 0 frequency
+    temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)] # this is the PSD value at fmin
+    idx_fmin = findlast(f -> abs(f) < fmin,f)
+    if !isnothing(idx_fmin)
+        idx = idx0[1]:idx_fmin
+        Sphi_2S[idx] .= 10 .^(range(0,stop=temp,length=length(idx)))
+    end
 
-    # take magnitude of any negative PSD values. Not sure why small negative values exist
+    # take magnitude to remove any negative PSD values.
     Sphi_2S = abs.(Sphi_2S)
     return Sphi_2S, f
 
@@ -548,9 +558,10 @@ generates realizations of phase error given a two-sided oscillator PSD
 - `Sphi::Nx1 Array`: 2 sided oscillator phase error PSD
 - `fs::Integer`: max PSD frequency [sample rate of clock phase error process]
 - `a_coeff_db:: 1x5 Array`: coefficients of the noise characteristic asymptotes
+- `no_sync_flag:: Bool`: Flag if sync is not used: Phase error resets to 0 at sync event if flag = 0
 
 """
-function osc_timeseries_from_psd_twosided(Sphi::Array{Float64,1},fs::Float64)
+function osc_timeseries_from_psd_twosided(Sphi::Array{Float64,1},fs::Float64,no_sync_flag::Bool)
 #   Generate time series from two sided PSD of clock phase error.
 #   Will first calculate the one sided PSD which = 0 for f<0
 #INPUTS
@@ -570,7 +581,6 @@ A_Sphi = sqrt.(abs.(Sphi_1S.*N))
 
 # random phase vector with amplitude of PSD
 phi_u = rand(N) .*2 .* pi
-# amp_u = rand(1,N); # random amplitude
 amp_u = 1; # constant amplitude
 
 # sequence with random phase & random amplitude of PSD
@@ -580,7 +590,10 @@ z2 = ifftshift(z)
 
 # random time sequence realization
 r = real(fftshift(ifft(z2))) # take real component of time series
-r = r.-r[1] # this zeros out the error at t=0. Sync "resets" the clock drift to 0. Will be added in sequence to keep phase errors continuous
+if !no_sync_flag
+    r = r.-r[1] # this zeros out the error at t=0. Sync "resets" the clock drift to 0. Will be added in sequence to keep phase errors continuous
+end
+
 # time vector
 t = collect(0:(N-1)) .* 1/fs
 
