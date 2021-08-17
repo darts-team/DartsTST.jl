@@ -241,7 +241,7 @@ Converts ECEF XYZ coordinates to SCH
 # Output
  - `SCH:3xN Float Array`, SCH coordinates
 """
-function xyz_to_sch(xyz::Array{Float64,1},peg::PegPoint)
+function xyz_to_sch(xyz::Array{Float64,1},peg)
 
     #compute x'y'z' coordinates from peg and xyz
     xyzp = (peg.Mxyzprime_xyz)'*(xyz-peg.O)
@@ -255,7 +255,7 @@ function xyz_to_sch(xyz::Array{Float64,1},peg::PegPoint)
     h = r - peg.Ra;
     return [s,c,h]
 end
-function xyz_to_sch(xyz::Array{Float64,2},peg::PegPoint)
+function xyz_to_sch(xyz::Array{Float64,2},peg)
     @assert size(xyz,1)==3 "SCH vector needs to be 3xN"
 
     #set up xyz output
