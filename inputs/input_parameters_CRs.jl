@@ -26,7 +26,7 @@ t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
 t_loc_3=[40] # m  heights if LLH or SCH, Z if XYZ
 t_ref=  [1] # reflectivities
 # image/scene pixel coordinates
-s_loc_1=-100:1:100 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_1=-130:1:130 # deg latitude if LLH, along-track if SCH, X if XYZ
 s_loc_2=-1000:10:1000 # deg longitude if LLH, cross-track if SCH, Y if XYZ
 s_loc_3=40 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
