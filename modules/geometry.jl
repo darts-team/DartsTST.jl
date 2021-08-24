@@ -68,6 +68,39 @@ rotate_frame(v,q) = convert(Array{Float64,1}, vect(inv(q)*v*q))
 " Rotate vector, given a rotation quaternion "
 rotate_vec(v,q) = convert(Array{Float64,1}, vect(q*v*inv(q)))
 
+function convert_platform_target_scene_coordinates(Np,Nst,Nt,p_xyz,t_xyz_3xN,targets_loc,s_xyz_3xN,s_loc_3xN,avg_peg,display_geometry_coord,ts_coord_sys)
+    Nsc=size(s_loc_3xN,2)
+    p_loc=zeros(3,Np,Nst)
+    t_loc=zeros(3,Nt)
+    s_loc=zeros(Nsc)
+    if display_geometry_coord=="LLH"
+        for i=1:Np
+            p_xyz_i=p_xyz[:,i,:]
+            p_xyz_i=reshape(p_xyz_i,3,Nst)
+            p_loc[:,i,:]=xyz_to_geo(p_xyz_i)
+        end
+        t_loc=xyz_to_geo(t_xyz_3xN)
+        s_loc=xyz_to_geo(s_xyz_3xN)
+    elseif display_geometry_coord=="SCH"
+        for i=1:Np
+            p_xyz_i=p_xyz[:,i,:]
+            p_xyz_i=reshape(p_xyz_i,3,Nst)
+            p_loc[:,i,:]=xyz_to_sch(p_xyz_i,avg_peg)
+        end
+        if ts_coord_sys=="SCH"
+            t_loc=targets_loc
+            s_loc=s_loc_3xN
+        else # ts_coord_sys == LLH or XYZ
+            t_loc=xyz_to_sch(t_xyz_3xN,avg_peg)
+            s_loc=xyz_to_sch(s_xyz_3xN,avg_peg)
+        end
+    elseif display_geometry_coord=="XYZ"
+        p_loc=p_xyz
+        t_loc=t_xyz_3xN
+        s_loc=s_xyz_3xN
+    end
+    return p_loc,t_loc,s_loc
+end
 
 """
 Calculates average peg point and average platform heights over all platforms and all slow-time (pulse) locations
