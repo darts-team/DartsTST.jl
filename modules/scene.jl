@@ -1,10 +1,14 @@
 module Scene
 #TODO add function definitions, comments, define input types, remove unused functions
 
-#include("geometry.jl")
-using ..Geometry
+#external packages
 using LinearAlgebra
 using Optim
+
+#local packages
+include("geometry.jl")
+using .Geometry
+
 
 mutable struct target_str
   loc # target location
@@ -29,7 +33,7 @@ end
 """
 Generate Input Target Scene in 3D (scene limited by input scene arrays)
 """
-function generate_input_scene_3D(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,t_ref,targets_ref,Nt,target_pos_mode)
+function generate_input_scene_3D(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,targets_ref,Nt,target_pos_mode)
     inputscene_3D=zeros(length(s_loc_1),length(s_loc_2),length(s_loc_3))
     # TODO check if target is inside the scene. gives error if target is outside the scene.
     if length(s_loc_1)>1;ind_1=round.(Int64,(t_loc_1.-s_loc_1[1])/(s_loc_1[2]-s_loc_1[1]).+1);else;ind_1=1;end
@@ -38,11 +42,11 @@ function generate_input_scene_3D(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3
     if target_pos_mode=="grid" # TODO check if there are targets outside the scene
         ind_3xN=Int64.(Scene.form3Dgrid_for(ind_1,ind_2,ind_3))
         for i=1:Nt
-            inputscene_3D[ind_3xN[1,i],ind_3xN[2,i],ind_3xN[3,i]]=targets_ref[i]
+            inputscene_3D[ind_3xN[1,i],ind_3xN[2,i],ind_3xN[3,i]]=abs.(targets_ref[i])
         end
     elseif target_pos_mode=="CR"
         for i=1:Nt
-            inputscene_3D[ind_1[i],ind_2[i],ind_3[i]]=t_ref[i]
+            inputscene_3D[ind_1[i],ind_2[i],ind_3[i]]=abs.(targets_ref[i])
         end
     end
     return inputscene_3D
@@ -173,7 +177,9 @@ Slant range to look angle and ground range conversion (spherical planet assumed)
 - θ_l: look angles to the targets
 - rg: ground ranges to the targets
 """
-function slantrange_to_lookangle(ra,rs,p_h) # target height is assumed 0 TODO add target height
+function slantrange_to_lookangle(ra,rs,p_h,t_h) # t_h: target height
+  ra=ra.+t_h
+  p_h=p_h.-t_h
   θ_l=acos.((rs.^2+(ra+p_h).^2-ra^2)./(2*rs.*(ra+p_h))) # rad look angle
   inc=asin.((ra+p_h)./ra.*sin.(θ_l)) # rad incidence angle
   α=inc-θ_l # rad planet-central anglesin

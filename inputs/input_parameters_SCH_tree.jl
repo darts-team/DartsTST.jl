@@ -20,43 +20,28 @@ target_pos_mode="grid" #  targets are defined as three 1D arrays forming either 
 ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene,  # if SCH, target and scene locations are defined relative to the point where look angle vector intersects the surface
 display_geometry_coord="SCH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
 look_angle=30 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
-if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
-    t_loc_1=-12:2:12 # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=0 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=4:1:15 # m  heights if LLH or SCH, Z if XYZ
-    t_ref=zeros(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
-    t_ref_2D=[0 0 0 0 0 0 3 0 0 0 0 0 0; #12 rows, 13 columns
-              0 0 0 0 0 3 2 2 0 0 0 0 0;
-              0 0 0 0 3 2 2 1 2 0 0 0 0;
-              0 0 0 0 3 2 1 1 1 2 0 0 0;
-              0 0 0 0 0 2 1 1 1 0 0 0 0;
-              0 0 0 0 0 2 1 1 0 0 0 0 0;
-              0 0 0 0 0 0 2 1 0 0 0 0 0;
-              0 0 0 0 0 0 2 1 0 0 0 0 0;
-              0 0 0 0 0 0 2 0 0 0 0 0 0;
-              0 0 0 0 0 0 2 0 0 0 0 0 0;
-              0 0 0 0 0 2 2 1 0 0 0 0 0;
-              4 4 4 4 4 3 3 3 2 2 2 2 2]
-    #t_ref[1,:,:]=t_ref_2D' #x-axis of table (columns) = 2nd dimension, y-axis of table (rows) = 3rd dimension, scene exists only at 1st point in 1st dimension
-    t_ref[:,1,:]=reverse(t_ref_2D',dims=2) #x-axis of table (columns) = 1st dimension, y-axis of table (rows) = 3rd dimension, scene exists only at 1st point in 2nd dimension
-elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are defined as 3xN array (useful for a few discrete targets)
-    # length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
-    #=t_loc_1=[ -5 -5   5  5 0  10   10 -10  -10  0  0] # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=[-60 60 -60 60 0 120 -120 120 -120  0  0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=[ 40 40  40 40 40 40   40  40   40  30 50] # m  heights if LLH or SCH, Z if XYZ=#
-    t_loc_1=[0]
-    t_loc_2=[0]
-    t_loc_3=[20]
-    t_ref=ones(length(t_loc_1)) # reflectivities
-end
+t_loc_1=-12:2:12 # deg latitude if LLH, along-track if SCH, X if XYZ
+t_loc_2=0 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+t_loc_3=4:1:15 # m  heights if LLH or SCH, Z if XYZ
+t_ref=zeros(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
+t_ref_2D=[0 0 0 0 0 0 3 0 0 0 0 0 0; #12 rows, 13 columns
+          0 0 0 0 0 3 2 2 0 0 0 0 0;
+          0 0 0 0 3 2 2 1 2 0 0 0 0;
+          0 0 0 0 3 2 1 1 1 2 0 0 0;
+          0 0 0 0 0 2 1 1 1 0 0 0 0;
+          0 0 0 0 0 2 1 1 0 0 0 0 0;
+          0 0 0 0 0 0 2 1 0 0 0 0 0;
+          0 0 0 0 0 0 2 1 0 0 0 0 0;
+          0 0 0 0 0 0 2 0 0 0 0 0 0;
+          0 0 0 0 0 0 2 0 0 0 0 0 0;
+          0 0 0 0 0 2 2 1 0 0 0 0 0;
+          4 4 4 4 4 3 3 3 2 2 2 2 2]
+#t_ref[1,:,:]=t_ref_2D' #x-axis of table (columns) = 2nd dimension, y-axis of table (rows) = 3rd dimension, scene exists only at 1st point in 1st dimension
+t_ref[:,1,:]=reverse(t_ref_2D',dims=2) #x-axis of table (columns) = 1st dimension, y-axis of table (rows) = 3rd dimension, scene exists only at 1st point in 2nd dimension
 # image/scene pixel coordinates
 s_loc_1=-20:1:20 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-10:10:10 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_2=0 # deg longitude if LLH, cross-track if SCH, Y if XYZ
 s_loc_3=0:0.5:25 # m  heights if LLH or SCH, Z if XYZ
-# s_loc_1=-10:.25:10 # deg latitude if LLH, along-track if SCH, X if XYZ
-# s_loc_2=-40:.5:40 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-# s_loc_3=  (-15:.25:15) .+ 40 # m  heights if LLH or SCH, Z if XYZ
-
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
@@ -71,3 +56,4 @@ display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
 display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
 display_input_scene=true # display input scene (targets) and delta between input/output scenes (3 slices at the center of scene) with same scene size as output tomogram scene
+include_antenna=false # whether to include projected antenna pattern

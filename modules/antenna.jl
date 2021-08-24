@@ -1,8 +1,10 @@
 module Antenna
 
+#external packages
 using LinearAlgebra
 using NCDatasets
 using Interpolations
+
 
 function pattern_sinc(sidelobe_dB,theta, hpbw)
    #     % Nino Majurec, May 23, 2019
@@ -282,8 +284,8 @@ function interpolate_pattern(ant::AntGrid, xyz::Array{Float64,}, freq::Float64=1
    az, el = xyz_to_azel(xyz)
 
    # make sure inputs are within the limits of the pattern
-   @assert minimum(el) >= minimum(ant.el) && maximum(el) <=maximum(ant.el) "Look vector array excceeds pattern elevation bounds"
-   @assert minimum(az) >= minimum(ant.az) && maximum(az) <=maximum(ant.az) "Look vector array excceeds pattern azimuth bounds"
+   #@assert minimum(el) >= minimum(ant.el) && maximum(el) <=maximum(ant.el) "Look vector array excceeds pattern elevation bounds"
+   #@assert minimum(az) >= minimum(ant.az) && maximum(az) <=maximum(ant.az) "Look vector array excceeds pattern azimuth bounds"
    @assert freq >= minimum(ant.freqs) && freq <=maximum(ant.freqs) "Frequency excceeds pattern bandwidth"
    if length(ant.freqs) == 1
       @assert ant.freqs[1] ≈ freq "Input antenna pattern doesn't match input frequency"
@@ -292,13 +294,17 @@ function interpolate_pattern(ant::AntGrid, xyz::Array{Float64,}, freq::Float64=1
    #interpolate the complex patterns
    if(length(ant.freqs)>1) #slightly different interpolator for a 3D pattern
       cpit = interpolate((ant.az, ant.el, ant.freqs), ant.copol, Gridded(Linear()));
+      cpit = extrapolate(cpit, 0);
       cpol = cpit.(az, el, freq);
       xpit = interpolate((ant.az, ant.el, ant.freqs), ant.xpol, Gridded(Linear()));
+      xpit = extrapolate(xpit, 0);
       xpol = xpit.(az, el, freq);
    else
       cpit = interpolate((ant.az, ant.el), ant.copol, Gridded(Linear()));
+      cpit = extrapolate(cpit, 0);
       cpol = cpit.(az, el);
       xpit = interpolate((ant.az, ant.el), ant.xpol, Gridded(Linear()));
+      xpit = extrapolate(xpit, 0);
       xpol = xpit.(az, el);
    end
 
@@ -320,8 +326,8 @@ function interpolate_pattern(ant::AntCuts, xyz::Array{Float64,}, freq::Float64=1
    az, el = xyz_to_azel(xyz)
 
    # make sure inputs are within the limits of the pattern
-   @assert minimum(el) >= minimum(ant.cut_el) && maximum(el) <=maximum(ant.cut_el) "Look vector array excceeds pattern elevation bounds"
-   @assert minimum(az) >= minimum(ant.cut_az) && maximum(az) <=maximum(ant.cut_az) "Look vector array excceeds pattern azimuth bounds"
+   #@assert minimum(el) >= minimum(ant.cut_el) && maximum(el) <=maximum(ant.cut_el) "Look vector array excceeds pattern elevation bounds"
+   #@assert minimum(az) >= minimum(ant.cut_az) && maximum(az) <=maximum(ant.cut_az) "Look vector array excceeds pattern azimuth bounds"
    @assert freq >= minimum(ant.freqs) && freq <=maximum(ant.freqs) "Frequency excceeds pattern bandwidth"
    if length(ant.freqs) == 1
       @assert ant.freqs[1] ≈ freq "Input antenna pattern doesn't match input frequency"
@@ -335,8 +341,10 @@ function interpolate_pattern(ant::AntCuts, xyz::Array{Float64,}, freq::Float64=1
       mag = maximum(abs.(ant.az_copol));
       #interpolate azimuth and elevation separately
       azcpit = interpolate((ant.cut_az[azsort], ant.freqs), ant.az_copol[azsort,:], Gridded(Linear()));
+      azcpit = extrapolate(azcpit, 0);
       azcpol = azcpit.(az, freq);
       elcpit = interpolate((ant.cut_el, ant.freqs), ant.el_copol./mag, Gridded(Linear())); #elevation is normalized
+      elcpit = extrapolate(elcpit, 0);
       elcpol = elcpit.(el, freq);
       #combine elevation and azimuth
       cpol   = azcpol.*elcpol;
@@ -355,5 +363,4 @@ function interpolate_pattern(ant::AntCuts, xyz::Array{Float64,}, freq::Float64=1
    return cpol
 end
 
-
-end
+end #end module
