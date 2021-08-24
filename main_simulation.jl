@@ -113,7 +113,7 @@ if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when th
     else
         PSF_metrics=true
         target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
-        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point) # resolutions in each of the 3 axes
+        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point,PSF_cuts,PSF_direction_xyz) # resolutions in each of the 3 axes
     end
 else
     PSF_metrics=false

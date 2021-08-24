@@ -1,32 +1,44 @@
 module Performance_Metrics
 using Plots
 using Statistics
+using Interpolations
 
 #TODO add function definitions, comments, define input types
-function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
-    image_1D_1,image_1D_2,image_1D_3=obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
-    if length(image_1D_1)>1
-        scene_res1=scene_axis1[2]-scene_axis1[1] # scene resolution along the 1st axis
-        res_1,res_ind_1,res_ind_2=resolution_1D(image_1D_1,scene_res1,res_dB)
-        PSLR_1,ISLR_1=sidelobe_1D(image_1D_1,1,res_ind_1,res_ind_2)
-        loc_error_1=location_error(image_1D_1,target_location[1],scene_axis1)
-    else;res_1=NaN;PSLR_1=NaN;ISLR_1=NaN;loc_error_1=NaN;end
-    if length(image_1D_2)>1
-        scene_res2=scene_axis2[2]-scene_axis2[1] # scene resolution along the 2nd axis
-        res_2,res_ind_1,res_ind_2=resolution_1D(image_1D_2,scene_res2,res_dB)
-        PSLR_2,ISLR_2=sidelobe_1D(image_1D_2,2,res_ind_1,res_ind_2)
-        loc_error_2=location_error(image_1D_2,target_location[2],scene_axis2)
-    else;res_2=NaN;PSLR_2=NaN;ISLR_2=NaN;loc_error_2=NaN;end
-    if length(image_1D_3)>1
-        scene_res3=scene_axis3[2]-scene_axis3[1] # scene resolution along the 3rd axis
-        res_3,res_ind_1,res_ind_2=resolution_1D(image_1D_3,scene_res3,res_dB)
-        PSLR_3,ISLR_3=sidelobe_1D(image_1D_3,3,res_ind_1,res_ind_2)
-        loc_error_3=location_error(image_1D_3,target_location[3],scene_axis3)
-    else;res_3=NaN;PSLR_3=NaN;ISLR_3=NaN;loc_error_3=NaN;end
-    resolutions=[res_1,res_2,res_3]
-    PSLRs=[PSLR_1,PSLR_2,PSLR_3]
-    ISLRs=[ISLR_1,ISLR_2,ISLR_3]
-    loc_errors=[loc_error_1,loc_error_2,loc_error_3]
+function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target,PSF_cuts,PSF_direction_xyz)
+    if PSF_cuts==1
+        image_1D_1,image_1D_2,image_1D_3=obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
+        if length(image_1D_1)>1
+            scene_res1=scene_axis1[2]-scene_axis1[1] # scene resolution along the 1st axis
+            res_1,res_ind_1,res_ind_2=resolution_1D(image_1D_1,scene_res1,res_dB)
+            PSLR_1,ISLR_1=sidelobe_1D(image_1D_1,1,res_ind_1,res_ind_2)
+            loc_error_1=location_error(image_1D_1,target_location[1],scene_axis1)
+        else;res_1=NaN;PSLR_1=NaN;ISLR_1=NaN;loc_error_1=NaN;end
+        if length(image_1D_2)>1
+            scene_res2=scene_axis2[2]-scene_axis2[1] # scene resolution along the 2nd axis
+            res_2,res_ind_1,res_ind_2=resolution_1D(image_1D_2,scene_res2,res_dB)
+            PSLR_2,ISLR_2=sidelobe_1D(image_1D_2,2,res_ind_1,res_ind_2)
+            loc_error_2=location_error(image_1D_2,target_location[2],scene_axis2)
+        else;res_2=NaN;PSLR_2=NaN;ISLR_2=NaN;loc_error_2=NaN;end
+        if length(image_1D_3)>1
+            scene_res3=scene_axis3[2]-scene_axis3[1] # scene resolution along the 3rd axis
+            res_3,res_ind_1,res_ind_2=resolution_1D(image_1D_3,scene_res3,res_dB)
+            PSLR_3,ISLR_3=sidelobe_1D(image_1D_3,3,res_ind_1,res_ind_2)
+            loc_error_3=location_error(image_1D_3,target_location[3],scene_axis3)
+        else;res_3=NaN;PSLR_3=NaN;ISLR_3=NaN;loc_error_3=NaN;end
+        resolutions=[res_1,res_2,res_3]
+        PSLRs=[PSLR_1,PSLR_2,PSLR_3]
+        ISLRs=[ISLR_1,ISLR_2,ISLR_3]
+        loc_errors=[loc_error_1,loc_error_2,loc_error_3]
+    end
+    if PSF_cuts==2
+        image_1D,scene_axis2_int,scene_axis3_int=obtain_1D_slice_xyz(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
+        if length(image_1D)>1
+            scene_res=((scene_axis1[2]-scene_axis1[1])^2+(scene_axis2_int[2]-scene_axis2_int[1])^2+(scene_axis3_int[2]-scene_axis3_int[1])^2)^0.5 # scene resolution along the PSF direction
+            resolutions,res_ind_1,res_ind_2=resolution_1D(image_1D,scene_res,res_dB)
+            PSLRs,ISLRs=sidelobe_1D(image_1D,1,res_ind_1,res_ind_2)
+            loc_errors=NaN
+        else;resolutions=NaN;PSLRs=NaN;ISLRs=NaN;loc_errors=NaN;end
+    end
     return resolutions,PSLRs,ISLRs,loc_errors
 end
 
@@ -37,6 +49,19 @@ function relative_radiometric_accuracy(inputscene_3D,image_3D)
     mean_diff_image=mean(diff_image3D)
     std_diff_image=std(diff_image3D)
     return diff_image3D,mean_diff_image,std_diff_image
+end
+
+function obtain_1D_slice_xyz(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
+    Ns_1=length(scene_axis1);Ns_2=length(scene_axis2);Ns_3=length(scene_axis3)
+    slice_index1=Int(ceil(Ns_1/2));slice_index2=Int(ceil(Ns_2/2));slice_index3=Int(ceil(Ns_3/2))
+    x1=scene_axis1[slice_index1];y1=scene_axis2[slice_index2];z1=scene_axis3[slice_index3]
+    x2=PSF_direction_xyz[1];y2=PSF_direction_xyz[2];z2=PSF_direction_xyz[3]
+    # 3D line equation: (x-x1)/(x2-x1)=(y-y1)/(y2-y1)=(z-z1)/(z2-z1)
+    scene_axis2_int=(scene_axis1-x1)*(y2-y1)/(x2-x1)+y1
+    scene_axis3_int=(scene_axis1-x1)*(z2-z1)/(x2-x1)+z1
+    itp=interpolate(image_3D,BSpline(Linear()))
+    image_1D=itp(scene_axis1,scene_axis2_int,scene_axis3_int)
+    return image_1D,scene_axis2_int,scene_axis3_int
 end
 
 function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
