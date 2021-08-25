@@ -26,9 +26,9 @@ t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
 t_loc_3=[0] # m  heights if LLH or SCH, Z if XYZ
 t_ref=  [1] # reflectivities
 # image/scene pixel coordinates
-s_loc_1=earth_radius-50:1:earth_radius+50 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-300:1:300 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=-60:1:60 # m  heights if LLH or SCH, Z if XYZ
+s_loc_1=earth_radius-3:0.1:earth_radius+3 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2=-310:2:310 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=-54:2:52 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
 Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
@@ -37,7 +37,7 @@ bandwidth=40e6 # bandwidth (Hz)
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
 PSF_image_point=1 # 1: peak location, 2: target location, 3: center of 3D scene
 PSF_cuts=2 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz shown in xyz TODO (works only if scene is defined in XYZ, SCH/LLH to be added)
-PSF_direction_xyz=[1 1 1] # direction to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2)
+PSF_direction_xyz=[0.01 1 1/6] # direction relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2)
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable

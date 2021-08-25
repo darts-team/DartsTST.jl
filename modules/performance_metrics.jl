@@ -31,9 +31,9 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
         loc_errors=[loc_error_1,loc_error_2,loc_error_3]
     end
     if PSF_cuts==2
-        image_1D,scene_axis2_int,scene_axis3_int=obtain_1D_slice_xyz(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
+        image_1D,scene_axis11,scene_axis22,scene_axis33=obtain_1D_slice_xyz(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
         if length(image_1D)>1
-            scene_res=((scene_axis1[2]-scene_axis1[1])^2+(scene_axis2_int[2]-scene_axis2_int[1])^2+(scene_axis3_int[2]-scene_axis3_int[1])^2)^0.5 # scene resolution along the PSF direction
+            scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
             resolutions,res_ind_1,res_ind_2=resolution_1D(image_1D,scene_res,res_dB)
             PSLRs,ISLRs=sidelobe_1D(image_1D,1,res_ind_1,res_ind_2)
             loc_errors=NaN
@@ -54,14 +54,31 @@ end
 function obtain_1D_slice_xyz(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
     Ns_1=length(scene_axis1);Ns_2=length(scene_axis2);Ns_3=length(scene_axis3)
     slice_index1=Int(ceil(Ns_1/2));slice_index2=Int(ceil(Ns_2/2));slice_index3=Int(ceil(Ns_3/2))
-    x1=scene_axis1[slice_index1];y1=scene_axis2[slice_index2];z1=scene_axis3[slice_index3]
+    xc=scene_axis1[slice_index1];yc=scene_axis2[slice_index2];zc=scene_axis3[slice_index3]
+    x1=0;y1=0;z1=0;
     x2=PSF_direction_xyz[1];y2=PSF_direction_xyz[2];z2=PSF_direction_xyz[3]
     # 3D line equation: (x-x1)/(x2-x1)=(y-y1)/(y2-y1)=(z-z1)/(z2-z1)
-    scene_axis2_int=(scene_axis1-x1)*(y2-y1)/(x2-x1)+y1
-    scene_axis3_int=(scene_axis1-x1)*(z2-z1)/(x2-x1)+z1
+    scene_axis10=scene_axis1.-xc
+    scene_axis20=scene_axis2.-yc
+    scene_axis30=scene_axis3.-zc
+    scene_axis1_int=scene_axis10
+    scene_axis2_int=(scene_axis1_int.-x1)*(y2-y1)/(x2-x1).+y1
+    scene_axis3_int=(scene_axis1_int.-x1)*(z2-z1)/(x2-x1).+z1
+    scene_axis1_ind=(scene_axis1_int.-scene_axis10[1])/(scene_axis10[2]-scene_axis10[1]).+1
+    scene_axis2_ind=(scene_axis2_int.-scene_axis20[1])/(scene_axis20[2]-scene_axis20[1]).+1
+    scene_axis3_ind=(scene_axis3_int.-scene_axis30[1])/(scene_axis30[2]-scene_axis30[1]).+1
     itp=interpolate(image_3D,BSpline(Linear()))
-    image_1D=itp(scene_axis1,scene_axis2_int,scene_axis3_int)
-    return image_1D,scene_axis2_int,scene_axis3_int
+    image_1D=zeros(Float64,length(scene_axis1_ind))
+    for i=1:length(scene_axis1_ind)
+        image_1D[i]=itp(scene_axis1_ind[i],scene_axis2_ind[i],scene_axis3_ind[i])
+    end
+    scene_axis11=scene_axis1_int.+xc
+    scene_axis22=scene_axis2_int.+yc
+    scene_axis33=scene_axis3_int.+zc
+    scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
+    scene_axis=(0:scene_res:(length(scene_axis1_ind)-1)*scene_res).-(length(scene_axis1_ind)-1)*scene_res/2
+    display(plot(scene_axis,20*log10.(image_1D),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the PSF along specified direction
+    return image_1D,scene_axis11,scene_axis22,scene_axis33
 end
 
 function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
