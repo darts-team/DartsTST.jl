@@ -4,7 +4,7 @@ using JLD2, Plots, SharedArrays, StatsPlots, PyCall, Statistics
 # define a couple functions to filter NaNs and make plots
 function filterNaNs2D(vals)
   #this function filters out the NaNs, but returns an array of vectors. Unfortunately, not helpful for plotting boxplots.
-  
+  np = pyimport("numpy")
   mask = np.isnan(vals) # finds NaNs
   mask = [!i for i in mask] # find non-nan indices
   
@@ -37,10 +37,9 @@ end#function
 # run the rest of the code, calling an input .jld2 file with the monte carlo data stored
 begin 
   
-  filename = "sync data/syncModule_MonteCarlo_mode_2_USO_sync_pri_sweep_wFreq.jld2"# this uses sync_data/*, a folder which isn't used on the master branch
+  # filename = "sync data/syncModule_MonteCarlo_mode_2_USO_sync_pri_sweep_wFreq.jld2"# this uses sync_data/*, a folder which isn't used on the master branch
   # filename = "sync data/syncModule_MonteCarlo_mode_2_USO_NOsync_pri_sweep_noFreq.jld2"
-# filename = "sync data/syncModule_MonteCarlo_mode_2_USO_sync_pri_sweep_noFreq.jld2"
-
+  filename = "sync data/syncModule_MonteCarlo_mode_2_USO_sync_pri_sweep_noFreq.jld2"
   
   @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs
   
