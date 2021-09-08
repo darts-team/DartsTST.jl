@@ -31,13 +31,10 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
         loc_errors=[loc_error_1,loc_error_2,loc_error_3]
     end
     if PSF_cuts==2
-        image_1D,scene_axis11,scene_axis22,scene_axis33=obtain_1D_slice_xyz(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
-        if length(image_1D)>1
-            scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
-            resolutions,res_ind_1,res_ind_2=resolution_1D(image_1D,scene_res,res_dB)
-            PSLRs,ISLRs=sidelobe_1D(image_1D,1,res_ind_1,res_ind_2)
-            loc_errors=NaN
-        else;resolutions=NaN;PSLRs=NaN;ISLRs=NaN;loc_errors=NaN;end
+        image_1D,scene_res=obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
+        resolutions,res_ind_1,res_ind_2=resolution_1D(image_1D,scene_res,res_dB)
+        PSLRs,ISLRs=sidelobe_1D(image_1D,1,res_ind_1,res_ind_2)
+        loc_errors=NaN
     end
     return resolutions,PSLRs,ISLRs,loc_errors
 end
@@ -51,26 +48,51 @@ function relative_radiometric_accuracy(inputscene_3D,image_3D)
     return diff_image3D,mean_diff_image,std_diff_image
 end
 
-function obtain_1D_slice_xyz(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
+function obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction)
     Ns_1=length(scene_axis1);Ns_2=length(scene_axis2);Ns_3=length(scene_axis3)
     slice_index1=Int(ceil(Ns_1/2));slice_index2=Int(ceil(Ns_2/2));slice_index3=Int(ceil(Ns_3/2))
     xc=scene_axis1[slice_index1];yc=scene_axis2[slice_index2];zc=scene_axis3[slice_index3]
-    x1=0;y1=0;z1=0;
-    x2=PSF_direction_xyz[1];y2=PSF_direction_xyz[2];z2=PSF_direction_xyz[3]
-    # 3D line equation: (x-x1)/(x2-x1)=(y-y1)/(y2-y1)=(z-z1)/(z2-z1)
+    x2=PSF_direction[1];y2=PSF_direction[2];z2=PSF_direction[3]
+    # 3D line equation: (x-x1)/(x2-x1)=(y-y1)/(y2-y1)=(z-z1)/(z2-z1) and x1=0;y1=0;z1=0 is the origin at center of scene
     scene_axis10=scene_axis1.-xc
     scene_axis20=scene_axis2.-yc
     scene_axis30=scene_axis3.-zc
-    scene_axis1_int=scene_axis10
-    scene_axis2_int=(scene_axis1_int.-x1)*(y2-y1)/(x2-x1).+y1
-    scene_axis3_int=(scene_axis1_int.-x1)*(z2-z1)/(x2-x1).+z1
-    scene_axis1_ind=(scene_axis1_int.-scene_axis10[1])/(scene_axis10[2]-scene_axis10[1]).+1
-    scene_axis2_ind=(scene_axis2_int.-scene_axis20[1])/(scene_axis20[2]-scene_axis20[1]).+1
-    scene_axis3_ind=(scene_axis3_int.-scene_axis30[1])/(scene_axis30[2]-scene_axis30[1]).+1
-    itp=interpolate(image_3D,BSpline(Linear()))
+    if x2!=0
+        scene_axis1_int=scene_axis10
+        scene_axis2_int=scene_axis1_int*(y2/x2)
+        scene_axis3_int=scene_axis1_int*(z2/x2)
+    elseif y2!=0
+        scene_axis2_int=scene_axis20
+        scene_axis1_int=scene_axis2_int*(x2/y2)
+        scene_axis3_int=scene_axis2_int*(z2/y2)
+    elseif z2!=0
+        scene_axis3_int=scene_axis30
+        scene_axis1_int=scene_axis3_int*(x2/z2)
+        scene_axis2_int=scene_axis3_int*(y2/z2)
+    else;println("The PSF direction relative to center/origin cannot be [0,0,0]!");end
+    if Ns_1>1;scene_axis1_ind=round.(Int64,(scene_axis1_int.-scene_axis10[1])/(scene_axis10[2]-scene_axis10[1]).+1);else;image=dropdims(image_3D,dims=1);end
+    if Ns_2>1;scene_axis2_ind=round.(Int64,(scene_axis2_int.-scene_axis20[1])/(scene_axis20[2]-scene_axis20[1]).+1);else;image=dropdims(image_3D,dims=2);end
+    if Ns_3>1;scene_axis3_ind=round.(Int64,(scene_axis3_int.-scene_axis30[1])/(scene_axis30[2]-scene_axis30[1]).+1);else;image=dropdims(image_3D,dims=3);end
+    itp=interpolate(image,BSpline(Linear()))
     image_1D=zeros(Float64,length(scene_axis1_ind))
-    for i=1:length(scene_axis1_ind)
-        image_1D[i]=itp(scene_axis1_ind[i],scene_axis2_ind[i],scene_axis3_ind[i])
+    for i=1:length(scene_axis1_int)
+        if Ns_1>1 && Ns_2>1 && Ns_3>1
+            if scene_axis1_ind[i]>0 && scene_axis1_ind[i]<=Ns_1 && scene_axis2_ind[i]>0 && scene_axis2_ind[i]<=Ns_2 && scene_axis3_ind[i]>0 && scene_axis3_ind[i]<=Ns_3
+                image_1D[i]=itp(scene_axis1_ind[i],scene_axis2_ind[i],scene_axis3_ind[i])
+            else;image_1D[i]=NaN;end
+        elseif Ns_1==1
+            if scene_axis2_ind[i]>0 && scene_axis2_ind[i]<=Ns_2 && scene_axis3_ind[i]>0 && scene_axis3_ind[i]<=Ns_3
+                image_1D[i]=itp(scene_axis2_ind[i],scene_axis3_ind[i])
+            else;image_1D[i]=NaN;end
+        elseif Ns_2==1
+            if scene_axis1_ind[i]>0 && scene_axis1_ind[i]<=Ns_1 && scene_axis3_ind[i]>0 && scene_axis3_ind[i]<=Ns_3
+                image_1D[i]=itp(scene_axis1_ind[i],scene_axis3_ind[i])
+            else;image_1D[i]=NaN;end
+        elseif Ns_3==1
+            if scene_axis2_ind[i]>0 && scene_axis2_ind[i]<=Ns_2 && scene_axis1_ind[i]>0 && scene_axis1_ind[i]<=Ns_1
+                image_1D[i]=itp(scene_axis1_ind[i],scene_axis2_ind[i])
+            else;image_1D[i]=NaN;end
+        end
     end
     scene_axis11=scene_axis1_int.+xc
     scene_axis22=scene_axis2_int.+yc
@@ -78,7 +100,9 @@ function obtain_1D_slice_xyz(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_di
     scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
     scene_axis=(0:scene_res:(length(scene_axis1_ind)-1)*scene_res).-(length(scene_axis1_ind)-1)*scene_res/2
     display(plot(scene_axis,20*log10.(image_1D),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the PSF along specified direction
-    return image_1D,scene_axis11,scene_axis22,scene_axis33
+    NaN_ind=findall(image_1D==NaN)
+    image_1D=deleteat!(vec(image_1D),findall(isnan,vec(image_1D)))
+    return image_1D,scene_res
 end
 
 function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)

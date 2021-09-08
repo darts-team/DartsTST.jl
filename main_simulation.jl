@@ -5,7 +5,8 @@ include("modules/scene.jl")
 #include("inputs/input_parameters_SCH_tree.jl")
 #include("inputs/input_parameters_antenna_pattern_grid.jl")
 #include("inputs/input_parameters_CR_nadirlooking.jl")
-include("inputs/input_parameters_CR_slantlooking.jl")
+#include("inputs/input_parameters_CR_slantlooking.jl")
+include("inputs/input_parameters_CR_nadirlooking_tiltedcuts.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
@@ -34,6 +35,7 @@ Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
 targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
 s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loops
+if ts_coord_sys=="XYZ" || ts_coord_sys=="LLH";look_angle=[];end
 #t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,look_angle,earth_radius,earth_eccentricity) ## calculate avg heading from platform positions
 t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,orbit_vel,look_angle,earth_radius,earth_eccentricity) # calculate avg heading from platform velocities
 ## TARGET REFLECTIVITIES
@@ -113,7 +115,8 @@ if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when th
     else
         PSF_metrics=true
         target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
-        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point,PSF_cuts,PSF_direction_xyz) # resolutions in each of the 3 axes
+        #include("modules/performance_metrics.jl")
+        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point,PSF_cuts,PSF_direction) # resolutions in each of the 3 axes
     end
 else
     PSF_metrics=false
