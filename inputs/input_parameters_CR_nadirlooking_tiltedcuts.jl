@@ -17,15 +17,15 @@ SAR_duration=2 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target/scene locations and target reflectvities
 target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
-ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
-display_geometry_coord="SCH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
+ts_coord_sys="XYZ" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
+display_geometry_coord="LLH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
 # length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
 if ts_coord_sys=="XYZ"
     t_loc_1=[earth_radius] # deg latitude if LLH, along-track if SCH, X if XYZ
     t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
     t_loc_3=[0] # m  heights if LLH or SCH, Z if XYZ
     t_ref=  [1] # reflectivities
-    s_loc_1=earth_radius-5:5:earth_radius+5 # deg latitude if LLH, along-track if SCH, X if XYZ
+    s_loc_1=earth_radius # deg latitude if LLH, along-track if SCH, X if XYZ
     s_loc_2=-350:2:350 # deg longitude if LLH, cross-track if SCH, Y if XYZ
     s_loc_3=-54:0.2:54 # m  heights if LLH or SCH, Z if XYZ
     PSF_direction=[0 13 2] # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored
@@ -38,7 +38,7 @@ elseif ts_coord_sys=="SCH"
     s_loc_2=-610:5:610 # deg longitude if LLH, cross-track if SCH, Y if XYZ
     s_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
     look_angle=0 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
-    PSF_direction=[0 1 0] # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored
+    PSF_direction=[20 610 0] # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored
 elseif ts_coord_sys=="LLH"
     t_loc_1=[0] # deg latitude if LLH, along-track if SCH, X if XYZ
     t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
@@ -46,7 +46,7 @@ elseif ts_coord_sys=="LLH"
     t_ref=  [1] # reflectivities
     s_loc_1=-0.0004:0.000005:0.0004 # deg latitude if LLH, along-track if SCH, X if XYZ
     s_loc_2=-0.0029:0.000025:0.0029 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    s_loc_3=-5:5:5 # m  heights if LLH or SCH, Z if XYZ
+    s_loc_3=0 # m  heights if LLH or SCH, Z if XYZ
     PSF_direction=[1 7 0] # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored
 end
 # range spread function (RSF) parameters

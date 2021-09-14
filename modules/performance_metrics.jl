@@ -70,11 +70,11 @@ function obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF
         scene_axis1_int=scene_axis3_int*(x2/z2)
         scene_axis2_int=scene_axis3_int*(y2/z2)
     else;println("The PSF direction relative to center/origin cannot be [0,0,0]!");end
-    if Ns_1>1;scene_axis1_ind=round.(Int64,(scene_axis1_int.-scene_axis10[1])/(scene_axis10[2]-scene_axis10[1]).+1);else;image=dropdims(image_3D,dims=1);end
-    if Ns_2>1;scene_axis2_ind=round.(Int64,(scene_axis2_int.-scene_axis20[1])/(scene_axis20[2]-scene_axis20[1]).+1);else;image=dropdims(image_3D,dims=2);end
-    if Ns_3>1;scene_axis3_ind=round.(Int64,(scene_axis3_int.-scene_axis30[1])/(scene_axis30[2]-scene_axis30[1]).+1);else;image=dropdims(image_3D,dims=3);end
-    itp=interpolate(image,BSpline(Linear()))
-    image_1D=zeros(Float64,length(scene_axis1_ind))
+    if Ns_1>1;scene_axis1_ind=round.(Int64,(scene_axis1_int.-scene_axis10[1])/(scene_axis10[2]-scene_axis10[1]).+1);else;image_3D=dropdims(image_3D,dims=1);end
+    if Ns_2>1;scene_axis2_ind=round.(Int64,(scene_axis2_int.-scene_axis20[1])/(scene_axis20[2]-scene_axis20[1]).+1);else;image_3D=dropdims(image_3D,dims=2);end
+    if Ns_3>1;scene_axis3_ind=round.(Int64,(scene_axis3_int.-scene_axis30[1])/(scene_axis30[2]-scene_axis30[1]).+1);else;image_3D=dropdims(image_3D,dims=3);end
+    itp=interpolate(image_3D,BSpline(Linear()))
+    image_1D=zeros(Float64,length(scene_axis1_int))
     for i=1:length(scene_axis1_int)
         if Ns_1>1 && Ns_2>1 && Ns_3>1
             if scene_axis1_ind[i]>0 && scene_axis1_ind[i]<=Ns_1 && scene_axis2_ind[i]>0 && scene_axis2_ind[i]<=Ns_2 && scene_axis3_ind[i]>0 && scene_axis3_ind[i]<=Ns_3
@@ -98,7 +98,7 @@ function obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF
     scene_axis22=scene_axis2_int.+yc
     scene_axis33=scene_axis3_int.+zc
     scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
-    scene_axis=(0:scene_res:(length(scene_axis1_ind)-1)*scene_res).-(length(scene_axis1_ind)-1)*scene_res/2
+    scene_axis=(0:scene_res:(length(scene_axis1_int)-1)*scene_res).-(length(scene_axis1_int)-1)*scene_res/2
     display(plot(scene_axis,20*log10.(image_1D),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the PSF along specified direction
     NaN_ind=findall(image_1D==NaN)
     image_1D=deleteat!(vec(image_1D),findall(isnan,vec(image_1D)))
