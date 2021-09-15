@@ -86,7 +86,7 @@ end
 
 
 "compute DCM to convert ECI to ECEF based on epoch and IERS EOP data"
-function eci_dcm(time::Array{Float32,1}, epoch::DateTime, eop_data)
+function eci_dcm(time, epoch::DateTime, eop_data)
     dcm = zeros(3,3,length(time))
     for ii = 1:length(time)
           dt = unix2datetime(datetime2unix(epoch)+time[ii]);
@@ -96,7 +96,7 @@ function eci_dcm(time::Array{Float32,1}, epoch::DateTime, eop_data)
 end
 
 "compute DCM to convert ECI to ECEF based on epoch"
-function eci_dcm(time::Array{Float32,1}, epoch::DateTime)
+function eci_dcm(time, epoch::DateTime)
     eop_data = get_iers_eop();
     dcm = zeros(3,3,length(time))
     for ii = 1:length(time)

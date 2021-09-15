@@ -4,8 +4,8 @@ include("modules/geometry.jl")
 include("modules/scene.jl")
 #include("inputs/input_parameters_SCH_tree.jl")
 #include("inputs/input_parameters_antenna_pattern_grid.jl")
-#include("inputs/input_parameters_CR_nadirlooking.jl")
-include("inputs/input_parameters_CR_slantlooking.jl")
+include("inputs/input_parameters_CR_nadirlooking.jl")
+#include("inputs/input_parameters_CR_slantlooking.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
@@ -15,6 +15,7 @@ include("modules/antenna.jl")
 include("modules/simsetup.jl")
 using NCDatasets
 using Statistics
+using Dates
 ## PLATFORM LOCATIONS and HEADINGS
 orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
 t12_orbits=orbit_dataset["time"][1:2] # first two time samples
@@ -23,7 +24,13 @@ orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_
 orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
 orbit_pos_ECI=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
 orbit_vel_ECI=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
-dcm=orbit_dataset["dcm"];
+try #does file have dcm already?
+    global dcm=orbit_dataset["dcm"];
+catch #if not generate from Orbits
+    dv = orbit_dataset.attrib["epoch"];
+    local epoch = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
+    global dcm = Orbits.eci_dcm(orbit_time, epoch);
+end
 orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
 orbit_vel=orbit_vel_ECI #; orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF TODO velocity conversion function not ready yet
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
