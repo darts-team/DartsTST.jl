@@ -37,6 +37,7 @@ bandwidth=40e6 # bandwidth (Hz)
 # performance metrics
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
 PSF_image_point=1 # 1: peak location, 2: target location, 3: center of 3D scene
+PSF_cuts=1 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable

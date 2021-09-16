@@ -12,7 +12,8 @@ fc=1.25e9 # center frequency (Hz) L-band
 fp=10 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz taken from orbits (including slow-time)
-orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
+#orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
+orbit_filename="orbit_output_062021.nc" # position in km, time in sec
 SAR_duration=2 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations and reflectvities
@@ -44,6 +45,7 @@ bandwidth=40e6 # bandwidth (Hz)
 # performance metrics
 res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
 PSF_image_point=1 # 1: peak location, 2: target location, 3: center of 3D scene
+PSF_cuts=1 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
