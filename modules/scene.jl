@@ -36,9 +36,10 @@ Generate Input Target Scene in 3D (scene limited by input scene arrays)
 function generate_input_scene_3D(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,targets_ref,Nt,target_pos_mode)
     inputscene_3D=zeros(length(s_loc_1),length(s_loc_2),length(s_loc_3))
     # TODO check if target is inside the scene. gives error if target is outside the scene.
-    if length(s_loc_1)>1;ind_1=round.(Int64,(t_loc_1.-s_loc_1[1])/(s_loc_1[2]-s_loc_1[1]).+1);else;ind_1=1;end
-    if length(s_loc_2)>1;ind_2=round.(Int64,(t_loc_2.-s_loc_2[1])/(s_loc_2[2]-s_loc_2[1]).+1);else;ind_2=1;end
-    if length(s_loc_3)>1;ind_3=round.(Int64,(t_loc_3.-s_loc_3[1])/(s_loc_3[2]-s_loc_3[1]).+1);else;ind_3=1;end
+    ind_1=Int.(ones(Nt,1));ind_2=Int.(ones(Nt,1));ind_3=Int.(ones(Nt,1))
+    if length(s_loc_1)>1;ind_1=round.(Int64,(t_loc_1.-s_loc_1[1])/(s_loc_1[2]-s_loc_1[1]).+1);else;end
+    if length(s_loc_2)>1;ind_2=round.(Int64,(t_loc_2.-s_loc_2[1])/(s_loc_2[2]-s_loc_2[1]).+1);else;;end
+    if length(s_loc_3)>1;ind_3=round.(Int64,(t_loc_3.-s_loc_3[1])/(s_loc_3[2]-s_loc_3[1]).+1);else;end
     if target_pos_mode=="grid" # TODO check if there are targets outside the scene
         ind_3xN=Int64.(Scene.form3Dgrid_for(ind_1,ind_2,ind_3))
         for i=1:Nt
@@ -199,7 +200,7 @@ rg: ground ranges to the targets
 """
 function groundrange_to_lookangle(ra,rg,p_h) # # target height is assumed 0 TODO add target height
   α=rg/ra # rad planet-central angle
-  rs=(((ra+p_h)*sind.(α)).^2+((ra+p_h).*cosd.(α)-ra).^2).^0.5 # slant range
+  rs=(((ra+p_h)*sin.(α)).^2+((ra+p_h).*cos.(α)-ra).^2).^0.5 # slant range
   θ_l=acos.((rs.^2+(ra+p_h).^2-ra^2)./(2*rs.*(ra+p_h))) # rad look angle
   return rs,θ_l*180/pi
 end
