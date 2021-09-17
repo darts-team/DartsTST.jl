@@ -6,7 +6,8 @@ include("modules/scene.jl")
 #include("inputs/input_parameters_antenna_pattern_grid.jl")
 #include("inputs/input_parameters_CR_nadirlooking.jl")
 #include("inputs/input_parameters_CR_slantlooking.jl")
-include("inputs/input_parameters_CR_nadirlooking_tiltedcuts.jl")
+#include("inputs/input_parameters_CR_nadirlooking_tiltedcuts.jl")
+include("inputs/input_parameters_CRs_cross.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
@@ -153,6 +154,6 @@ if display_geometry || display_RSF_rawdata || display_input_scene || display_tom
         Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt)
     end
     if display_input_scene;Plotting.plot_input_scene(inputscene_3D,s_loc_1,s_loc_2,s_loc_3,ts_coord_txt);end
-    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,ts_coord_txt);end
+    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,ts_coord_txt,mode);end
     if display_input_scene;Plotting.plot_input_scene(diff_image3D,s_loc_1,s_loc_2,s_loc_3,ts_coord_txt);end
 end

@@ -55,12 +55,14 @@ function plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,coords) #TODO smar
     display(scatter!(s_loc[1,:],s_loc[2,:],s_loc[3,:],markersize=0.3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Platforms and Targets and Scene")) #display grid in 3D
 end
 
-function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,coords)
+function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,coords,mode)
+    image_3D=image_3D/maximum(image_3D)
     brightest=maximum(image_3D)
     faintest=minimum(image_3D)
     Ns_1=length(s_loc_1)
     Ns_2=length(s_loc_2)
     Ns_3=length(s_loc_3)
+    if mode==1;mode_txt="SAR-SISO";elseif mode==2;mode_txt="SIMO";elseif mode==3;mode_txt="MIMO";end
     if display_tomograms==1
         gr()
         if PSF_image_point==3 # center of scene
@@ -77,9 +79,14 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_lo
             k2=findall(t_loc_2 .==s_loc_2);k2=k2[1]
             k3=findall(t_loc_3 .==s_loc_3);k3=k3[1]
         end
-        if Ns_2>1 && Ns_3>1;display(heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',ylabel=coords[3],xlabel=coords[2],title="2D Image at Loc-1="*string(s_loc_1[k1]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200)));end #aspect_ratio=:equal
-        if Ns_1>1 && Ns_3>1;display(heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',ylabel=coords[3],xlabel=coords[1],title="2D Image at Loc-2="*string(s_loc_2[k2]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200)));end #aspect_ratio=:equal
-        if Ns_1>1 && Ns_2>1;display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],ylabel=coords[1],xlabel=coords[2],title="2D Image at Loc-3="*string(s_loc_3[k3]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200)));end #aspect_ratio=:equal
+        col=[:black,:yellow,:red]
+        psize=(900,900)
+        if Ns_2>1 && Ns_3>1;display(heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
+            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));savefig("image_responses/tomogram_"*mode_txt*".png");end #title="2D Image at Loc-1="*string(s_loc_1[k1])
+        if Ns_1>1 && Ns_3>1;display(heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[1]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
+            c=:thermal,xticks=s_loc_1[1]:10:s_loc_1[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));savefig("image_responses/tomogram_"*mode_txt*".png");end #title="2D Image at Loc-2="*string(s_loc_2[k2])
+        if Ns_1>1 && Ns_2>1;display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[1]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
+            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_1[1]:10:s_loc_1[end],clims=(faintest,brightest),size=psize));savefig("image_responses/tomogram_"*mode_txt*".png");end #title="2D Image at Loc-3="*string(s_loc_3[k3])
     elseif display_tomograms==2
         gr()
         for k=1:Ns_3 # height slices from the scene
