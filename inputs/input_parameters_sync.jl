@@ -9,13 +9,13 @@ sync_pri = .1 # (s) repetition interval of sync
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length
-sync_fc = 1e9 # waveform center frequency
+sync_fc = 1.25e9 # waveform center frequency
 sync_fs = 25e6; # sync receiver sampling rate
 sync_fbw = sync_fs # LFM bandwidth
 
-osc_type = "USO" # putting a oscillator type variable here to auto-name save files
+# osc_type = "USO" # putting a oscillator type variable here to auto-name save files
 # osc_type = "USRP"
-# osc_type = "Wenzel5MHz"
+osc_type = "Wenzel5MHz"
 # osc_type = "Wenzel100MHz"
 
 #defines oscillator quality. Either leave as single row to use across all platforms, or define values for each platform as a new row
@@ -58,7 +58,7 @@ else
 end
 
 
-sync_fmin = 0.01 # minimum frequency > 0 in Hz to window PSD
+sync_fmin = 1.0 # minimum frequency > 0 in Hz to window PSD -- Float64
 # f_osc = 10e6 # local oscillator frequency
 sync_clk_fs = 1e3; # sample rate of clock error process
 master = 1; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
