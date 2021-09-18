@@ -31,8 +31,6 @@ function ecef_orbitpos(eci_pos, dcm)
     else
         error("DCM is badly shaped")
     end
-    #println("No. platforms: ",nplat)
-    #println("No. locations: ",ntimes)
 
     ecef_pos = zeros(3,nplat, ntimes);
     for iplat=1:nplat
@@ -40,10 +38,10 @@ function ecef_orbitpos(eci_pos, dcm)
             ecef_pos[:,iplat,itime] = dcm[:,:,itime]*eci_pos[:,iplat,itime];
         end
     end
-    #println("Done with it, ", size(ecef_pos))
     return ecef_pos
 end
-"convert eci orbit posoitions to ECEF based using input DCM"
+
+"convert eci orbit posoitions and velocities to ECEF based using input DCM"
 function ecef_orbitpos(eci_pos, eci_vel, dcm)
     #eci_pos = 3 x N_plat x N_time
     #dcm = 3 x 3 x 1 or 3 x 3 x N_time
@@ -80,7 +78,6 @@ function ecef_orbitpos(eci_pos, eci_vel, dcm)
             ecef_vel[:,iplat,itime] = dcm[:,:,itime]*eci_vel[:,iplat,itime] - cross([0;0;w],ecef_pos[:,iplat,itime]);
         end
     end
-    #println("Done with it, ", size(ecef_pos))
     return ecef_pos, ecef_vel
 end
 
@@ -91,19 +88,14 @@ function eci_dcm(time, epoch::DateTime, eop_data)
     for ii = 1:length(time)
           dt = unix2datetime(datetime2unix(epoch)+time[ii]);
           dcm[:,:,ii] = convert(Array{Float64}, rECItoECEF(J2000(), ITRF(), DatetoJD(dt), eop_data));
-      end
-      return dcm
+    end
+    return dcm
 end
 
-"compute DCM to convert ECI to ECEF based on epoch"
+"compute DCM to convert ECI to ECEF based on epoch, wrapper method that downloads EOP data"
 function eci_dcm(time, epoch::DateTime)
     eop_data = get_iers_eop();
-    dcm = zeros(3,3,length(time))
-    for ii = 1:length(time)
-          dt = unix2datetime(datetime2unix(epoch)+time[ii]);
-          dcm[:,:,ii] = convert(Array{Float64}, rECItoECEF(J2000(), ITRF(), DatetoJD(dt), eop_data));
-      end
-      return dcm
+    return eci_dcm(time, epoch, eop_data)
 end
 
 "interpolate darts orbits"
@@ -138,23 +130,17 @@ function get_perp_baselines(pos, vel, θ,refind=1)
     @assert size(pos)==size(vel) "POS and VEL need to have same size"
     @assert refind <= size(pos,2) "Reference index needs to be <= Np"
 
-
+    #set aside some space
     Nplats = size(pos,2); #number of platforms
     Ntimes = size(pos,3); #number of time steps
-
-    print
-    bperp = zeros(Nplats, Nplats, Ntimes);
+    bperp  = zeros(Nplats, Nplats, Ntimes); #output perp-baseline matrix
 
     for itimes = 1:Ntimes
         #create geocetric TCN frame for reference satellite
-        #nhat = -pos[:,refind,itimes]/norm(pos[:,refind,itimes]);
-        #vrad = dot(vel[:,refind,itimes], -nhat)*(-nhat); #radial velocity
-        #vtan = vel[:,refind,itimes]  - vrad; #tangential velocity
-        #that = vtan/norm(vtan); #track vector
-        #chat = cross(nhat, that); #cross-track vector
         that, chat, nhat = Geometry.get_tcn(pos[:,refind,itimes], vel[:,refind,itimes]);
         #get look vector based on TCN-frame and look angle TODO: add azimuth
         lhat = cosd(θ)*nhat + sind(θ)*chat;
+
         #iterate over platforms and compute full perp-baseline matrix
         for iplat = 1:Nplats
             for jplat = 1:Nplats
