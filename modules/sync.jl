@@ -151,7 +151,7 @@ end
         push!(crlbs,crlbs[end])
         itp_crlb = LinearInterpolation(time_vec,crlbs,extrapolation_bc = Line()) # create interpolant with CRLB values sampled at orbit sample times. Repeats last value to avoid extrapolation errors
 
-        (Sphi, f_psd) = osc_psd_twosided(sync_clk_fs, clk_args_N, a_coeff_db)    # this gives the basic PSD of the oscillator (no sync involved)
+        (Sphi, f_psd) = osc_psd_twosided(sync_clk_fs, clk_args_N, a_coeff_db,sync_fmin)    # this gives the basic PSD of the oscillator (no sync involved)
         
         phase_err_internal = zeros(0)       # initialize an empty array to collect the phase error values at internal time base
         internal_time_vec = zeros(0)        # initialize an empty array to keep track of internal time base
@@ -493,7 +493,7 @@ calculate the two-sided PSD of the clock phase error
 
 """
 #-start-function--------------------------------------------------------------------------------------------
-function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1})
+function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1}, sync_fmin::Float64)
 #   Generate PSD of clock phase error
 #INPUTS
 #     fs = 2000; # max PSD frequency [sample rate of clock phase error process]
