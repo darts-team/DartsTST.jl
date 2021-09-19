@@ -29,7 +29,7 @@ function makeBoxPlot(SRIs,vals,titleString::String,saveFilename::String)
   
   display(boxplot!(sync_PRIs[len].*ones(len),vals[len], title = titleString,
   xlabel = "PSD Coefficient Value (dB)", legend = false))
-  
+  plot!(ylim=(0, 20))
   savefig(saveFilename)
 end#function
 
@@ -37,7 +37,7 @@ end#function
 # run the rest of the code, calling an input .jld2 file with the monte carlo data stored
 begin 
   
-  filename = "sync data/syncModule_MonteCarlo_mode_2_PERF_coeff_number5_sync_osc_sweep_noFreq.jld2"
+  filename = "sync data/syncModule_MonteCarlo_mode_2_PERF_coeff_number4_sync_osc_sweep_noFreq.jld2"
   # filename = "sync data/syncModule_MonteCarlo_mode_2_USO_Cband_coeff_number1_sync_osc_sweep_noFreq.jld2"
   @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors osc_coeff_sweep
   gr()
@@ -50,10 +50,10 @@ begin
   # ---- Peak loss ------
   ideal_peak_dB = 20 .* log10.(ideal_peak)
   peakvals = ideal_peak_dB .- (20 .* log10.(peaks))
-  display(boxplot(coeff_plot, peakvals', title = "Peak Power Loss (dB)",
+  display(boxplot(coeff_plot, peakvals', title = "Peak Power Loss Oscillator Coefficient #4", ylabel = "Power Loss (dB)",
     xlabel = "PSD Coefficient Value (dB)", legend = false))
   # savefig("USO_SIMO_SRI_sweep_no_phase_ramp_peak_loss.png")
-  savefig("USO_SIMO_coeff1_sweep_peak_loss.png")
+  savefig("SIMO_coeff4_sweep_peak_loss.png")
 
   # ---- PSLR ----
   vals1 = filterNaNs2D(PSLRs[1,:,:] .- ideal_PSLR[1])
@@ -61,7 +61,7 @@ begin
   vals3 = filterNaNs2D(PSLRs[3,:,:] .- ideal_PSLR[3])
 
   
-  makeBoxPlot(sync_PRIs,vals1,"PSLR Change Along-Track (dB)","USO_SIMO_SRI_sweep_no_phase_ramp_pslr_change_AT.png")
+  makeBoxPlot(sync_PRIs,vals1,"PSLR Change Along-Track (dB)","USO_SIMO_coeff5_sweep_no_phase_ramp_pslr_change_AT.png")
   makeBoxPlot(sync_PRIs,vals2,"PSLR Change Cross-Track (dB)","USO_SIMO_SRI_sweep_no_phase_ramp_pslr_change_CT.png")
   makeBoxPlot(sync_PRIs,vals3,"PSLR Change Height (dB)","USO_SIMO_SRI_sweep_no_phase_ramp_pslr_change_hgt.png")
     
