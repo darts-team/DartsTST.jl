@@ -184,7 +184,7 @@ end
                 
                 # calculate post-sync PSD from crlb, sync_radar_offset
                 crlb = itp_crlb(sync_time) # this tells us what the crlb was at the sync
-                Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs, dt)
+                Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs, dt, f_osc)
                 # generate time series of phase error
                 Sphi_sync_uc = up_convert_psd .* Sphi
                 (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,no_sync_flag)
@@ -534,7 +534,7 @@ function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1}, syn
     #     Sphi_2S[idx] .= sum([a_coeff[1]*fmin.^(-4) a_coeff[2]*fmin.^(-3) a_coeff[3]*fmin.^(-2) a_coeff[4]*fmin.^(-1) a_coeff[5]*fmin.^0 ]).*(fmin/fmin1)
     # end#if
 
-    # new code 7/15/21, This creates a "high-pass filter" with fmin as the cutoff frequency
+    # code added 7/15/21, This creates a "high-pass filter" with fmin as the cutoff frequency
     # create a roll-off from fmin to 0 frequency
     temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)] # this is the PSD value at fmin
     idx_fmin = findlast(f -> abs(f) < fmin,f)
@@ -728,35 +728,68 @@ calculates the post-synchronization phase error PSD
 
 
 """
-function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync_radar_offset::Float64,sig_crlb::Float64,sync_prf::Float64,sync_fs::Float64, sync_clk_fs::Float64, PRI::Float64)
+function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync_radar_offset::Float64,sig_crlb::Float64,sync_prf::Float64,sync_fs::Float64, sync_clk_fs::Float64, PRI::Float64, f_osc::Float64)
 # Function describes PSD of clk phase after finite offset sync
 # Sphi is input PSD
+    
     sync_pri = 1 / sync_prf
-    # this is the finite offset filter stage
-    Sphi_tilde = (2 .* Sphi .* (1 .- cos.(2*pi*sync_radar_offset.*f_psd) ) )
     
+    S_n = (2*(sig_crlb*sync_fs.*2*pi).^2).*ones(length(Sphi)).*(sync_pri*1.5).*(sync_fs./f_osc)^2; # scale by (sync_fs*sync_pri) to account for lower bandwidth/downsampling to conserve PSD power
 
-    #here is the aliasing error stage from long PRI
-    # Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde,sync_clk_fs,sync_prf)
-    Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde, sync_clk_fs, sync_pri) .*rect(f_psd,-1/sync_pri, 1/sync_pri+(f_psd[2]-f_psd[1]) , 1) # updated from Sam's code 6/21/21
-    
-    
-    # PSD of AWGN with variance determined by CRLB of sync algorithm
-    # S_n =  ( sig_crlb .* sync_fs .*2*pi .* 2 ./ sqrt(2) ) .^2 .*ones(length(Sphi))
-    # updated noise floor power calculation 
-    S_n = (2*(sig_crlb*sync_fs .*2*pi ).^2 ) .* ones(length(Sphi)) .* (sync_clk_fs * sync_pri*1.5) # scale by (clk_args.fs*sync_pri) to account for lower bandwidth/downsampling to conserve PSD power
-    
-    #debugging negative Sphi
-    idx_test = findall(S_n -> S_n < 0,S_n)
-    if !isempty(idx_test)
-        println("negative psd values")
-        println(S_n[idx_test])
-        
-        println(f_psd[idx_test])
+    #adding code 9/25/21 this is the least squares linear predictor
+    n_hist = 3 # number of previous samples used in prediction
+    cb = sync_pri*(n_hist^2*(n_hist^2-1))/12
+    # avoid divide by 0. Will still reduce to original expression for Sphi_tilde
+    if (n_hist==1)
+        cb = 1
     end
+    
+    dtp = sync_radar_offset
+    sincpwr = 3 # exponent that sinc functions get raised to
+    
+    S_sync1 = zeros(length(f_psd))
+    for i=0:(n_hist-1)
+        S_sync1 = S_sync1 .+ n_hist.* (i.-(n_hist-1)./2).*(cos.(2 .*pi.*f_psd.*((n_hist-1-i).*sync_pri.+dtp))-cos.(2 .*pi.*f_psd.*((n_hist-1-i).*sync_pri)))
+    end
+    S_sync2 = zeros(length(f_psd))
+    for i=0:(n_hist-1)
+        for j=0:(n_hist-1)
+            S_sync2 = S_sync2 .+ (n_hist.^2).*(i.*j.+(((n_hist-1).^2)/4)).*exp.(1i.*2 .*pi*f_psd.*(i-j)*sync_pri) .- ((n_hist.^2).*(n_hist-1)).*i.*cos.(2 .*pi.*f_psd.*(i-j).*sync_pri)
+        end
+    end
+    S_n_ls = S_n .* (-1*(dtp/cb).*n_hist.*(n_hist-1) .+ ((dtp/cb).^2).*(n_hist.^3 .* (n_hist.^2 .-1 ))./12)
 
-    # PSD of clock phase error after synchronization assumes SRI and PRI are different, and SRI is a multiple of PRI
-    Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .* ( abs.(sinc.(f_psd .* PRI)).^4.25 ) ./ abs.(sinc.(f_psd.* sync_pri)).^0.25 )
+    S_phi_sync_tilde = Sphi.*((2 .- 2 .*cos.(2 .*pi.*dtp.*f_psd) .-1 .*(2 .* dtp./cb) .*S_sync1 .+1 .*((dtp./cb).^2).*S_sync2)) 
+
+    Sphi_tilde_alias = downsampled_spectrum(S_phi_sync_tilde,round(sync_clk_fs/(2/sync_pri)),sync_prf).*rect(f_psd,-1/sync_pri, 1/sync_pri+(f_psd[2]-f_psd[1]) , 1)
+    Sphi_sync = (Sphi_tilde_alias.+S_n.+S_n_ls) .*abs.(sinc.(f_psd.*PRI)) .^(sincpwr+.25) ./ abs.(sinc.(f_psd.*sync_pri)).^.25
+
+
+    # # this is the finite offset filter stage
+    # Sphi_tilde = (2 .* Sphi .* (1 .- cos.(2*pi*sync_radar_offset.*f_psd) ) )
+    # 
+    # 
+    # #here is the aliasing error stage from long PRI
+    # # Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde,sync_clk_fs,sync_prf)
+    # Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde, sync_clk_fs, sync_pri) .*rect(f_psd,-1/sync_pri, 1/sync_pri+(f_psd[2]-f_psd[1]) , 1) # updated from Sam's code 6/21/21
+    # 
+    # 
+    # # PSD of AWGN with variance determined by CRLB of sync algorithm
+    # # updated noise floor power calculation 
+    # S_n = (2*(sig_crlb*sync_fs .*2*pi ).^2 ) .* ones(length(Sphi)) .* (sync_clk_fs * sync_pri*1.5) # scale by (clk_args.fs*sync_pri) to account for lower bandwidth/downsampling to conserve PSD power
+    # 
+    # 
+    # # #debugging negative Sphi
+    # # idx_test = findall(S_n -> S_n < 0,S_n)
+    # # if !isempty(idx_test)
+    # #     println("negative psd values")
+    # #     println(S_n[idx_test])
+    # # 
+    # #     println(f_psd[idx_test])
+    # # end
+    # 
+    # # PSD of clock phase error after synchronization assumes SRI and PRI are different, and SRI is a multiple of PRI
+    # Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .* ( abs.(sinc.(f_psd .* PRI)).^4.25 ) ./ abs.(sinc.(f_psd.* sync_pri)).^0.25 )
     
     return Sphi_sync
 

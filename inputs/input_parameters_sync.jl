@@ -14,9 +14,12 @@ sync_fs = 25e6; # sync receiver sampling rate
 sync_fbw = sync_fs # LFM bandwidth
 
 # osc_type = "USO" # putting a oscillator type variable here to auto-name save files
-# osc_type = "USRP"
-osc_type = "Wenzel5MHz"
+osc_type = "USRP"
+# osc_type = "Wenzel5MHz"
 # osc_type = "Wenzel100MHz"
+# osc_type = "MicroSemi" #Microsemi GPS-3500
+
+
 
 #defines oscillator quality. Either leave as single row to use across all platforms, or define values for each platform as a new row
 #define oscillator quality and frequency
@@ -24,7 +27,7 @@ if osc_type == "USO"
     a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
     f_osc = 10e6 # local oscillator frequency
 elseif osc_type == "USRP"
-    a_coeff_dB = [-28 -40 -200 -130 -155] # [USRP E312]
+    a_coeff_dB = [-66 -62 -80 -110 -153] # [USRP E312]
     f_osc = 10e6 # local oscillator frequency
 elseif osc_type == "Wenzel5MHz"
     a_coeff_dB = [-1000 -128 -1000 -150 -178] # [Wenzel 5MHz oscillator] - NOTE: fractional dB values were rounded up for Wenzel oscillators (to keep as Int64 values)
@@ -32,6 +35,9 @@ elseif osc_type == "Wenzel5MHz"
 elseif osc_type == "Wenzel100MHz"
     a_coeff_dB = [-1000 -73 -1000 -104 -181] # [Wenzel 100MHz oscillator]
     f_osc = 100e6 # local oscillator frequency
+elseif osc_type == "MicroSemi"
+    a_coeff_dB = [-120.342 -114.709 -Inf -134.902 -166.054 ] # [Microsemi GPS-3500 oscillator]
+    f_osc = 10e6 # local oscillator frequency #TODO(right center freq?)
 end
 
 # here we assume all platforms are the same quality. however, we can redefine the osc_coeffs to have different values. (likely scenario in SIMO mode with master transmitter)

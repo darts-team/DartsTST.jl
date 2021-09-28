@@ -1,7 +1,5 @@
 
 *.png
 *.ipynb
-image_responses/Coefficient study/.DS_Store
-*.nc
 *.jld2
-.DS_Store
+*.nc
