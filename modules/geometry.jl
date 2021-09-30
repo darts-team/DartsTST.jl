@@ -369,11 +369,12 @@ function get_tcn(pos::Array{Float64,1}, vel::Array{Float64,1})
 
     #create geocetric TCN frame for reference satellite described
     #in coordinates of input 'position' and 'velocity' assumed to be ECEF
-    nhat = -pos/norm(pos); # unit nadir vector
-    vrad = dot(vel, -nhat)*(-nhat); #radial velocity
-    vtan = vel  - vrad; #tangential velocity
-    that = vtan/norm(vtan); #track vector
-    chat = cross(nhat, that); #cross-track vector
+    llh = xyz_to_geo(pos);
+    e,n,u = enu_from_geo(llh[1], llh[2])
+
+    nhat = -dropdims(u,dims=2); # unit nadir vector
+    chat = cross(nhat, vel/norm(vel)); #cross-track vector
+    that = cross(chat, nhat); #track vector
     return that, chat, nhat
 end
 function get_tcn(pos::Array{Float64,2}, vel::Array{Float64,2})
@@ -392,6 +393,7 @@ function get_tcn(pos::Array{Float64,2}, vel::Array{Float64,2})
     end
     return that, chat, nhat
 end
+
 
 """
 Compute orientation quaternion based on TCN basis
