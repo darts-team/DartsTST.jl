@@ -29,14 +29,15 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
         PSLRs=[PSLR_1,PSLR_2,PSLR_3]
         ISLRs=[ISLR_1,ISLR_2,ISLR_3]
         loc_errors=[loc_error_1,loc_error_2,loc_error_3]
+        scene_axis11=scene_axis1;scene_axis22=scene_axis2;scene_axis33=scene_axis3;
     end
     if PSF_cuts==2
-        image_1D,scene_res=obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
+        image_1D,scene_res,scene_axis11,scene_axis22,scene_axis33=obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
         resolutions,res_ind_1,res_ind_2=resolution_1D(image_1D,scene_res,res_dB)
         PSLRs,ISLRs=sidelobe_1D(image_1D,1,res_ind_1,res_ind_2)
         loc_errors=NaN
     end
-    return resolutions,PSLRs,ISLRs,loc_errors
+    return resolutions,PSLRs,ISLRs,loc_errors,scene_axis11,scene_axis22,scene_axis33
 end
 
 function relative_radiometric_accuracy(inputscene_3D,image_3D)
@@ -73,7 +74,7 @@ function obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF
     if Ns_1>1;scene_axis1_ind=round.(Int64,(scene_axis1_int.-scene_axis10[1])/(scene_axis10[2]-scene_axis10[1]).+1);else;image_3D=dropdims(image_3D,dims=1);end
     if Ns_2>1;scene_axis2_ind=round.(Int64,(scene_axis2_int.-scene_axis20[1])/(scene_axis20[2]-scene_axis20[1]).+1);else;image_3D=dropdims(image_3D,dims=2);end
     if Ns_3>1;scene_axis3_ind=round.(Int64,(scene_axis3_int.-scene_axis30[1])/(scene_axis30[2]-scene_axis30[1]).+1);else;image_3D=dropdims(image_3D,dims=3);end
-    itp=interpolate(image_3D,BSpline(Linear()))
+    itp=interpolate(image_3D,BSpline(Cubic(Free(OnGrid()))))
     image_1D=zeros(Float64,length(scene_axis1_int))
     for i=1:length(scene_axis1_int)
         if Ns_1>1 && Ns_2>1 && Ns_3>1
@@ -94,15 +95,16 @@ function obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF
             else;image_1D[i]=NaN;end
         end
     end
+    image_1D=deleteat!(vec(image_1D),findall(isnan,vec(image_1D)))
     scene_axis11=scene_axis1_int.+xc
     scene_axis22=scene_axis2_int.+yc
     scene_axis33=scene_axis3_int.+zc
     scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
-    scene_axis=(0:scene_res:(length(scene_axis1_int)-1)*scene_res).-(length(scene_axis1_int)-1)*scene_res/2
-    display(plot(scene_axis,20*log10.(image_1D),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the PSF along specified direction
-    NaN_ind=findall(image_1D==NaN)
-    image_1D=deleteat!(vec(image_1D),findall(isnan,vec(image_1D)))
-    return image_1D,scene_res
+    scene_axis=(0:scene_res:(length(image_1D)-1)*scene_res).-(length(image_1D)-1)*scene_res/2
+    plotly()
+    display(plot(scene_axis,20*log10.(image_1D/maximum(image_1D)),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false)) # plot the PSF along specified direction
+    #NaN_ind=findall(image_1D==NaN)
+    return image_1D,scene_res,scene_axis11,scene_axis22,scene_axis33
 end
 
 function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
