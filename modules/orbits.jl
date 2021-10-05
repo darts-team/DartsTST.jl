@@ -5,8 +5,8 @@ include("geometry.jl")
 using SatelliteToolbox
 using NCDatasets
 using Dates
-using Interpolations
 using LinearAlgebra
+using Dierckx
 
 "convert eci orbit posoitions to ECEF based using input DCM"
 function ecef_orbitpos(eci_pos, dcm)
@@ -112,10 +112,8 @@ function interp_orbit(time_old, pos, time_new)
     pos_i = zeros(szp[1],nplat, length(time_new));
     for iplat=1:nplat
         for iaxis=1:szp[1]
-            #TODO: using CubicSplineInterpolation instead of Linear Interpolations
-            itp = LinearInterpolation(time_old, pos[iaxis, iplat, :])
-            # itp = CubicSplineInterpolation(time_old, pos[iaxis, iplat,:])
-            pos_i[iaxis,iplat,:] = itp(time_new);
+            itp = Spline1D(time_old, pos[iaxis, iplat,:], w=ones(length(time_old)), k=3, bc = "error");
+            pos_i[iaxis,iplat,:] = evaluate(itp,time_new);
         end
     end
     return pos_i
