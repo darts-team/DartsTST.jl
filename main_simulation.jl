@@ -114,6 +114,7 @@ Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
 image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
 ## PERFORMANCE METRICS
 # PSF metrics
+include("modules/performance_metrics.jl")
 if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when there is only one point target
     target_index1=findall(t_loc_1 .==s_loc_1)
     target_index2=findall(t_loc_2 .==s_loc_2)
@@ -124,8 +125,7 @@ if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when th
     else
         PSF_metrics=true
         target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
-        #include("modules/performance_metrics.jl")
-        resolutions,PSLRs,ISLRs,loc_errors=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point,PSF_cuts,PSF_direction) # resolutions in each of the 3 axes
+        resolutions,PSLRs,ISLRs,loc_errors,scene_axis11,scene_axis22,scene_axis33=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point,PSF_cuts,PSF_direction) # resolutions in each of the 3 axes
     end
 else
     PSF_metrics=false
@@ -154,6 +154,6 @@ if display_geometry || display_RSF_rawdata || display_input_scene || display_tom
         Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt)
     end
     if display_input_scene;Plotting.plot_input_scene(inputscene_3D,s_loc_1,s_loc_2,s_loc_3,ts_coord_txt);end
-    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,ts_coord_txt,mode);end
+    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,ts_coord_txt,mode,scene_axis11,scene_axis22,scene_axis33,PSF_cuts,PSF_metrics);end
     if display_input_scene;Plotting.plot_input_scene(diff_image3D,s_loc_1,s_loc_2,s_loc_3,ts_coord_txt);end
 end
