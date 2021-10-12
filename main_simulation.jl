@@ -7,7 +7,8 @@ include("modules/scene.jl")
 #include("inputs/input_parameters_CR_nadirlooking.jl")
 #include("inputs/input_parameters_CR_slantlooking.jl")
 #include("inputs/input_parameters_CR_nadirlooking_tiltedcuts.jl")
-include("inputs/input_parameters_CRs_cross.jl")
+include("inputs/input_parameters_CR_slantlooking_tiltedcuts.jl")
+#include("inputs/input_parameters_CRs_cross.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
@@ -33,8 +34,10 @@ catch #if not generate from Orbits
     local epoch = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
     global dcm = Orbits.eci_dcm(orbit_time, epoch);
 end
-orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
-orbit_vel=orbit_vel_ECI #; orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF TODO velocity conversion function not ready yet
+#orbit_pos=orbit_pos_ECI
+#orbit_vel=orbit_vel_ECI
+#orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
+orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF TODO velocity conversion function not ready yet
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
 if length(slow_time)==1;p_xyz=orbit_pos
 else;p_xyz=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time);end # interpolate orbit to slow time, 3 x Np x Nst, convert km to m

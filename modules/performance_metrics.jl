@@ -30,11 +30,15 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
         ISLRs=[ISLR_1,ISLR_2,ISLR_3]
         loc_errors=[loc_error_1,loc_error_2,loc_error_3]
         scene_axis11=scene_axis1;scene_axis22=scene_axis2;scene_axis33=scene_axis3;
-    end
-    if PSF_cuts==2
+    elseif PSF_cuts==2
         image_1D,scene_res,scene_axis11,scene_axis22,scene_axis33=obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
-        resolutions,res_ind_1,res_ind_2=resolution_1D(image_1D,scene_res,res_dB)
-        PSLRs,ISLRs=sidelobe_1D(image_1D,1,res_ind_1,res_ind_2)
+        itp=interpolate(image_1D,BSpline(Cubic(Free(OnGrid()))))
+        k_up=100;scene_res_itp=scene_res/k_up
+        image_1D_itp=itp(1:1/k_up:length(image_1D))
+        scene_axis=(0:scene_res_itp:(length(image_1D_itp)-1)*scene_res_itp).-(length(image_1D_itp)-1)*scene_res_itp/2
+        display(plot!(scene_axis,20*log10.(image_1D_itp/maximum(image_1D_itp)))) # plot the PSF along specified direction
+        resolutions,res_ind_1,res_ind_2=resolution_1D(image_1D_itp,scene_res_itp,res_dB)
+        PSLRs,ISLRs=sidelobe_1D(image_1D_itp,1,res_ind_1,res_ind_2)
         loc_errors=NaN
     end
     return resolutions,PSLRs,ISLRs,loc_errors,scene_axis11,scene_axis22,scene_axis33
@@ -102,7 +106,7 @@ function obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF
     scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
     scene_axis=(0:scene_res:(length(image_1D)-1)*scene_res).-(length(image_1D)-1)*scene_res/2
     plotly()
-    display(plot(scene_axis,20*log10.(image_1D/maximum(image_1D)),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false)) # plot the PSF along specified direction
+    (plot(scene_axis,20*log10.(image_1D/maximum(image_1D)),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false)) # plot the PSF along specified direction
     #NaN_ind=findall(image_1D==NaN)
     return image_1D,scene_res,scene_axis11,scene_axis22,scene_axis33
 end

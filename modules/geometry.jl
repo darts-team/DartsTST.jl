@@ -109,13 +109,15 @@ function avg_peg_h(p_xyz)
     # Average Platform Heading
       Np=size(p_xyz)[2] # number of platforms
       Nst=size(p_xyz)[3] # number of slow-time samples (pulses processed)
-      p_geo=zeros(3,Np,Nst)
       p_headings=zeros(1,Np)
+      p_geo=zeros(3,Np,Nst)
       for i=1:Np
         p_xyz_i=p_xyz[:,i,:]
         p_xyz_i=reshape(p_xyz_i,3,Nst)
         p_geo[:,i,:]=xyz_to_geo(Float64.(p_xyz_i))
-        p_headings[i]=mean(compute_heading(p_geo[1,i,:],p_geo[2,i,:]))
+        p_lat=reshape(p_geo[1,i,:],1,Nst)
+        p_lon=reshape(p_geo[2,i,:],1,Nst)
+        p_headings[i]=mean(compute_heading(p_lat,p_lon))
       end
       p_avg_heading=mean(p_headings)
       p_avg_geo=mean(mean(p_geo,dims=2),dims=3) # average LLH of platforms over platforms and slow-time locations
