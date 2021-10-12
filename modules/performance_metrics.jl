@@ -9,18 +9,27 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
         image_1D_1,image_1D_2,image_1D_3=obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
         if length(image_1D_1)>1
             scene_res1=scene_axis1[2]-scene_axis1[1] # scene resolution along the 1st axis
+            image_1D_itp,scene_res_itp,scene_axis_itp=upsample_PSFcut(image_1D_1,scene_res1,100)
+            plotly();plot(scene_axis1,20*log10.(image_1D_1/maximum(image_1D_1)),xaxis=("scene axis 1 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false) # plot the PSF along axis 1
+            display(plot!(scene_axis_itp,20*log10.(image_1D_itp/maximum(image_1D_itp))))
             res_1,res_ind_1,res_ind_2=resolution_1D(image_1D_1,scene_res1,res_dB)
             PSLR_1,ISLR_1=sidelobe_1D(image_1D_1,1,res_ind_1,res_ind_2)
             loc_error_1=location_error(image_1D_1,target_location[1],scene_axis1)
         else;res_1=NaN;PSLR_1=NaN;ISLR_1=NaN;loc_error_1=NaN;end
         if length(image_1D_2)>1
             scene_res2=scene_axis2[2]-scene_axis2[1] # scene resolution along the 2nd axis
+            image_1D_itp,scene_res_itp,scene_axis_itp=upsample_PSFcut(image_1D_2,scene_res2,100)
+            plotly();plot(scene_axis2,20*log10.(image_1D_2/maximum(image_1D_2)),xaxis=("scene axis 2 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false) # plot the PSF along axis 2
+            display(plot!(scene_axis_itp,20*log10.(image_1D_itp/maximum(image_1D_itp))))
             res_2,res_ind_1,res_ind_2=resolution_1D(image_1D_2,scene_res2,res_dB)
             PSLR_2,ISLR_2=sidelobe_1D(image_1D_2,2,res_ind_1,res_ind_2)
             loc_error_2=location_error(image_1D_2,target_location[2],scene_axis2)
         else;res_2=NaN;PSLR_2=NaN;ISLR_2=NaN;loc_error_2=NaN;end
         if length(image_1D_3)>1
             scene_res3=scene_axis3[2]-scene_axis3[1] # scene resolution along the 3rd axis
+            image_1D_itp,scene_res_itp,scene_axis_itp=upsample_PSFcut(image_1D_3,scene_res3,100)
+            plotly();plot(scene_axis3,20*log10.(image_1D_3/maximum(image_1D_3)),xaxis=("scene axis 3 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false) # plot the PSF along axis 3
+            display(plot!(scene_axis_itp,20*log10.(image_1D_itp/maximum(image_1D_itp))))
             res_3,res_ind_1,res_ind_2=resolution_1D(image_1D_3,scene_res3,res_dB)
             PSLR_3,ISLR_3=sidelobe_1D(image_1D_3,3,res_ind_1,res_ind_2)
             loc_error_3=location_error(image_1D_3,target_location[3],scene_axis3)
@@ -32,16 +41,23 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
         scene_axis11=scene_axis1;scene_axis22=scene_axis2;scene_axis33=scene_axis3;
     elseif PSF_cuts==2
         image_1D,scene_res,scene_axis11,scene_axis22,scene_axis33=obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
-        itp=interpolate(image_1D,BSpline(Cubic(Free(OnGrid()))))
-        k_up=100;scene_res_itp=scene_res/k_up
-        image_1D_itp=itp(1:1/k_up:length(image_1D))
-        scene_axis=(0:scene_res_itp:(length(image_1D_itp)-1)*scene_res_itp).-(length(image_1D_itp)-1)*scene_res_itp/2
-        display(plot!(scene_axis,20*log10.(image_1D_itp/maximum(image_1D_itp)))) # plot the PSF along specified direction
+        image_1D_itp,scene_res_itp,scene_axis_itp=upsample_PSFcut(image_1D,scene_res,100)
+        scene_axis=(0:scene_res:(length(image_1D)-1)*scene_res).-(length(image_1D)-1)*scene_res/2
+        plotly();plot(scene_axis,20*log10.(image_1D/maximum(image_1D)),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false) # plot the PSF along specified direction
+        display(plot!(scene_axis_itp,20*log10.(image_1D_itp/maximum(image_1D_itp)))) # plot the PSF along specified direction
         resolutions,res_ind_1,res_ind_2=resolution_1D(image_1D_itp,scene_res_itp,res_dB)
         PSLRs,ISLRs=sidelobe_1D(image_1D_itp,1,res_ind_1,res_ind_2)
         loc_errors=NaN
     end
     return resolutions,PSLRs,ISLRs,loc_errors,scene_axis11,scene_axis22,scene_axis33
+end
+
+function upsample_PSFcut(image_1D,scene_res,k_up)
+    itp=interpolate(image_1D,BSpline(Cubic(Free(OnGrid()))))
+    scene_res_itp=scene_res/k_up
+    image_1D_itp=itp(1:1/k_up:length(image_1D))
+    scene_axis_itp=(0:scene_res_itp:(length(image_1D_itp)-1)*scene_res_itp).-(length(image_1D_itp)-1)*scene_res_itp/2
+    return image_1D_itp,scene_res_itp,scene_axis_itp
 end
 
 function relative_radiometric_accuracy(inputscene_3D,image_3D)
@@ -104,9 +120,6 @@ function obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF
     scene_axis22=scene_axis2_int.+yc
     scene_axis33=scene_axis3_int.+zc
     scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
-    scene_axis=(0:scene_res:(length(image_1D)-1)*scene_res).-(length(image_1D)-1)*scene_res/2
-    plotly()
-    (plot(scene_axis,20*log10.(image_1D/maximum(image_1D)),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false)) # plot the PSF along specified direction
     #NaN_ind=findall(image_1D==NaN)
     return image_1D,scene_res,scene_axis11,scene_axis22,scene_axis33
 end
@@ -137,19 +150,16 @@ function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene
             image_slice=image_3D[:,slice_index2,slice_index3]
             image_1D_1=zeros(Float64,length(image_slice))
             image_1D_1[:]=image_slice
-            display(plot(scene_axis1,20*log10.(image_1D_1),xaxis=("scene axis 1 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the PSF along axis 1
         else;image_1D_1=NaN;println("PSF metrics along 1st dimension cannot be calculated since image has no 1st dimension.");end
         if length(scene_axis2)>1
             image_slice=image_3D[slice_index1,:,slice_index3]
             image_1D_2=zeros(Float64,length(image_slice))
             image_1D_2[:]=image_slice
-            display(plot(scene_axis2,20*log10.(image_1D_2),xaxis=("scene axis 2 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the PSF along axis 2
         else;image_1D_2=NaN;println("PSF metrics along 2nd dimension cannot be calculated since image has no 2nd dimension.");end
         if length(scene_axis3)>1
             image_slice=image_3D[slice_index1,slice_index2,:]
             image_1D_3=zeros(Float64,length(image_slice))
             image_1D_3[:]=image_slice
-            display(plot(scene_axis3,20*log10.(image_1D_3),xaxis=("scene axis 3 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the PSF along axis 3
         else;image_1D_3=NaN;println("PSF metrics along 3rd dimension cannot be calculated since image has no 3rd dimension.");end
     end
     return image_1D_1,image_1D_2,image_1D_3
