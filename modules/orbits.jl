@@ -132,6 +132,8 @@ function get_perp_baselines(pos, vel, θ,refind=1)
     Nplats = size(pos,2); #number of platforms
     Ntimes = size(pos,3); #number of time steps
     bperp  = zeros(Nplats, Nplats, Ntimes); #output perp-baseline matrix
+    b_at  = zeros(Nplats, Nplats, Ntimes); #output along-track baseline matrix
+    bnorm  = zeros(Nplats, Nplats, Ntimes); #output along-track baseline matrix
 
     for itimes = 1:Ntimes
         #create geocetric TCN frame for reference satellite
@@ -143,15 +145,19 @@ function get_perp_baselines(pos, vel, θ,refind=1)
         for iplat = 1:Nplats
             for jplat = 1:Nplats
                 baseline = pos[:,jplat,itimes] - pos[:,iplat,itimes];
+
+                bnorm[iplat,jplat,itimes] = norm(baseline);
                 # use the imaging plane baseline only
-                baseline = dot(baseline,nhat)*nhat + dot(baseline,chat)*chat;
+                baseline_nc = dot(baseline,nhat)*nhat + dot(baseline,chat)*chat;
                 # find baseline component perpendicular to look direction
-                bperp[iplat,jplat,itimes] = norm(baseline - dot(baseline,lhat)*lhat);
+                bperp[iplat,jplat,itimes] = norm(baseline_nc - dot(baseline_nc,lhat)*lhat);
+                # find the along-track baseline component
+                b_at[iplat,jplat,itimes]  = abs(dot(baseline,that));
             end
         end
 
     end
-    return bperp
+    return bperp, b_at, bnorm
 
 end
 
