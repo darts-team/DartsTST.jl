@@ -11,7 +11,7 @@ function plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata) #
     # plot rawdata
     if mode==1 || mode==2
         if enable_fast_time #rawdata is displayed as a 2D image of size Nft x Np*Nst
-            display(heatmap(t_rx,1:Np*Nst,20*log10.(abs.(reshape(rawdata,Np*Nst,size(t_rx)[1]))),c=cgrad([:black,:white]),xlabel="fast-time (s)",ylabel="TX/RX platform pairs",title="raw data amplitude (dB)",size=(1600,900)))
+            display(heatmap(t_rx*1e6,1:Np*Nst,20*log10.(abs.(reshape(rawdata,Np*Nst,size(t_rx)[1]))),c=cgrad([:black,:white]),xlabel="fast-time (us)",ylabel="TX/RX platform pairs",title="raw data amplitude (dB)",size=(1600,900)))
         else #rawdata is displayed as a 2D image of size Np x Nst
             display(heatmap(1:Np,1:Nst,20*log10.(abs.(rawdata)),c=cgrad([:black,:white]),xlabel="platforms",ylabel="pulse number",title="raw data amplitude (dB)",size=(1600,900)))
         end
