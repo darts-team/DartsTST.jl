@@ -83,7 +83,7 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_lo
         psize=(900,900)
         if Ns_2>1 && Ns_3>1
             display(heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
-            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));savefig("image_responses/tomogram_"*mode_txt*".png") #title="2D Image at Loc-1="*string(s_loc_1[k1])
+            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-1="*string(s_loc_1[k1])
             if PSF_metrics
                 heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
                 c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize)
@@ -95,7 +95,7 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_lo
         end
         if Ns_1>1 && Ns_3>1
             display(heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[1]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
-            c=:thermal,xticks=s_loc_1[1]:10:s_loc_1[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));savefig("image_responses/tomogram_"*mode_txt*".png") #title="2D Image at Loc-2="*string(s_loc_2[k2])
+            c=:thermal,xticks=s_loc_1[1]:10:s_loc_1[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-2="*string(s_loc_2[k2])
             if PSF_metrics
                 heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[1]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
                 c=:thermal,xticks=s_loc_1[1]:10:s_loc_1[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize)
@@ -107,7 +107,7 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_lo
         end
         if Ns_1>1 && Ns_2>1
             display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[1]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
-            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_1[1]:10:s_loc_1[end],clims=(faintest,brightest),size=psize));savefig("image_responses/tomogram_"*mode_txt*".png") #title="2D Image at Loc-3="*string(s_loc_3[k3])
+            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_1[1]:10:s_loc_1[end],clims=(faintest,brightest),size=psize));savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-3="*string(s_loc_3[k3])
             if PSF_metrics
                 heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[1]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
                 c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_1[1]:10:s_loc_1[end],clims=(faintest,brightest),size=psize)
@@ -134,7 +134,6 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_lo
         #display(scatter(image_3D,size=(1600,1200)))
         for i=30:5:60;display(scatter(image_3D,camera=(i,30),size=(1600,1200)));end;for i=30:5:60;display(scatter(image_3D,camera=(60,i),size=(1600,1200)));end;for i=60:-5:30;display(scatter(image_3D,camera=(i,60),size=(1600,1200)));end
     end
-    #savefig("tomogram.png")
 end
 
 function plot_input_scene(inputscene_3D,s_loc_1,s_loc_2,s_loc_3,coords)

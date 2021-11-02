@@ -7,8 +7,9 @@ include("modules/scene.jl")
 #include("inputs/input_parameters_CR_nadirlooking.jl")
 #include("inputs/input_parameters_CR_slantlooking.jl")
 #include("inputs/input_parameters_CR_nadirlooking_tiltedcuts.jl")
-include("inputs/input_parameters_CR_slantlooking_tiltedcuts.jl")
+#include("inputs/input_parameters_CR_slantlooking_tiltedcuts.jl")
 #include("inputs/input_parameters_CRs_cross.jl")
+include("inputs/input_parameters_custom_orbit.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
@@ -20,24 +21,48 @@ using NCDatasets
 using Statistics
 using Dates
 ## PLATFORM LOCATIONS and HEADINGS
-orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
-t12_orbits=orbit_dataset["time"][1:2] # first two time samples
-dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
 orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
-orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
-orbit_pos_ECI=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
-orbit_vel_ECI=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
-try #does file have dcm already?
-    global dcm=orbit_dataset["dcm"];
-catch #if not generate from Orbits
-    dv = orbit_dataset.attrib["epoch"];
-    local epoch = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
-    global dcm = Orbits.eci_dcm(orbit_time, epoch);
+if user_defined_orbit
+    Np=length(pos_n)
+    orbit_time_all=0:dt_orbits:Torbit
+    Nt=length(orbit_time_all)
+    peg_t0=Geometry.PegPoint(p_t0_LLH[1],p_t0_LLH[2],p_heading)
+    p_Ss_1p=Vtan*orbit_time_all';p_Ss=repeat(p_Ss_1p,Np,1);p_Ss=reshape(p_Ss,1,Np,Nt)
+    p_Hs_t0=p_t0_LLH[3].+pos_n'*sind(look_angle);p_Hs=repeat(p_Hs_t0,1,Nt);p_Hs=reshape(p_Hs,1,Np,Nt)
+    p_Cs_t0=pos_n'*cosd(look_angle);p_Cs=repeat(p_Cs_t0,1,Nt);p_Cs=reshape(p_Cs,1,Np,Nt)
+    p_SCHs=cat(p_Ss,p_Cs,p_Hs,dims=1)
+    orbit_pos_all=zeros(3,Np,Nt)
+    for i=1:Np
+        orbit_pos_all[:,i,:]=Geometry.sch_to_xyz(p_SCHs[:,i,:],peg_t0) # ECEF TODO use mid-aperture peg
+    end
+    #plot orbit on surface sphere
+    if display_custom_orbit
+        lats=-90:1:90;lons=-180:1:180;hgts=0; # background spherical grid on surface
+        spherical_grid=Geometry.geo_to_xyz(Scene.form3Dgrid_for(lats,lons,hgts)); #create grid in LLH and convert to XYZ
+        using Plots;plotly();scatter(spherical_grid[1,:]/1e3,spherical_grid[2,:]/1e3,spherical_grid[3,:]/1e3,xlabel = "X-ECEF", ylabel="Y-ECEF", zlabel="Z-ECEF",size=(1600,900),leg=false,markersize=0.1)#display background grid in 3D
+        for i=1:Np
+            display(scatter!(orbit_pos_all[1,i,:]/1e3,orbit_pos_all[2,i,:]/1e3,orbit_pos_all[3,i,:]/1e3,markersize=0.5))
+        end
+    end
+    orbit_pos=orbit_pos_all[:,:,orbit_time_index]
+    orbit_time=orbit_time_all[orbit_time_index]
+else # orbits from file
+    orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
+    t12_orbits=orbit_dataset["time"][1:2] # first two time samples
+    dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
+    orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
+    orbit_pos_ECI=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
+    orbit_vel_ECI=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
+    try #does file have dcm already?
+        global dcm=orbit_dataset["dcm"];
+    catch #if not generate from Orbits
+        dv = orbit_dataset.attrib["epoch"];
+        local epoch = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
+        global dcm = Orbits.eci_dcm(orbit_time, epoch);
+    end
+    #orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
+    orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF
 end
-#orbit_pos=orbit_pos_ECI
-#orbit_vel=orbit_vel_ECI
-#orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
-orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF TODO velocity conversion function not ready yet
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
 if length(slow_time)==1;p_xyz=orbit_pos
 else;p_xyz=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time);end # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
@@ -48,8 +73,8 @@ targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t
 targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
 s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loops
 if ts_coord_sys=="XYZ" || ts_coord_sys=="LLH";look_angle=[];end
-#t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,look_angle,earth_radius,earth_eccentricity) ## calculate avg heading from platform positions
-t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,orbit_vel,look_angle,earth_radius,earth_eccentricity) # calculate avg heading from platform velocities
+t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,look_angle,earth_radius,earth_eccentricity) ## calculate avg heading from platform positions
+#t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,orbit_vel,look_angle,earth_radius,earth_eccentricity) # calculate avg heading from platform velocities
 ## TARGET REFLECTIVITIES
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
 ## ANTENNA PATTERN
