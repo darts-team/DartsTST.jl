@@ -14,10 +14,10 @@ sync_fs = 25e6; # sync receiver sampling rate
 sync_fbw = sync_fs # LFM bandwidth
 
 # osc_type = "USO" # putting a oscillator type variable here to auto-name save files
-osc_type = "USRP"
+# osc_type = "USRP"
 # osc_type = "Wenzel5MHz"
 # osc_type = "Wenzel100MHz"
-# osc_type = "MicroSemi" #Microsemi GPS-3500
+osc_type = "MicroSemi" #Microsemi GPS-3500
 
 
 
@@ -36,7 +36,7 @@ elseif osc_type == "Wenzel100MHz"
     a_coeff_dB = [-1000 -73 -1000 -104 -181] # [Wenzel 100MHz oscillator]
     f_osc = 100e6 # local oscillator frequency
 elseif osc_type == "MicroSemi"
-    a_coeff_dB = [-120.342 -114.709 -Inf -134.902 -166.054 ] # [Microsemi GPS-3500 oscillator]
+    a_coeff_dB = [-120 -114 -999 -134 -166 ] # [Microsemi GPS-3500 oscillator]
     f_osc = 10e6 # local oscillator frequency #TODO(right center freq?)
 end
 
@@ -45,7 +45,7 @@ end
 # ------this is ugly code that needs to be replaced------
 # orbit_dataset=Dataset("inputs/orbitOutput_082020.nc") # Read orbits data in NetCDF format
 if use_orbits_flag
-    orbit_dataset=Dataset(orbit_filename) # Read orbits data in NetCDF format
+    orbit_dataset=Dataset("inputs/"*orbit_filename) 
     orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data
     nplat=size(orbit_pos)[2] # number of platforms
 else
