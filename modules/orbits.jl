@@ -161,6 +161,45 @@ function get_perp_baselines(pos, vel, θ,refind=1)
 
 end
 
+"""
+helper function to create synthetic orbits.
+Arguments
+    - `position::Array{3x1}`, ECEF xyz position (m,m,m)
+    - `heading::Float64`, heading (deg)
+    - `baselines::Array{3,Np}`, TCN baselines for Np platforms
+    - `tvec::Array{3x1}`, time vector
+   # Output
+    - `cuts::AntCuts`, in addition to peg coordinates also contains other parameters necessary for peg calculations
+"""
+function make_orbit(pos, hdg, baselines, tvec)
+    @assert ndims(pos)==1 "POS needs to be 3 x 1 Vector"
+
+    # create velocity vector from heading
+    pos_llh = Geometry.xyz_to_geo(pos); #position in geodetic coords
+    ehat,nhat,uhat = Geometry.enu_from_geo(pos_llh[1], pos_llh[2]); #ENU basis
+    vel = cosd(hdg)*nhat + sind(hdg)*ehat;
+
+    println(size(vel[:,1]))
+    println(size(pos))
+
+    #compute TCN frame for that position
+    tcnquat = Geometry.tcn_quat(pos,vel[:,1]);
+
+    #create platform position and velocity vectors
+    platf_pos = zeros(3,size(baselines,2), length(tvec));
+    platf_vel = repeat(vel, 1, size(baselines,2), length(tvec)); #repeat velocity vector for now. TODO: update if necessary
+
+    #iterate over all baselines to create synthetic orbits
+    for ii=1:size(baselines,2)
+        # compute platform position for each platform by adding baseline (in XYZ)
+        # to platform position and repeating for all slow time samples
+        # Note: we use rotate_vec instead of rotate_frame because tcn_quat describes
+        #       rotation from XYZ to TCN
+        platf_pos[:,ii,:] = pos .+ repeat(Geometry.rotate_vec(baselines[:,ii], tcnquat[1]),1,length(tvec));
+    end
+
+    return platf_pos, platf_vel
+end
 
 
 end #end of module
