@@ -45,7 +45,7 @@ slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time a
 if length(slow_time)==1;p_xyz=orbit_pos
 else;p_xyz=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time);end # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
 Np=size(orbit_pos)[2] # number of platforms
-Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)## TARGET/SCENE LOCATIONS
+Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
 ## TARGET/SCENE LOCATIONS
 targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
@@ -114,8 +114,6 @@ include("../../inputs/input_parameters_sync.jl")
 rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,p_xyz,enable_fast_time,parameters)
 
 ## PROCESS RAW DATA TO GENERATE IMAGE
-#image_3xN=Process_Raw_Data.main(rawdata,s_xyz_3xN,p_xyz_grid,mode,tx_el,fc) # without fastime, without slowtime
-#image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)  # with fastime, without slowtime
 if enable_fast_time # with fastime, with slowtime
     image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata_sync,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
 else # without fastime, with slowtime

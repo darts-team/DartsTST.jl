@@ -27,7 +27,6 @@ println("Current procs: " * "$curr_procs")
     include("../../modules/performance_metrics.jl")
 end#begin
 
-## Determining Parameters
 c=299792458 # speed of light (m/s)
 # planetary shape constants
 earth_radius=6378.137e3 # semi-major axis at equator
@@ -37,56 +36,46 @@ mode=2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
 tx_el=1 # which element transmits for SIMO (max value N)
 # radar parameters
 fc=1.25e9 # center frequency (Hz) L-band
-# fc=3e9 # center frequency (Hz) S-band
+# fc=3.2e9 # center frequency (Hz) S-band
 # fc=6e9 # center frequency (Hz) C-band
-fp=10 # pulse repetition frequency (Hz)
+fp=5 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz taken from orbits (including slow-time)
-orbit_filename="inputs/orbitOutput_082020.nc" # position in km, time in sec
-
-SAR_duration=5 # synthetic aperture duration (s)
+#orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
+orbit_filename="orbit_output_062021.nc" # position in km, time in sec
+SAR_duration=3 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations and reflectvities
-
 target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
 ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
-if ts_coord_sys=="SCH" # if SCH, target and scene locations are defined relative to the point where look angle vector intersects the surface
-    # look_angle=30 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
-    look_angle=0 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
-    p_avg_heading=0.1 # average heading of platforms, due North is 0, due East is 90 (deg), required only if SCH coordinates TODO we should get this from orbits!
-end
-if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
-    t_loc_1=-10:10:10 # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=-20:20:20 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=0:30:30 # m  heights if LLH or SCH, Z if XYZ
-    t_ref=rand(Float64,length(t_loc_1),length(t_loc_2),length(t_loc_3)) # uniform random reflectivities between 0 and 1, a 3D input array (e.g. 3D image) can be used instead
-elseif target_pos_mode=="CR" # ("CR" for corner reflector) target positions are defined as 3xN array (useful for a few discrete targets)
-    # length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
-    t_loc_1=[0] # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3=[40] # m  heights if LLH or SCH, Z if XYZ
-    t_ref=  [1] # reflectivities
-end
+display_geometry_coord="SCH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
+look_angle=30 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
+# length(t_loc_1)==length(t_loc_2)==length(t_loc_3) should hold
+t_loc_1=[0] # deg latitude if LLH, along-track if SCH, X if XYZ
+t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
+t_loc_3=[0] # m  heights if LLH or SCH, Z if XYZ
+t_ref=  [1] # reflectivities
 # image/scene pixel coordinates
-# s_loc_1=-40:.5:40 # deg latitude if LLH, along-track if SCH, X if XYZ
-# s_loc_2=-60:1:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-# s_loc_3=  0:1:80 # m  heights if LLH or SCH, Z if XYZ
-s_loc_1= (-40:.5:40) .+ t_loc_1  # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2= (-40:1:40)  .+ t_loc_2 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3= (-15:.5:15)  .+ t_loc_3 # m  heights if LLH or SCH, Z if XYZ
+s_loc_1=-60:1:60 # deg latitude if LLH, along-track if SCH, X if XYZ
+s_loc_2=-60:1:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=-60:1:60 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
-Δt=1e-8 # s fast-time resolution (ADC sampling rate effect is excluded for now)
+Δt=1e-9 # s fast-time resolution (ADC sampling rate effect is excluded for now)
 bandwidth=40e6 # bandwidth (Hz)
 # performance metrics
-res_dB=3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
+res_dB=5 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
 PSF_image_point=1 # 1: peak location, 2: target location, 3: center of 3D scene
+PSF_cuts=2 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
+PSF_direction=[0 1 tand(34)] # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
 enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
 display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
-display_tomograms=0 # how to display tomograms, 0: do not display, 1: display only 3 slices at the scene center, 2: display all slices in each dimension, 3: display as 3D scatter plot
+display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
+include_antenna=false # whether to include projected antenna pattern
+display_input_scene=false # display input scene (targets) and delta between input/output scenes (3 slices at the center of scene) with same scene size as output tomogram scene
 disable_freq_offset = true # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 
 
@@ -96,13 +85,24 @@ sync_fc = 1.25e9 # waveform center frequency
 sync_fs = 25e6; # sync receiver sampling rate
 sync_fbw = sync_fs # LFM bandwidth
 
-osc_type = "USO" # putting a oscillator type variable here to auto-name save files
-# osc_type = "USRP"
+# osc_type = "USO" # putting a oscillator type variable here to auto-name save files
+osc_type = "MicroSemi"
 #defines oscillator quality. Either leave as single row to use across all platforms, or define values for each platform as a new row
 if osc_type == "USO"
     a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
+    f_osc = 10e6 # local oscillator frequency
 elseif osc_type == "USRP"
-    a_coeff_dB = [-28 -40 -200 -130 -155] # [USRP E312]
+    a_coeff_dB = [-66 -62 -80 -110 -153] # [USRP E312]
+    f_osc = 10e6 # local oscillator frequency
+elseif osc_type == "Wenzel5MHz"
+    a_coeff_dB = [-1000 -128 -1000 -150 -178] # [Wenzel 5MHz oscillator] - NOTE: fractional dB values were rounded up for Wenzel oscillators (to keep as Int64 values)
+    f_osc = 5e6 # local oscillator frequency
+elseif osc_type == "Wenzel100MHz"
+    a_coeff_dB = [-1000 -73 -1000 -104 -181] # [Wenzel 100MHz oscillator]
+    f_osc = 100e6 # local oscillator frequency
+elseif osc_type == "MicroSemi"
+    a_coeff_dB = [-120 -114 -999 -134 -166 ] # [Microsemi GPS-3500 oscillator]
+    f_osc = 10e6 # local oscillator frequency #TODO(right center freq?)
 end
 osc_coeffs = 0 # temporary holding value, will get overwritten
 
@@ -115,7 +115,6 @@ end
 
 # sync_fmin   = 0.01 # minimum frequency > 0 in Hz to window PSD
 sync_fmin   = 1 # Hz new fmin value
-f_osc       = 10e6 # local oscillator frequency
 sync_clk_fs = 1e3; # sample rate of clock error process
 master      = 1 # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
 sync_pri    = 1 # to be overwritten in loop
@@ -174,48 +173,85 @@ sync_PRIs = [.1 1 2 3 4 5]
 # sync_PRIs=0.1
 numSRI = length(sync_PRIs)
 
-## PLATFORM LOCATIONS
-orbit_dataset=Dataset(orbit_filename) # Read orbits data in NetCDF format
-orbit_dataset=Dataset(orbit_filename) # Read orbits data in NetCDF format
-
+## PLATFORM LOCATIONS and HEADINGS
+orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
 t12_orbits=orbit_dataset["time"][1:2] # first two time samples
 dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
 orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
 orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
-orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data #TODO convert ECI to ECEF?
+orbit_pos_ECI=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
+orbit_vel_ECI=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
+try #does file have dcm already?
+    global dcm=orbit_dataset["dcm"];
+catch #if not generate from Orbits
+    dv = orbit_dataset.attrib["epoch"];
+    local epoch = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
+    global dcm = Orbits.eci_dcm(orbit_time, epoch);
+end
+#orbit_pos=orbit_pos_ECI
+#orbit_vel=orbit_vel_ECI
+#orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
+orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF TODO velocity conversion function not ready yet
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
-orbit_pos_interp=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time) # interpolate orbit to slow time
-p_xyz=1e3*orbit_pos_interp # convert km to m
+if length(slow_time)==1;p_xyz=orbit_pos
+else;p_xyz=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time);end # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
 Np=size(orbit_pos)[2] # number of platforms
 Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
-
-parameters.osc_coeffs = repeat(a_coeff_dB,Np) # put together all oscillator coeffs
-if disable_freq_offset == 1 # option to remove linear phase drift due to osc frequency offset
-    sigma_freq_offsets = zeros(Np)
-else
-    sigma_freq_offsets = 1.5e-3 # Hz - std. dev. of the frequency offset of the oscillator. This is the linear phase ramp value
-    sigma_freq_offsets = sigma_freq_offsets .* ones(Np) # convert to matrix form, one value for each oscillator
-end
-parameters.sigma_freq_offsets=sigma_freq_offsets # overwrite here
-
-orbit_pos_all=reshape(p_xyz,3,Np*Nst) # platform positions in xyz; for each platform, its position at each PRF treated as a different platform; output loops over platforms first, then slow-time
 
 ## TARGET/SCENE LOCATIONS
 targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
 s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loops
-t_xyz_3xN,s_xyz_3xN=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,p_xyz,look_angle,p_avg_heading,earth_radius,earth_eccentricity)
+if ts_coord_sys=="XYZ" || ts_coord_sys=="LLH";look_angle=[];end
+#t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,look_angle,earth_radius,earth_eccentricity) ## calculate avg heading from platform positions
+t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,orbit_vel,look_angle,earth_radius,earth_eccentricity) # calculate avg heading from platform velocities
 ## TARGET REFLECTIVITIES
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
+## ANTENNA PATTERN
+if include_antenna # calculate look angle (average over platforms and slow-time positions)
+    avg_p_xyz=reshape(mean(mean(p_xyz,dims=2),dims=3),3)
+    avg_p_vel=reshape(mean(mean(orbit_vel,dims=2),dims=3),3)
+    if ts_coord_sys=="SCH"
+        look_ang=look_angle
+    elseif ts_coord_sys=="XYZ" || ts_coord_sys=="LLH"
+        platform_heights=zeros(Np);slant_ranges=zeros(Np)
+        avg_t_xyz=mean(t_xyz_3xN,dims=2) # average target location in XYZ
+        avg_rs=Geometry.distance(avg_t_xyz,avg_p_xyz) # average slant range
+        for i=1:Np
+            p_xyz_i=p_xyz[:,i,:] # p_xyz: 3 x Np x Nst
+            p_xyz_i=reshape(p_xyz_i,3,Nst) # p_xyz: 3 x Nst
+            p_LLH=Geometry.xyz_to_geo(p_xyz_i)
+            platform_heights[i]=mean(p_LLH[3,:]) # average platform heights over slow-time for each platform
+        end
+        avg_p_h=mean(platform_heights) # average platform height over platforms and slow-time
+        if avg_rs<avg_p_h;avg_rs=avg_p_h;end
+        avg_rg,look_ang=Scene.slantrange_to_lookangle(earth_radius,avg_rs,avg_p_h,0) # assuming target height is 0 (negligible effect), look_ang: average look angle
+    end
+    vgrid = Antenna.AntGrid("inputs/darts_ant_03192021.nc") # read in vpol grid, takes time to load
+    ant = SimSetup.sc_ant(vgrid); #create antenna structure, additional arguments are rotation and origin
+    sc = SimSetup.spacecraft(avg_p_xyz, Float64.(avg_p_vel), ant = ant, look_angle = look_ang, side = "right"); ##create spacecraft structure; ant, look_angle, side are optional
+    co_pol,cross_pol = SimSetup.interpolate_pattern(sc, t_xyz_3xN);#inteprolate pattern (cp:co-pol, xp: cross-pol), outputs are 1xNt complex vectors
+    targets_ref=targets_ref.*transpose(co_pol).^2/maximum(abs.(co_pol))^2 #TODO separate TX and RX, include range effect?
+    if target_pos_mode=="grid" # plotting projected pattern only for grid type target distribution
+        projected_pattern_3D=Scene.convert_image_1xN_to_3D(abs.(co_pol),length(t_loc_1),length(t_loc_2),length(t_loc_3))#take magnitude and reshape to 3D
+        include("modules/plotting.jl");coords_txt=Plotting.coordinates(ts_coord_sys)
+        Nt_1=length(t_loc_1)
+        Nt_2=length(t_loc_2)
+        Nt_3=length(t_loc_3)
+        using Plots;gr()
+        if Nt_2>1 && Nt_1>1;display(heatmap(t_loc_2,t_loc_1, 20*log10.(projected_pattern_3D[:,:,1]), ylabel=coords_txt[1],xlabel=coords_txt[2],title = "Antenna Pattern Projected on Targets (V-copol)", fill=true,size=(1600,900)));end #, clim=(-80,40),aspect_ratio=:equal
+        if Nt_3>1 && Nt_2>1;display(heatmap(t_loc_3,t_loc_2, 20*log10.(projected_pattern_3D[1,:,:]),ylabel=coords_txt[2],xlabel=coords_txt[3],title = "Antenna Pattern Projected on Targets (V-copol)", fill=false,size=(1600,900)));end #, clim=(-80,40),aspect_ratio=:equal
+        if Nt_3>1 && Nt_1>1;display(heatmap(t_loc_3,t_loc_1, 20*log10.(projected_pattern_3D[:,1,:]),ylabel=coords_txt[1],xlabel=coords_txt[3],title = "Antenna Pattern Projected on Targets (V-copol)", fill=false,size=(1600,900)));end #, clim=(-80,40),aspect_ratio=:equal
+    end
+end
 
 ## RANGE SPREAD FUNCTION (matched filter output)
 min_range,max_range=Geometry.find_min_max_range(t_xyz_3xN,p_xyz)
-Trx=2*(max_range-min_range)/c+2*pulse_length # s duration of RX window
+Trx=2*(max_range-min_range)/c+5*pulse_length # s duration of RX window
 if enable_fast_time # matched filter gain is included in Srx
     Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
     # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
 end
-
 ## GENERATE RAW DATA
 ref_range=Geometry.distance(mean(t_xyz_3xN,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range (equal to slant_range in sch?)
 if enable_fast_time # with fastime and slowtime; matched filter gain is included in Srx
@@ -249,7 +285,8 @@ if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when th
     else
         PSF_metrics=true
         target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
-        ideal_res,ideal_PSLR,ideal_ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point) # resolutions in each of the 3 axes
+        ideal_res,ideal_PSLR,ideal_ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point,PSF_cuts,PSF_direction) # resolutions in each of the 3 axes
+        resolutions,PSLRs,ISLRs,loc_errors,scene_axis11,scene_axis22,scene_axis33=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point,PSF_cuts,PSF_direction) # resolutions in each of the 3 axes
     end
 else
     PSF_metrics=false
@@ -265,9 +302,6 @@ loc_errors  = SharedArray{Float64}(3,numSRI,Ntrials)
 tomo_data   = SharedArray{Float64}(Ns_1,Ns_2,Ns_3,numSRI,Ntrials)
 ## run trials
 @sync @distributed for ntrial = 1 : Ntrials
-# Threads.@threads for ntrial = 1 : Ntrials
-    # println("Trial Number: ", ntrial)
-
      for k = 1 : numSRI
         sync_pri = sync_PRIs[k]
         parameters.sync_pri = sync_pri
@@ -305,7 +339,7 @@ tomo_data   = SharedArray{Float64}(Ns_1,Ns_2,Ns_3,numSRI,Ntrials)
                 PSF_metrics=true
                 target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
                 try
-                    resolution,PSLR,ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point) # resolutions in each of the 3 axes
+                    resolution,PSLR,ISLR,loc_error=Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point,PSF_cuts,PSF_direction) # resolutions in each of the 3 axes
                 catch
                     resolution=[NaN,NaN,NaN]
                     PSLR=[NaN,NaN,NaN]
