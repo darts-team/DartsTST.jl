@@ -12,18 +12,22 @@ fc=1.25e9 # center frequency (Hz) L-band
 fp=10 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz (including slow-time locations)
-user_defined_orbit=true # whether to use orbits file or user defined circular orbits
-if user_defined_orbit
-    p_t0_LLH=[0;0;750e3] # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time)
+user_defined_orbit=1 # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
+if user_defined_orbit==0 # orbit file
+    #orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
+    orbit_filename="orbit_output_062021.nc" # position in km, time in sec
+else # user defined orbit
+    p_t0_LLH=[0;0;750e3] # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
     Vtan=7500 # tangential (along-track) velocity (m/s), radial velocity is assumed 0 (circular orbit)
     Torbit=10*60 # orbital duration (s) (should be larger than SAR_start_time+SAR_duration)
     dt_orbits=0.5 # orbit time resolution (s)
-    pos_n=[-7.5 -5 -2 0 3.7 5.5 6.5]*1e3 # relative position of each platform along n (m), 0 is the reference location
     p_heading=0 # heading (deg), all platforms assumed to have the same heading, 0 deg is north
     display_custom_orbit=false #whether to show orbit on Earth sphere (for a duration of Torbit)
-else
-    #orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
-    orbit_filename="orbit_output_062021.nc" # position in km, time in sec
+end
+if user_defined_orbit==1 # SCH option
+    pos_n=[-7.5 -5 -2 0 3.7 5.5 6.5]*1e3 # relative position of each platform along n (m), 0 is the reference location
+elseif user_defined_orbit==2 # TCN option
+    pos_TCN=[0 0 0;0 5e3 0;1e3 -3e3 1e3] # Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
 end
 SAR_duration=3 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
