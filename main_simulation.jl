@@ -106,13 +106,7 @@ end
 if !enable_fast_time;SNR=SNR*pulse_length*bandwidth;end # SNR increases after matched filter
 if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end # adding random noise based on SNR after range (fast-time) processing
 ## PROCESS RAW DATA TO GENERATE IMAGE
-#image_3xN=Process_Raw_Data.main(rawdata,s_xyz_3xN,p_xyz_grid,mode,tx_el,fc) # without fastime, without slowtime
-#image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)  # with fastime, without slowtime
-if enable_fast_time # with fastime, with slowtime
-    image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
-else # without fastime, with slowtime
-    image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc)
-end
+image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
 Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
 image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
 ## PERFORMANCE METRICS
