@@ -7,8 +7,9 @@ include("modules/scene.jl")
 #include("inputs/input_parameters_CR_nadirlooking.jl")
 #include("inputs/input_parameters_CR_slantlooking.jl")
 #include("inputs/input_parameters_CR_nadirlooking_tiltedcuts.jl")
-include("inputs/input_parameters_CR_slantlooking_tiltedcuts.jl")
+#include("inputs/input_parameters_CR_slantlooking_tiltedcuts.jl")
 #include("inputs/input_parameters_CRs_cross.jl")
+include("inputs/input_parameters_custom_orbit.jl")
 include("modules/range_spread_function.jl") # as RSF
 include("modules/orbits.jl")
 include("modules/sync.jl")
@@ -99,10 +100,10 @@ ref_range=Geometry.distance(mean(t_xyz_3xN,dims=2),mean(mean(p_xyz,dims=2),dims=
 rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range,targets_ref) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
 if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end # adding random noise based on SNR after range (fast-time) processing
 ## PROCESS RAW DATA TO GENERATE IMAGE
+Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
 #image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
-#Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
 #image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
-image_3D=Process_Raw_Data.main_RSF_slowtime_3D(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+image_3D=Process_Raw_Data.main_RSF_slowtime_3D(rawdata,s_xyz_3xN,Ns_1,Ns_2,Ns_3,p_xyz,mode,tx_el,fc,t_rx,ref_range)
 ## PERFORMANCE METRICS
 # PSF metrics
 include("modules/performance_metrics.jl")
