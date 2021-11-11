@@ -145,7 +145,7 @@ end
 
     for i = 1:nplat #for each platform, generate oscillator phase errors at each time point
         
-        a_coeff_db = osc_coeffs[i, :]   # grab the clock coefficients for each platform
+        a_coeff_db = osc_coeffs[i,:]   # grab the clock coefficients for each platform
         crlbs      = sig_crlb[i,:]      # grab the CRLB previously calculated
         #interpolate CRLB values to sync PRI times
         push!(crlbs,crlbs[end])

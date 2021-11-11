@@ -188,15 +188,16 @@ catch #if not generate from Orbits
     local epoch = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
     global dcm = Orbits.eci_dcm(orbit_time, epoch);
 end
-#orbit_pos=orbit_pos_ECI
-#orbit_vel=orbit_vel_ECI
-#orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
+
 orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF TODO velocity conversion function not ready yet
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
 if length(slow_time)==1;p_xyz=orbit_pos
 else;p_xyz=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time);end # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
 Np=size(orbit_pos)[2] # number of platforms
 Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
+# Add in oscillator coefficients - assuming same for each platform
+osc_coeffs = repeat(a_coeff_dB,Np)
+parameters.osc_coeffs=osc_coeffs
 
 ## TARGET/SCENE LOCATIONS
 targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
@@ -308,7 +309,7 @@ tomo_data   = SharedArray{Float64}(Ns_1,Ns_2,Ns_3,numSRI,Ntrials)
         println("Starting SRI value: ", sync_pri)
 
         ## add in error sources
-        rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_time,parameters)
+        rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,p_xyz,enable_fast_time,parameters)
 
         ## PROCESS RAW DATA TO GENERATE IMAGE
         if enable_fast_time # with fastime, with slowtime
