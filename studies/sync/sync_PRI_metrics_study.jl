@@ -2,6 +2,7 @@
 using NCDatasets
 using Plots
 using Statistics
+using Dates
 using JLD2 # note: may have to Pkg.add("JLD2")
 using Distributed, SharedArrays
 
@@ -43,7 +44,7 @@ SNR=50 # SNR for single platform and single pulse before fast-time processing dB
 # platform locations in xyz taken from orbits (including slow-time)
 #orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
 orbit_filename="orbit_output_062021.nc" # position in km, time in sec
-SAR_duration=3 # synthetic aperture duration (s)
+SAR_duration=5 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations and reflectvities
 target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
@@ -66,7 +67,7 @@ bandwidth=40e6 # bandwidth (Hz)
 # performance metrics
 res_dB=5 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
 PSF_image_point=1 # 1: peak location, 2: target location, 3: center of 3D scene
-PSF_cuts=2 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
+PSF_cuts=1 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
 PSF_direction=[0 1 tand(34)] # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
@@ -114,7 +115,7 @@ else
 end
 
 # sync_fmin   = 0.01 # minimum frequency > 0 in Hz to window PSD
-sync_fmin   = 1 # Hz new fmin value
+sync_fmin   = 1.0 # Hz new fmin value
 sync_clk_fs = 1e3; # sample rate of clock error process
 master      = 1 # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
 sync_pri    = 1 # to be overwritten in loop
@@ -198,6 +199,8 @@ Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
 # Add in oscillator coefficients - assuming same for each platform
 osc_coeffs = repeat(a_coeff_dB,Np)
 parameters.osc_coeffs=osc_coeffs
+sigma_freq_offsets = repeat(a_coeff_dB,Np)
+parameters.sigma_freq_offsets = sigma_freq_offsets
 
 ## TARGET/SCENE LOCATIONS
 targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
@@ -366,7 +369,6 @@ tomo_data   = SharedArray{Float64}(Ns_1,Ns_2,Ns_3,numSRI,Ntrials)
         PSLRs[:,k,ntrial]       = PSLR
         ISLRs[:,k,ntrial]       = ISLR
     end#N SRIs
-
 end#Ntrials
 
 if disable_freq_offset # test to denote frequency error or not in save file name
