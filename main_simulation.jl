@@ -19,7 +19,19 @@ include("modules/antenna.jl")
 include("modules/simsetup.jl")
 using NCDatasets
 using Statistics
+using Parameters
 using Dates
+using .UserParameters
+
+params = UserParameters.inputParameters()
+
+@unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n, 
+    Torbit, p_t0_LLH, p_heading, Vtan, look_angle, display_custom_orbit, fp, 
+    target_pos_mode, t_loc_1, t_loc_2, t_loc_3, t_ref,
+    s_loc_1, s_loc_2, s_loc_3, ts_coord_sys, include_antenna, pulse_length,
+    enable_fast_time, Δt, bandwidth, res_dB, PSF_image_point, PSF_cuts, PSF_direction, 
+    display_geometry, display_RSF_rawdata, display_input_scene, display_tomograms, display_geometry_coord, mode = params
+
 ## PLATFORM LOCATIONS and HEADINGS
 orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
 if user_defined_orbit==0 # orbits from file
@@ -69,11 +81,15 @@ if (user_defined_orbit==1 || user_defined_orbit==2)
     orbit_pos=orbit_pos_all[:,:,orbit_time_index]
     orbit_time=orbit_time_all[orbit_time_index]
 end
+
+
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
 if length(slow_time)==1;p_xyz=orbit_pos
 else;p_xyz=Orbits.interp_orbit(orbit_time,orbit_pos,slow_time);end # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
 Np=size(orbit_pos)[2] # number of platforms
 Nst=size(slow_time)[1] # number of slow-time samples (pulses processed)
+
+
 ## TARGET/SCENE LOCATIONS
 targets,Nt=Scene.construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 targets_loc=zeros(3,Nt);for i=1:Nt;targets_loc[:,i]=targets[i].loc;end # 3xN
@@ -81,8 +97,10 @@ s_loc_3xN=Scene.form3Dgrid_for(s_loc_1,s_loc_2,s_loc_3) # using 3 nested for loo
 if ts_coord_sys=="XYZ" || ts_coord_sys=="LLH";look_angle=[];end
 t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,look_angle,earth_radius,earth_eccentricity) ## calculate avg heading from platform positions
 #t_xyz_3xN,s_xyz_3xN,avg_peg=Scene.convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,orbit_vel,look_angle,earth_radius,earth_eccentricity) # calculate avg heading from platform velocities
+
 ## TARGET REFLECTIVITIES
 targets_ref=zeros(1,Nt);for i=1:Nt;targets_ref[i]=targets[i].ref;end
+
 ## ANTENNA PATTERN
 if include_antenna # calculate look angle (average over platforms and slow-time positions)
     avg_p_xyz=reshape(mean(mean(p_xyz,dims=2),dims=3),3)
@@ -120,6 +138,8 @@ if include_antenna # calculate look angle (average over platforms and slow-time 
         if Nt_3>1 && Nt_1>1;display(heatmap(t_loc_3,t_loc_1, 20*log10.(projected_pattern_3D[:,1,:]),ylabel=coords_txt[1],xlabel=coords_txt[3],title = "Antenna Pattern Projected on Targets (V-copol)", fill=false,size=(1600,900)));end #, clim=(-80,40),aspect_ratio=:equal
     end
 end
+
+
 ## RANGE SPREAD FUNCTION (matched filter output)
 min_range,max_range=Geometry.find_min_max_range(t_xyz_3xN,p_xyz)
 Trx=2*(max_range-min_range)/c+5*pulse_length # s duration of RX window
@@ -127,25 +147,31 @@ if enable_fast_time # matched filter gain is included in Srx
     Srx,MF,ft,t_rx=RSF.ideal_RSF(pulse_length,Δt,bandwidth,Trx) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
     # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
 end
+
+
 ## GENERATE RAW DATA
 ref_range=Geometry.distance(mean(t_xyz_3xN,dims=2),mean(mean(p_xyz,dims=2),dims=3)) # reference range (equal to slant_range in sch?)
-if enable_fast_time # with fastime and slowtime; matched filter gain is included in Srx
-    rawdata=Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN,p_xyz,mode,tx_el,fc,Srx,t_rx,ref_range,targets_ref) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
+if params.enable_fast_time # with fastime and slowtime; matched filter gain is included in Srx
+    rawdata = Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN,p_xyz, params,Srx,t_rx,ref_range,targets_ref) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
 else # without fastime, with slowtime; matched filter gain is included inside the function
     rawdata=Generate_Raw_Data.main_noRSF_slowtime(t_xyz_3xN,p_xyz,mode,tx_el,fc,targets_ref) # rawdata is a: 2D array of size Nst x Np (SAR/SIMO), 3D array of size Nst x Np(RX) x Np(TX) (MIMO)
 end
-if !enable_fast_time;SNR=SNR*pulse_length*bandwidth;end # SNR increases after matched filter
-if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end # adding random noise based on SNR after range (fast-time) processing
+if !params.enable_fast_time;SNR=SNR*pulse_length*bandwidth;end # SNR increases after matched filter
+if params.enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end # adding random noise based on SNR after range (fast-time) processing
+
+
 ## PROCESS RAW DATA TO GENERATE IMAGE
 #image_3xN=Process_Raw_Data.main(rawdata,s_xyz_3xN,p_xyz_grid,mode,tx_el,fc) # without fastime, without slowtime
 #image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)  # with fastime, without slowtime
-if enable_fast_time # with fastime, with slowtime
-    image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+if params.enable_fast_time # with fastime, with slowtime
+    image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_3xN,p_xyz, params, t_rx, ref_range)
 else # without fastime, with slowtime
     image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc)
 end
 Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
 image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
+
+
 ## PERFORMANCE METRICS
 # PSF metrics
 include("modules/performance_metrics.jl")

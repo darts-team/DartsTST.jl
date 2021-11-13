@@ -1,5 +1,7 @@
 module Process_Raw_Data
 
+using Parameters
+
 c=299792458 # speed of light (m/s)
 
 function main(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc) # no RSF, no slowtime
@@ -61,14 +63,14 @@ function main_RSF(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,t_rx,ref_range) # 
     return abs.(processed_image) # square for power?
 end
 
-function main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range) # with RSF and slow-time
+function main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz_3D, params, t_rx, ref_range) # with RSF and slow-time
+    @unpack mode, tx_el, λ = params
     Ns=size(s_xyz_grid)[2] # number of pixels in the scene
     Np=size(p_xyz_3D)[2] # number of platforms
     Nft=length(t_rx) # number of fast-time samples
     Nst=size(p_xyz_3D)[3] # number of slow-time samples
     Δt=t_rx[2]-t_rx[1]
     processed_image=zeros(ComplexF64,Ns) # intensity image vector
-    λ=c/fc # wavelength (m)
     ref_delay=2*ref_range/c # reference delay
 
     if mode==1 # SAR (ping-pong)  
