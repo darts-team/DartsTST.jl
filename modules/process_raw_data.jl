@@ -97,7 +97,7 @@ function main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_ra
     return abs.(processed_image) # square for power?
 end
 
-function main_RSF_slowtime_3D(rawdata,s_xyz_grid,Ns_1,Ns_2,Ns_3,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range) # with fast-time, slow-time, and tomographic processing; pixels in 3D
+function main_SAR_tomo_3D(rawdata,s_xyz_grid,Ns_1,Ns_2,Ns_3,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range) # with fast-time, slow-time, and tomographic processing; pixels in 3D
     Nft=length(t_rx) # number of fast-time samples
     Nst=size(p_xyz_3D)[3] # number of slow-time samples
     s_xyz_3D=reshape(s_xyz_grid,3,Ns_3,Ns_2,Ns_1) # convert scene to 3D
