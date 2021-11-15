@@ -171,14 +171,14 @@ function main_SAR_tomo_3D(rawdata,s_xyz_grid,Ns_1,Ns_2,Ns_3,p_xyz_3D,mode,tx_el,
     return abs.(processed_image) # square for power?
 end
 
-function along_track_processing(rawdata,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range) # slow-time processing of rawdata with fast-time
+function SAR_processing(rawdata,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range) # slow-time processing of rawdata with fast-time
 
-    return SAR_images
+    return SAR_images_3D
 end
 
-function tomographic_processing(SAR_images,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range) # tomographic processing of slow-time processed data
+function tomo_processing_afterSAR(SAR_images_3D,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range) # tomographic processing of slow-time processed data
 
-    return tomographic_image
+    return image_3D
 end
 
 function distance(xyz1,xyz2)

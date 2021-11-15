@@ -103,7 +103,12 @@ if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fa
 Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
 #image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
 #image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
-image_3D=Process_Raw_Data.main_SAR_tomo_3D(rawdata,s_xyz_3xN,Ns_1,Ns_2,Ns_3,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+if processing_steps==1 # 1-step processing
+    image_3D=Process_Raw_Data.main_SAR_tomo_3D(rawdata,s_xyz_3xN,Ns_1,Ns_2,Ns_3,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+elseif processing_steps==2 # 2-step processing, first SAR (along-track), then tomographic
+    SAR_images_3D=Process_Raw_Data.SAR_processing(rawdata,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range)
+    image_3D=Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range)
+end
 ## PERFORMANCE METRICS
 # PSF metrics
 include("modules/performance_metrics.jl")
@@ -146,6 +151,6 @@ if display_geometry || display_RSF_rawdata || display_input_scene || display_tom
         Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt)
     end
     if display_input_scene;Plotting.plot_input_scene(inputscene_3D,s_loc_1,s_loc_2,s_loc_3,ts_coord_txt);end
-    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,ts_coord_txt,mode,scene_axis11,scene_axis22,scene_axis33,PSF_cuts,PSF_metrics);end
+    if display_tomograms!=0;Plotting.plot_tomogram(PSF_image_point,display_tomograms,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,ts_coord_txt,mode,scene_axis11,scene_axis22,scene_axis33,PSF_cuts,PSF_metrics);end
     if display_input_scene;Plotting.plot_input_scene(diff_image3D,s_loc_1,s_loc_2,s_loc_3,ts_coord_txt);end
 end
