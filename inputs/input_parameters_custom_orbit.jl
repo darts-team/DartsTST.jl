@@ -9,10 +9,10 @@ tx_el=1 # which element transmits for SIMO (max value N)
 fc=1.25e9 # center frequency (Hz) L-band
 # fc=3.2e9 # center frequency (Hz) S-band
 # fc=6e9 # center frequency (Hz) C-band
-fp=10 # pulse repetition frequency (Hz)
+fp=5 # pulse repetition frequency (Hz)
 SNR=50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
 # platform locations in xyz (including slow-time locations)
-user_defined_orbit=1 # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
+user_defined_orbit=0 # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
 if user_defined_orbit==0 # orbit file
     #orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
     orbit_filename="orbit_output_062021.nc" # position in km, time in sec
@@ -29,6 +29,7 @@ if user_defined_orbit==1 # SCH option
 elseif user_defined_orbit==2 # TCN option
     pos_TCN=[0 0 0;0 5e3 0;1e3 -3e3 1e3] # Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
 end
+processing_steps=2 # 1: 1-step, 2: 2-step for SAR and tomographic processing
 SAR_duration=3 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations and reflectvities
@@ -43,8 +44,8 @@ t_loc_3=[0] # m  heights if LLH or SCH, Z if XYZ
 t_ref=  [1] # reflectivities
 # image/scene pixel coordinates
 s_loc_1=0 # deg latitude if LLH, along-track if SCH, X if XYZ
-s_loc_2=-60:0.5:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-s_loc_3=-60:0.5:60 # m  heights if LLH or SCH, Z if XYZ
+s_loc_2=-60:2:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+s_loc_3=-60:2:60 # m  heights if LLH or SCH, Z if XYZ
 # range spread function (RSF) parameters
 pulse_length=10e-6 # s pulse length
 Δt=1e-9 # s fast-time resolution (ADC sampling rate effect is excluded for now)
@@ -57,7 +58,6 @@ PSF_direction=[0 1 tand(34)] # direction (in ts_coord_sys) relative to scene cen
 #PSF_direction= [0 1 tand(inc_angle)] for along-n cut and [0 1 -1/tand(inc_angle)] for along-r cut; inc_angle=asind((earth_radius+h)./earth_radius.*sind(look_angle)), h:altitude
 # simulation options
 enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
-enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
 display_geometry=false # whether to display geometry plots
 display_RSF_rawdata=false # whether to display RSF and rawdata plots
 display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
