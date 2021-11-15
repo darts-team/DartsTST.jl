@@ -26,10 +26,10 @@ else # user defined orbit
 end
 if user_defined_orbit==1 # SCH option
     pos_n=[-7.5 -5 -2 0 3.7 5.5 6.5]*1e3 # relative position of each platform along n (m), 0 is the reference location
-elseif user_defined_orbit==2 # TCN option
+elseif user_defined_orbit==2 # TCN option TODO not yet complete
     pos_TCN=[0 0 0;0 5e3 0;1e3 -3e3 1e3] # Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
 end
-processing_steps=2 # 1: 1-step, 2: 2-step for SAR and tomographic processing
+processing_steps=1 # 1: 1-step, 2: 2-step for SAR and tomographic processing
 SAR_duration=3 # synthetic aperture duration (s)
 SAR_start_time=0 # SAR imaging start time (s)
 # target locations and reflectvities
