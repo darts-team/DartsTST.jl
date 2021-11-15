@@ -7,6 +7,71 @@ using NCDatasets
 using Dates
 using LinearAlgebra
 using Dierckx
+using Parameters
+using Plots
+
+function computeTimePosVel(params)
+    @unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n, 
+    Torbit, p_t0_LLH, p_heading, Vtan, look_angle, display_custom_orbit = params
+
+    ## PLATFORM LOCATIONS and HEADINGS
+    orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
+
+    if user_defined_orbit==0 # orbits from file
+        orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
+        t12_orbits=orbit_dataset["time"][1:2] # first two time samples
+        dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
+        orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
+        orbit_pos_ECI=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
+        orbit_vel_ECI=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
+        try #does file have dcm already?
+            global dcm=orbit_dataset["dcm"];
+        catch #if not generate from Orbits
+            dv = orbit_dataset.attrib["epoch"];
+            local epoch = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
+            global dcm = Orbits.eci_dcm(orbit_time, epoch);
+        end
+        #orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
+        orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF
+    elseif user_defined_orbit==1 # user defined, SCH option
+        Np=length(pos_n)
+        orbit_time_all=0:dt_orbits:Torbit
+        Nt=length(orbit_time_all)
+        peg_t0=Geometry.PegPoint(p_t0_LLH[1],p_t0_LLH[2],p_heading)
+        p_Ss_1p=Vtan*orbit_time_all';p_Ss=repeat(p_Ss_1p,Np,1);p_Ss=reshape(p_Ss,1,Np,Nt)
+        p_Hs_t0=p_t0_LLH[3].+pos_n'*sind(look_angle);p_Hs=repeat(p_Hs_t0,1,Nt);p_Hs=reshape(p_Hs,1,Np,Nt)
+        p_Cs_t0=pos_n'*cosd(look_angle);p_Cs=repeat(p_Cs_t0,1,Nt);p_Cs=reshape(p_Cs,1,Np,Nt)
+        p_SCHs=cat(p_Ss,p_Cs,p_Hs,dims=1)
+        orbit_pos_all=zeros(3,Np,Nt)
+        orbit_vel_all=zeros( size(orbit_pos_all) ) # ml: needs revision
+        @warn "Orbit Velocity not defined for SCH option"        
+        for i=1:Np
+            orbit_pos_all[:,i,:]=Geometry.sch_to_xyz(p_SCHs[:,i,:],peg_t0) # ECEF TODO use mid-aperture peg
+        end
+    elseif user_defined_orbit==2 # user defined, TCN option
+        pos_TCN=pos_TCN' # 3 x Np
+        pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
+        orbit_time_all=0:dt_orbits:Torbit
+        orbit_pos_all,orbit_vel_all=Orbits.make_orbit(pos_XYZ,p_heading,pos_TCN,orbit_time_all)
+        @warn "Orbit velocity needs revision for TCN"
+    end
+    if (user_defined_orbit==1 || user_defined_orbit==2)
+        if display_custom_orbit  #plot orbit on surface sphere
+            lats=-90:1:90;lons=-180:1:180;hgts=0; # background spherical grid on surface
+            spherical_grid=Geometry.geo_to_xyz(Scene.form3Dgrid_for(lats,lons,hgts)); #create grid in LLH and convert to XYZ
+            plotly();scatter(spherical_grid[1,:]/1e3,spherical_grid[2,:]/1e3,spherical_grid[3,:]/1e3,xlabel = "X-ECEF", ylabel="Y-ECEF", zlabel="Z-ECEF",size=(1600,900),leg=false,markersize=0.1)#display background grid in 3D
+            for i=1:Np
+                display(scatter!(orbit_pos_all[1,i,:]/1e3,orbit_pos_all[2,i,:]/1e3,orbit_pos_all[3,i,:]/1e3,markersize=0.5))
+            end
+        end
+        orbit_pos=orbit_pos_all[:,:,orbit_time_index]
+        orbit_time=orbit_time_all[orbit_time_index]
+        orbit_vel=orbit_time_all[orbit_time_index] # ml: needs revision
+    end
+
+    return orbit_time, orbit_pos, orbit_vel
+end
+
 
 "convert eci orbit posoitions to ECEF based using input DCM"
 function ecef_orbitpos(eci_pos, dcm)

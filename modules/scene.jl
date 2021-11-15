@@ -4,6 +4,7 @@ module Scene
 #external packages
 using LinearAlgebra
 using Optim
+using Parameters
 
 #local packages
 include("geometry.jl")
@@ -14,7 +15,10 @@ mutable struct target_str
   loc # target location
   ref # target reflectivity
 end
-function construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref)
+
+function construct_targets_str(params)
+  @unpack target_pos_mode, t_loc_1, t_loc_2, t_loc_3, t_ref = params
+  
   if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
       t_loc_3xN=Scene.form3Dgrid_for(t_loc_1,t_loc_2,t_loc_3) # using 3 nested for loops
       #t_loc_3xN=Scene.form3Dgrid_array(trg_prm.loc_1,trg_prm.loc_2,trg_prm.loc_3) # using array processing
@@ -26,7 +30,9 @@ function construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref)
   end
   Nt=size(t_loc_3xN,2) # number of targets
   targets=Array{target_str}(undef,Nt)
-  for i=1:Nt;targets[i]=target_str(t_loc_3xN[:,i],t_ref_1xN[i]);end
+  for i=1:Nt;
+    targets[i]=target_str(t_loc_3xN[:,i],t_ref_1xN[i])
+  end
   return targets, Nt
 end
 
@@ -78,8 +84,10 @@ function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,or
   end
   return t_xyz_3xN,s_xyz_3xN,avg_peg
 end
+
 # calculate avg heading from platform velocities
-function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,look_angle,earth_radius,earth_eccentricity)
+function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,params)
+  @unpack look_angle = params
   if ts_coord_sys=="LLH" # convert LLH to XYZ
       t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
       s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)

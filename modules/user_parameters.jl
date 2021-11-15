@@ -1,4 +1,4 @@
-#=module UserParameters 
+module UserParameters 
 
 using Parameters
 
@@ -76,17 +76,19 @@ end
  =#
 
 @with_kw struct inputParameters
+    
     mode::Int  = 2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     tx_el::Int = 1 # which element transmits for SIMO (max value N)
+    
     # radar parameters
     fc::Float64 = 1.25e9 # center frequency (Hz) L-band
     # fc=3.2e9 # center frequency (Hz) S-band
     # fc=6e9 # center frequency (Hz) C-band
     fp::Float64 = 10 # pulse repetition frequency (Hz)
     SNR::Float64 =50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
+    
     # platform locations in xyz (including slow-time locations)
     user_defined_orbit::Int =1 # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
-    
     #orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
     orbit_filename="orbit_output_062021.nc" # position in km, time in sec --> TODO: convert to :file, :sch, :tcn
     
@@ -105,6 +107,8 @@ end
     
     SAR_duration=3 # synthetic aperture duration (s)
     SAR_start_time=0 # SAR imaging start time (s)
+
+
     # target locations and reflectvities
     target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
     ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
@@ -115,6 +119,7 @@ end
     t_loc_2=[0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
     t_loc_3=[0] # m  heights if LLH or SCH, Z if XYZ
     t_ref=  [1] # reflectivities
+    
     # image/scene pixel coordinates
     s_loc_1=0 # deg latitude if LLH, along-track if SCH, X if XYZ
     s_loc_2=-60:0.5:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
@@ -142,4 +147,4 @@ end
     λ=c/fc # wavelength (m)
 end
 
-end=#
+end

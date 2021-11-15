@@ -1,10 +1,12 @@
 module Error_Sources
 using ..Sync
+using Parameters
 
 
 
-
-function random_noise(rawdata,SNR,enable_fast_time,mode)
+function random_noise(rawdata, params)
+    @unpack SNR,enable_fast_time,mode = params
+    
     Np_RX=size(rawdata)[2] # number of RX platforms
     if mode==3;Np_TX=size(rawdata)[3];end # number of TX platforms
     Nst=size(rawdata)[1] # number of slow-time samples

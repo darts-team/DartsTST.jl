@@ -87,7 +87,7 @@ function main_RSF(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,Srx,t_rx,ref_range) # with
     return rawdata
 end
 
-function main_RSF_slowtime(t_xyz_grid,p_xyz_3D, params,Srx,t_rx,ref_range,t_ref) # with RSF and slow-time
+function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,Srx,t_rx,ref_range,t_ref, params) # with RSF and slow-time
     # TODO add descriptions of inputs and output
     @unpack mode, tx_el, λ = params
     Nt=size(t_xyz_grid,2) # number of targets
@@ -146,7 +146,8 @@ function main_RSF_slowtime(t_xyz_grid,p_xyz_3D, params,Srx,t_rx,ref_range,t_ref)
     return rawdata
 end
 
-function main_noRSF_slowtime(t_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_ref) # without fast-time and slow-time
+function main_noRSF_slowtime(t_xyz_grid,p_xyz_3D,t_ref, params) # without fast-time and slow-time_new
+    @unpack mode, tx_el, fc = params
     # TODO add descriptions of inputs and output
     λ=c/fc # wavelength (m)
     Nt=size(t_xyz_grid)[2] # number of targets
