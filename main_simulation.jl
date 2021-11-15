@@ -106,8 +106,8 @@ Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
 if processing_steps==1 # 1-step processing
     image_3D=Process_Raw_Data.main_SAR_tomo_3D(rawdata,s_xyz_3xN,Ns_1,Ns_2,Ns_3,p_xyz,mode,tx_el,fc,t_rx,ref_range)
 elseif processing_steps==2 # 2-step processing, first SAR (along-track), then tomographic
-    SAR_images_3D=Process_Raw_Data.SAR_processing(rawdata,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range)
-    image_3D=Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D,s_xyz_grid,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range)
+    SAR_images_3D=Process_Raw_Data.SAR_processing(rawdata,s_xyz_3xN,Ns_1,Ns_2,Ns_3,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+    image_3D=Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
 end
 ## PERFORMANCE METRICS
 # PSF metrics
