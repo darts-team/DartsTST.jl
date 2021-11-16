@@ -28,7 +28,7 @@ params = UserParameters.inputParameters()
 orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
 
 # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
-p_xyz, Nst = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
+p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
 
 # Create target/scene location 
 targets_loc, targets_ref, Nt = Scene.construct_targets_str(params) # Nt: number of targets, targets: structure array containing target locations and reflectivities
@@ -63,6 +63,12 @@ if processing_steps === :bp3d # 1-step processing
 elseif processing_steps === :bp2d3d # 2-step processing, first SAR (along-track), then tomographic
     SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
     image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
+end
+
+# Add phase error
+sync_osc_coeffs = repeat(params.sync_a_coeff_dB, Np)
+if params.enable_sync_phase_error
+    rawdata = Error_Sources.synchronization_errors!(rawdata, slow_time, p_xyz, sync_osc_coeffs, params)
 end
 
 # Calculate point target performance metrics

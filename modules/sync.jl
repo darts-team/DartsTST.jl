@@ -19,7 +19,7 @@ takes the position vectors and slow time vector to produce a phase error matrix 
 
 """
 
-function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, pos::Array{Float64,3}, parameters)
+function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, pos::Array{Float64,3}, osc_coeffs, parameters)
     # - Inputs -
     # time_vector   : a vector of time values at which the orbit positions for each platform are sampled
     # pos           : a matrix (3 x [Np x Nt] or 3 x Nt) of the orbit positions for each platform
@@ -43,15 +43,14 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     sync_fs                 = parameters.sync_fs
     sync_fbw                = parameters.sync_fbw
     sync_fmin               = parameters.sync_fmin
-    f_osc                   = parameters.f_osc
+    f_osc                   = parameters.sync_f_osc
     sync_clk_fs             = parameters.sync_clk_fs
-    master                  = parameters.master
-    osc_coeffs              = parameters.osc_coeffs
+    master                  = parameters.sync_master
+    #osc_coeffs              = parameters.sync_osc_coeffs
     sync_processing_time    = parameters.sync_processing_time
     mode                    = parameters.mode
     no_sync_flag            = parameters.no_sync_flag
     fc                      = parameters.fc
-    sigma_freq_offsets      = parameters.sigma_freq_offsets
     
     
     # find total elapsed time over the course of the orbits
@@ -212,12 +211,13 @@ end
             
         end # for platform pulse times
         
-        # add in linear phase ramp term (uses frequency offset of oscillator)
+        #= add in linear phase ramp term (uses frequency offset of oscillator)
         sigma_freq_offset = sigma_freq_offsets[i]
         freq_offset = randn(1)*sigma_freq_offset # zero mean random
         phase_ramp = 2*pi* freq_offset .* internal_time_vec
         phase_err_internal = phase_err_internal + phase_ramp
-        
+        =#
+
         # reset phase error to 0 at each sync time. Do this by finding the start/stop indices at each of the sync times
         if no_sync_flag
             
