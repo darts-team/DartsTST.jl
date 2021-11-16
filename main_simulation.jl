@@ -43,7 +43,6 @@ if params.include_antenna # calculate look angle (average over platforms and slo
     Antenna.applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, params)
 end
 
-
 # Generate range spread function (matched filter output)
 min_range, max_range = Geometry.find_min_max_range(t_xyz_3xN, p_xyz)
 Trx = 2*(max_range-min_range)/c + 5*pulse_length # s duration of RX window

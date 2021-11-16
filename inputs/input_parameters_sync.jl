@@ -4,8 +4,8 @@ use_orbits_flag = true # true if using an orbit file to inform number of platfor
 disable_freq_offset = true  # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 if !use_orbits_flag
     setNumPlatforms = 3 # manually select number of Rx platforms
-end 
-sync_pri = .1 # (s) repetition interval of sync
+
+sync_pri = 2 # (s) repetition interval of sync
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
 sync_signal_len = 1024 # waveform length
@@ -18,6 +18,7 @@ sync_fbw = sync_fs # LFM bandwidth
 # osc_type = "Wenzel5MHz"
 # osc_type = "Wenzel100MHz"
 osc_type = "MicroSemi" #Microsemi GPS-3500
+
 
 
 
@@ -62,6 +63,7 @@ else
     sigma_freq_offsets = 1.5e-3 # Hz - std. dev. of the frequency offset of the oscillator. This is the linear phase ramp value
     sigma_freq_offsets = sigma_freq_offsets .* ones(nplat) # convert to matrix form, one value for each oscillator
 end
+
 
 
 sync_fmin = 1.0 # minimum frequency > 0 in Hz to window PSD -- Float64

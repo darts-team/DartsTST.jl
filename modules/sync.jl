@@ -69,8 +69,8 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     if clk_args_N < 40e3 # enfore a minimum number of points. Needed for PSD accuracy
         clk_args_N = 40e3
     end#if   
-    up_convert =  1 #fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF) #TODO temporarily commenting out to unity use PSD upscaling instead
-    up_convert_psd = (fc / f_osc)^2 # frequency up-conversion factor (scale factor from LO to RF) for use on PSD
+    up_convert =  sqrt(2) * fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF) 
+    up_convert_psd = 1 #2*(fc / f_osc)^2 # frequency up-conversion factor (scale factor from LO to RF) for use on PSD #TODO reverted back to upscaling in phase domain instead of PSD because PSD domain doesn't account for frequency offset error upscaling
 
     # verify size of position input
     szp = size(pos)
@@ -144,13 +144,13 @@ end
 
     for i = 1:nplat #for each platform, generate oscillator phase errors at each time point
         
-        a_coeff_db = osc_coeffs[i, :]   # grab the clock coefficients for each platform
+        a_coeff_db = osc_coeffs[i,:]   # grab the clock coefficients for each platform
         crlbs      = sig_crlb[i,:]      # grab the CRLB previously calculated
         #interpolate CRLB values to sync PRI times
         push!(crlbs,crlbs[end])
         itp_crlb = LinearInterpolation(time_vec,crlbs,extrapolation_bc = Line()) # create interpolant with CRLB values sampled at orbit sample times. Repeats last value to avoid extrapolation errors
 
-        (Sphi, f_psd) = osc_psd_twosided(sync_clk_fs, clk_args_N, a_coeff_db)    # this gives the basic PSD of the oscillator (no sync involved)
+        (Sphi, f_psd) = osc_psd_twosided(sync_clk_fs, clk_args_N, a_coeff_db,sync_fmin)    # this gives the basic PSD of the oscillator (no sync involved)
         
         phase_err_internal = zeros(0)       # initialize an empty array to collect the phase error values at internal time base
         internal_time_vec = zeros(0)        # initialize an empty array to keep track of internal time base
@@ -168,7 +168,7 @@ end
             
             if no_sync_flag # no sync case
                 Sphi_uc = up_convert_psd .* Sphi
-                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs)
+                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs,no_sync_flag)
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi
             else
@@ -183,10 +183,10 @@ end
                 
                 # calculate post-sync PSD from crlb, sync_radar_offset
                 crlb = itp_crlb(sync_time) # this tells us what the crlb was at the sync
-                Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs)
+                Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs, dt, f_osc)
                 # generate time series of phase error
                 Sphi_sync_uc = up_convert_psd .* Sphi
-                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs)
+                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,no_sync_flag)
             
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi_sync    
@@ -401,7 +401,7 @@ end
             Sphi_sync = sync_PSDs[i,j,:] # load precalculated PSD
             # generate time series of phase error
             Sphi_sync_uc = up_convert_psd .* Sphi
-            (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs)
+            (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,no_sync_flag)
             
             # t and r are longer than PRI, cut to PRI
             idx_pri = findfirst(t -> t >= dt,t)
@@ -493,7 +493,7 @@ calculate the two-sided PSD of the clock phase error
 
 """
 #-start-function--------------------------------------------------------------------------------------------
-function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1})
+function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1}, sync_fmin::Float64)
 #   Generate PSD of clock phase error
 #INPUTS
 #     fs = 2000; # max PSD frequency [sample rate of clock phase error process]
@@ -510,7 +510,7 @@ function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1})
     temp = 0.1 .* a_coeff_db
     a_coeff = [ 10^temp[1], 10^temp[2], 10^temp[3], 10^temp[4], 10^temp[5] ]
 
-    fmin = .01 # minimum PSD frequency. Zeros out PSD below this value
+    fmin = .1 # minimum PSD frequency. Reduces PSD below this value
 
 
     Sphi_2S = a_coeff' * [f.^(-4), f.^(-3), f.^(-2), f.^(-1), f.^0]
@@ -519,21 +519,31 @@ function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1})
     idx0 = findall(f -> f == 0,f)
     Sphi_2S[idx0] .= 0
 
-    idx = findall(f -> f > 0,f)
-    fmin1 = f[idx[1]] # takes first index of frequency vector that is greater than 0, grabs frequency value
+    # Previous code 7/15/21 This code set frequency values below fmin to the PSD amplitude at fmin.
+    # idx = findall(f -> f > 0,f)
+    # fmin1 = f[idx[1]] # takes first index of frequency vector that is greater than 0, grabs frequency value
+    # 
+    # if fmin1<fmin
+    #     idx = findall(f -> abs(f) < fmin,f)
+    #       #Sphi_2S[idx] .=  a_coeff[1].*fmin^(-4).+a_coeff[2]*fmin^(-3).+a_coeff[3]*fmin^(-2).+a_coeff[4]*fmin^(-1).+a_coeff[5]*fmin^0
+    #     temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)]
+    #     Sphi_2S[idx] .= temp
+    # else
+    #     # conserve power around dc
+    #     idx = findall(f -> abs(f) < fmin,f)
+    #     Sphi_2S[idx] .= sum([a_coeff[1]*fmin.^(-4) a_coeff[2]*fmin.^(-3) a_coeff[3]*fmin.^(-2) a_coeff[4]*fmin.^(-1) a_coeff[5]*fmin.^0 ]).*(fmin/fmin1)
+    # end#if
 
-    if fmin1<fmin
-        idx = findall(f -> abs(f) < fmin,f)
-          #Sphi_2S[idx] .=  a_coeff[1].*fmin^(-4).+a_coeff[2]*fmin^(-3).+a_coeff[3]*fmin^(-2).+a_coeff[4]*fmin^(-1).+a_coeff[5]*fmin^0
-        temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)]
-        Sphi_2S[idx] .= temp
-    else
-        # conserve power around dc
-        idx = findall(f -> abs(f) < fmin,f)
-        Sphi_2S[idx] .= sum([a_coeff[1]*fmin.^(-4) a_coeff[2]*fmin.^(-3) a_coeff[3]*fmin.^(-2) a_coeff[4]*fmin.^(-1) a_coeff[5]*fmin.^0 ]).*(fmin/fmin1)
-    end#if
+    # code added 7/15/21, This creates a "high-pass filter" with fmin as the cutoff frequency
+    # create a roll-off from fmin to 0 frequency
+    temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)] # this is the PSD value at fmin
+    idx_fmin = findlast(f -> abs(f) < fmin,f)
+    if !isnothing(idx_fmin)
+        idx = idx0[1]:idx_fmin
+        Sphi_2S[idx] .= 10 .^(range(0,stop=temp,length=length(idx)))
+    end
 
-    # take magnitude of any negative PSD values. Not sure why small negative values exist
+    # take magnitude to remove any negative PSD values.
     Sphi_2S = abs.(Sphi_2S)
     return Sphi_2S, f
 
@@ -548,9 +558,10 @@ generates realizations of phase error given a two-sided oscillator PSD
 - `Sphi::Nx1 Array`: 2 sided oscillator phase error PSD
 - `fs::Integer`: max PSD frequency [sample rate of clock phase error process]
 - `a_coeff_db:: 1x5 Array`: coefficients of the noise characteristic asymptotes
+- `no_sync_flag:: Bool`: Flag if sync is not used: Phase error resets to 0 at sync event if flag = 0
 
 """
-function osc_timeseries_from_psd_twosided(Sphi::Array{Float64,1},fs::Float64)
+function osc_timeseries_from_psd_twosided(Sphi::Array{Float64,1},fs::Float64,no_sync_flag::Bool)
 #   Generate time series from two sided PSD of clock phase error.
 #   Will first calculate the one sided PSD which = 0 for f<0
 #INPUTS
@@ -570,7 +581,6 @@ A_Sphi = sqrt.(abs.(Sphi_1S.*N))
 
 # random phase vector with amplitude of PSD
 phi_u = rand(N) .*2 .* pi
-# amp_u = rand(1,N); # random amplitude
 amp_u = 1; # constant amplitude
 
 # sequence with random phase & random amplitude of PSD
@@ -580,7 +590,10 @@ z2 = ifftshift(z)
 
 # random time sequence realization
 r = real(fftshift(ifft(z2))) # take real component of time series
-r = r.-r[1] # this zeros out the error at t=0. Sync "resets" the clock drift to 0. Will be added in sequence to keep phase errors continuous
+if !no_sync_flag
+    r = r.-r[1] # this zeros out the error at t=0. Sync "resets" the clock drift to 0. Will be added in sequence to keep phase errors continuous
+end
+
 # time vector
 t = collect(0:(N-1)) .* 1/fs
 
@@ -711,35 +724,72 @@ calculates the post-synchronization phase error PSD
 - `sync_prf::Float`: repetition frequency of sync process (1/SRI)
 - `sync_fs::Float`: sync receiver sampling rate
 - `sync_clk_fs::Float`: sample rate of clock error process
+- `PRI::Float`: radar pulse repetition interval
 
 
 """
-function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync_radar_offset::Float64,sig_crlb::Float64,sync_prf::Float64,sync_fs::Float64, sync_clk_fs::Float64)
+function sync_effects_on_PSD(Sphi::Array{Float64,1},f_psd::Array{Float64,1},sync_radar_offset::Float64,sig_crlb::Float64,sync_prf::Float64,sync_fs::Float64, sync_clk_fs::Float64, PRI::Float64, f_osc::Float64)
 # Function describes PSD of clk phase after finite offset sync
 # Sphi is input PSD
+    
+    sync_pri = 1 / sync_prf
+    
+    S_n = (2*(sig_crlb*sync_fs.*2*pi).^2).*ones(length(Sphi)).*(sync_pri*1.5).*(sync_fs./f_osc)^2; # scale by (sync_fs*sync_pri) to account for lower bandwidth/downsampling to conserve PSD power
 
-    # this is the finite offset filter stage
-    Sphi_tilde = (2 .* Sphi .* (1 .- cos.(2*pi*sync_radar_offset.*f_psd) ) )
-
-    #here is the aliasing error stage from long PRI
-    Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde,sync_clk_fs,sync_prf)
-    
-    
-    
-    # PSD of AWGN with variance determined by CRLB of sync algorithm
-    S_n =  ( sig_crlb .* sync_fs .*2*pi .* 2 ./ sqrt(2) ) .^2 .*ones(length(Sphi))
-    
-    #debugging negative Sphi
-    idx_test = findall(S_n -> S_n < 0,S_n)
-    if !isempty(idx_test)
-        println("negative psd values")
-        println(S_n[idx_test])
-        
-        println(f_psd[idx_test])
+    #adding code 9/25/21 this is the least squares linear predictor
+    n_hist = 3 # number of previous samples used in prediction
+    cb = sync_pri*(n_hist^2*(n_hist^2-1))/12
+    # avoid divide by 0. Will still reduce to original expression for Sphi_tilde
+    if (n_hist==1)
+        cb = 1
     end
+    
+    dtp = sync_radar_offset
+    sincpwr = 3 # exponent that sinc functions get raised to
+    
+    S_sync1 = zeros(length(f_psd))
+    for i=0:(n_hist-1)
+        S_sync1 = S_sync1 .+ n_hist.* (i.-(n_hist-1)./2).*(cos.(2 .*pi.*f_psd.*((n_hist-1-i).*sync_pri.+dtp))-cos.(2 .*pi.*f_psd.*((n_hist-1-i).*sync_pri)))
+    end
+    S_sync2 = zeros(length(f_psd))
+    for i=0:(n_hist-1)
+        for j=0:(n_hist-1)
+            S_sync2 = S_sync2 .+ (n_hist.^2).*(i.*j.+(((n_hist-1).^2)/4)).*exp.(1i.*2 .*pi*f_psd.*(i-j)*sync_pri) .- ((n_hist.^2).*(n_hist-1)).*i.*cos.(2 .*pi.*f_psd.*(i-j).*sync_pri)
+        end
+    end
+    S_n_ls = S_n .* (-1*(dtp/cb).*n_hist.*(n_hist-1) .+ ((dtp/cb).^2).*(n_hist.^3 .* (n_hist.^2 .-1 ))./12)
 
-    # PSD of clock phase error after synchronization
-    Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .*rect(f_psd,-sync_prf,sync_prf,1) ) # low pass filter the PSD by the Sync process
+    S_phi_sync_tilde = Sphi.*((2 .- 2 .*cos.(2 .*pi.*dtp.*f_psd) .-1 .*(2 .* dtp./cb) .*S_sync1 .+1 .*((dtp./cb).^2).*S_sync2)) 
+
+    Sphi_tilde_alias = downsampled_spectrum(S_phi_sync_tilde,round(sync_clk_fs/(2/sync_pri)),sync_prf).*rect(f_psd,-1/sync_pri, 1/sync_pri+(f_psd[2]-f_psd[1]) , 1)
+    Sphi_sync = (Sphi_tilde_alias.+S_n.+S_n_ls) .*abs.(sinc.(f_psd.*PRI)) .^(sincpwr+.25) ./ abs.(sinc.(f_psd.*sync_pri)).^.25
+
+
+    # # this is the finite offset filter stage
+    # Sphi_tilde = (2 .* Sphi .* (1 .- cos.(2*pi*sync_radar_offset.*f_psd) ) )
+    # 
+    # 
+    # #here is the aliasing error stage from long PRI
+    # # Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde,sync_clk_fs,sync_prf)
+    # Sphi_tilde_alias = downsampled_spectrum(Sphi_tilde, sync_clk_fs, sync_pri) .*rect(f_psd,-1/sync_pri, 1/sync_pri+(f_psd[2]-f_psd[1]) , 1) # updated from Sam's code 6/21/21
+    # 
+    # 
+    # # PSD of AWGN with variance determined by CRLB of sync algorithm
+    # # updated noise floor power calculation 
+    # S_n = (2*(sig_crlb*sync_fs .*2*pi ).^2 ) .* ones(length(Sphi)) .* (sync_clk_fs * sync_pri*1.5) # scale by (clk_args.fs*sync_pri) to account for lower bandwidth/downsampling to conserve PSD power
+    # 
+    # 
+    # # #debugging negative Sphi
+    # # idx_test = findall(S_n -> S_n < 0,S_n)
+    # # if !isempty(idx_test)
+    # #     println("negative psd values")
+    # #     println(S_n[idx_test])
+    # # 
+    # #     println(f_psd[idx_test])
+    # # end
+    # 
+    # # PSD of clock phase error after synchronization assumes SRI and PRI are different, and SRI is a multiple of PRI
+    # Sphi_sync = abs.( (Sphi_tilde_alias .+ S_n) .* ( abs.(sinc.(f_psd .* PRI)).^4.25 ) ./ abs.(sinc.(f_psd.* sync_pri)).^0.25 )
     
     return Sphi_sync
 
@@ -828,7 +878,7 @@ function getSensorCRLB_network(pos::Array{Float64,3},N::Int64,fc::Float64,fs::Fl
             
             sigma_2TOF = sqrt( 3/ ( (2*pi*fbw)^2 * snr_avg * (N/fs) * fs ) ) # this may become a useful parameter for the positioning module/task
             
-            sig_crlb[i,j] = sqrt(1 / (3 * sqrt( (nplat-1) * nplat ) ) * sigma_2TOF^2) # latest equation from Sam 01/23/2021
+            sig_crlb[i,j] = sqrt( ( (nplat-1) / nplat ) * sigma_2TOF^2) # latest equation from Sam 06/17/2021
         end # for ntimes
     end #for nplat
 

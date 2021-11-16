@@ -34,7 +34,7 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
             scene_res1=scene_axis1[2]-scene_axis1[1] # scene resolution along the 1st axis
             image_1D_itp,scene_res_itp,scene_axis_itp=upsample_PSFcut(image_1D_1,scene_res1,100)
             plotly();plot(scene_axis1,20*log10.(image_1D_1/maximum(image_1D_1)),xaxis=("scene axis 1 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false) # plot the PSF along axis 1
-            display(plot!(scene_axis_itp,20*log10.(image_1D_itp/maximum(image_1D_itp))))
+            # display(plot!(scene_axis_itp,20*log10.(image_1D_itp/maximum(image_1D_itp))))
             res_1,res_ind_1,res_ind_2=resolution_1D(image_1D_1,scene_res1,res_dB)
             PSLR_1,ISLR_1=sidelobe_1D(image_1D_1,1,res_ind_1,res_ind_2)
             loc_error_1=location_error(image_1D_1,target_location[1],scene_axis1)
@@ -43,7 +43,7 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
             scene_res2=scene_axis2[2]-scene_axis2[1] # scene resolution along the 2nd axis
             image_1D_itp,scene_res_itp,scene_axis_itp=upsample_PSFcut(image_1D_2,scene_res2,100)
             plotly();plot(scene_axis2,20*log10.(image_1D_2/maximum(image_1D_2)),xaxis=("scene axis 2 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false) # plot the PSF along axis 2
-            display(plot!(scene_axis_itp,20*log10.(image_1D_itp/maximum(image_1D_itp))))
+            # display(plot!(scene_axis_itp,20*log10.(image_1D_itp/maximum(image_1D_itp))))
             res_2,res_ind_1,res_ind_2=resolution_1D(image_1D_2,scene_res2,res_dB)
             PSLR_2,ISLR_2=sidelobe_1D(image_1D_2,2,res_ind_1,res_ind_2)
             loc_error_2=location_error(image_1D_2,target_location[2],scene_axis2)
@@ -52,7 +52,7 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
             scene_res3=scene_axis3[2]-scene_axis3[1] # scene resolution along the 3rd axis
             image_1D_itp,scene_res_itp,scene_axis_itp=upsample_PSFcut(image_1D_3,scene_res3,100)
             plotly();plot(scene_axis3,20*log10.(image_1D_3/maximum(image_1D_3)),xaxis=("scene axis 3 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false) # plot the PSF along axis 3
-            display(plot!(scene_axis_itp,20*log10.(image_1D_itp/maximum(image_1D_itp))))
+            # display(plot!(scene_axis_itp,20*log10.(image_1D_itp/maximum(image_1D_itp))))
             res_3,res_ind_1,res_ind_2=resolution_1D(image_1D_3,scene_res3,res_dB)
             PSLR_3,ISLR_3=sidelobe_1D(image_1D_3,3,res_ind_1,res_ind_2)
             loc_error_3=location_error(image_1D_3,target_location[3],scene_axis3)
