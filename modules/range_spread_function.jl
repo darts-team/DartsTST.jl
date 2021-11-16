@@ -1,6 +1,10 @@
 module RSF # Range Spread Function (matched filter output)
 
-function ideal_RSF(pulse_length,Δt,bandwidth,Trx) # ideal RSF for LFM pulse, no windowing
+using Parameters
+
+function ideal_RSF(Trx, params) # ideal RSF for LFM pulse, no windowing
+    @unpack pulse_length,Δt,bandwidth = params
+    
     ft=-pulse_length:Δt:pulse_length # fast-time axis, RSF is zero outside +/- τ
     MF=(bandwidth*pulse_length)*sinc.((1.0.-abs.(ft)/pulse_length).*ft*bandwidth).*(1.0.-abs.(ft)/pulse_length) # equation for LFM chirp matched filter output, 0° constant phase
     MF[findall(x->0<=x.<0.0001,MF)].=0.0001

@@ -1,8 +1,10 @@
 module Plotting
 
 using Plots
+using Parameters
 
-function plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata) #TODO add descriptions
+function plot_RSF_rawdata(ft,t_rx,MF,Srx,Np,Nst,rawdata, params) #TODO add descriptions
+    @unpack enable_fast_time, mode = params
     gr()
     if enable_fast_time # plot range-compressed pulse (matched filter output)
         display(plot(ft*1e6,20*log10.(abs.(MF)),ylims=(-100+20*log10(maximum(MF)),20*log10(maximum(MF))),leg=false,xlabel="fast time (μs)",ylabel="amplitude (dB)",title="Matched Filter Output (Range Spread Function)",size=(1600,900)))
@@ -54,8 +56,10 @@ function plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,coords) #TODO smar
     scatter!(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],markersize=1) #display grid in 3D
     display(scatter!(s_loc[1,:],s_loc[2,:],s_loc[3,:],markersize=0.3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Platforms and Targets and Scene")) #display grid in 3D
 end
+            
+function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis33, PSF_metrics, params)
+    @unpack mode, PSF_cuts, t_loc_1,t_loc_2,t_loc_3, s_loc_1,s_loc_2,s_loc_3, PSF_image_point,display_tomograms = params
 
-function plot_tomogram(PSF_image_point,display_tomograms,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,coords,mode,scene_axis11,scene_axis22,scene_axis33,PSF_cuts,PSF_metrics)
     image_3D=image_3D/maximum(image_3D)
     brightest=maximum(image_3D)
     faintest=minimum(image_3D)
@@ -136,7 +140,9 @@ function plot_tomogram(PSF_image_point,display_tomograms,image_3D,s_loc_1,s_loc_
     end
 end
 
-function plot_input_scene(inputscene_3D,s_loc_1,s_loc_2,s_loc_3,coords)
+function plot_input_scene(inputscene_3D, coords, params)
+    @unpack s_loc_1, s_loc_2, s_loc_3 = params
+
     brightest=maximum(inputscene_3D)
     faintest=minimum(inputscene_3D)
     Ns_1=length(s_loc_1)
