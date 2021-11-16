@@ -10,6 +10,23 @@ using Dierckx
 using Parameters
 using Plots
 
+function interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
+    @unpack SAR_start_time, SAR_duration, fp = params
+
+    # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
+    slow_time = SAR_start_time : 1/fp : SAR_start_time+SAR_duration # create slow time axis
+
+    Nst = size(slow_time)[1] # number of slow-time samples (pulses processed)
+
+    if Nst == 1;
+        p_xyz = orbit_pos
+    else
+        p_xyz = Orbits.interp_orbit(orbit_time,orbit_pos,slow_time)
+    end # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
+
+    return p_xyz, Nst
+end
+
 function computeTimePosVel(params)
     @unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n, 
     Torbit, p_t0_LLH, p_heading, Vtan, look_angle, display_custom_orbit = params

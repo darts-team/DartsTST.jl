@@ -2,7 +2,7 @@ module Process_Raw_Data
 
 using Parameters
 
-c=299792458 # speed of light (m/s)
+const c=299792458 # speed of light (m/s)
 
 function main_RSF(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,t_rx,ref_range) # with fast-time and tomographic processing, no slowtime
     Ns=size(s_xyz_grid)[2] # number of pixels in the scene
@@ -99,7 +99,9 @@ function main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz_3D, params, t_rx, ref_range)
     return abs.(processed_image) # square for power?
 end
 
-function main_SAR_tomo_3D(rawdata,s_xyz_grid,Ns_1,Ns_2,Ns_3,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range) # with fast-time, slow-time, and tomographic processing; pixels in 3D
+function main_SAR_tomo_3D(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, params) # with fast-time, slow-time, and tomographic processing; pixels in 3D
+    @unpack Ns_1, Ns_2, Ns_3, mode, tx_el, fc = params
+    
     Nft=length(t_rx) # number of fast-time samples
     Nst=size(p_xyz_3D)[3] # number of slow-time samples
     s_xyz_3D=reshape(s_xyz_grid,3,Ns_3,Ns_2,Ns_1) # convert scene to 3D
@@ -108,6 +110,7 @@ function main_SAR_tomo_3D(rawdata,s_xyz_grid,Ns_1,Ns_2,Ns_3,p_xyz_3D,mode,tx_el,
     processed_image=zeros(ComplexF64,Ns_1,Ns_2,Ns_3) # 3D image array
     λ=c/fc # wavelength (m)
     ref_delay=2*ref_range/c # reference delay
+    rel_delay_ind::Int = 0
 
     if mode==1 # SAR (ping-pong)
         for j1=1:Ns_1 # for each pixel in axis-1
@@ -140,7 +143,7 @@ function main_SAR_tomo_3D(rawdata,s_xyz_grid,Ns_1,Ns_2,Ns_3,p_xyz_3D,mode,tx_el,
                             range_rx=distance(pixel_j,@view(p_xyz_3D[:,i,s]))
                             rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
                             rel_delay_ind=round(Int,rel_delay/Δt)
-                            pixel_sum=pixel_sum+rawdata[s,i,round(Int,Nft/2)+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
+                            pixel_sum += rawdata[s,i,rel_delay_ind + round(Int,Nft/2)]*exp(im*2*pi/λ*(range_tx+range_rx))
                         end
                     end
                     processed_image[j1,j2,j3] = pixel_sum
@@ -171,7 +174,9 @@ function main_SAR_tomo_3D(rawdata,s_xyz_grid,Ns_1,Ns_2,Ns_3,p_xyz_3D,mode,tx_el,
     end
     return abs.(processed_image)
 end
-function SAR_processing(rawdata,s_xyz_grid,Ns_1,Ns_2,Ns_3,p_xyz_3D,mode,tx_el,fc,t_rx,ref_range) # slow-time processing of rawdata with fast-time
+function SAR_processing(rawdata, s_xyz_grid, p_xyz_3D, t_rx, ref_range, params) # slow-time processing of rawdata with fast-time
+    @unpack Ns_1, Ns_2, Ns_3, mode, tx_el, fc = params
+    
     Nft=length(t_rx) # number of fast-time samples
     Nst=size(p_xyz_3D)[3] # number of slow-time samples
     s_xyz_3D=reshape(s_xyz_grid,3,Ns_3,Ns_2,Ns_1) # convert scene to 3D

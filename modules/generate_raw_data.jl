@@ -2,7 +2,7 @@ module Generate_Raw_Data
 using Random
 using Parameters
 
-c=299792458 # speed of light (m/s)
+const c=299792458 # speed of light (m/s)
 
 function main_RSF(t_xyz_grid,p_xyz_grid,mode,tx_el,fc,Srx,t_rx,ref_range) # with fast-time and tomographic axes
     # TODO add descriptions of inputs and output

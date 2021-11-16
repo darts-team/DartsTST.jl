@@ -2,6 +2,29 @@ module Performance_Metrics
 using Plots
 using Statistics
 using Interpolations
+using Parameters
+
+function computePTPerformanceMetrics(image_3D, params)
+    @unpack s_loc_1, s_loc_2, s_loc_3, t_loc_1, t_loc_2, t_loc_3,
+            res_dB, PSF_image_point, PSF_cuts, PSF_direction = params
+
+    target_index1 = findall(t_loc_1 .== s_loc_1)
+    target_index2 = findall(t_loc_2 .== s_loc_2)
+    target_index3 = findall(t_loc_3 .== s_loc_3)
+
+    if isempty(target_index1) || isempty(target_index2) || isempty(target_index3)
+        @warn "Target outside the scene. PSF related performance metrics cannot be calculated."
+        resolutions = PSLRs = ISLRs = loc_errors = NaN
+        scene_axis11 = scene_axis22 = scene_axis33 = NaN
+        PSF_metrics = false
+    else
+        PSF_metrics = true
+        target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
+        resolutions,PSLRs,ISLRs,loc_errors,scene_axis11,scene_axis22,scene_axis33 = Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point,PSF_cuts,PSF_direction) # resolutions in each of the 3 axes
+    end
+    return resolutions, PSLRs, ISLRs, loc_errors, scene_axis11, scene_axis22, scene_axis33, PSF_metrics
+
+end
 
 #TODO add function definitions, comments, define input types
 function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target,PSF_cuts,PSF_direction_xyz)
