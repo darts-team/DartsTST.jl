@@ -72,7 +72,20 @@ end
     antennaFile = "inputs/darts_ant_03192021.nc"
 
     # synchronization parameters
-
+    sync_pri = 1 # (s) repetition interval of sync
+    sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
+    sync_signal_len = 1024 # waveform length
+    sync_fc = 1e9 # waveform center frequency
+    sync_fs = 25e6; # sync receiver sampling rate
+    sync_fbw = sync_fs # LFM bandwidth
+    sync_fmin = 1.0 # minimum frequency > 0 in Hz to window PSD
+    sync_clk_fs = 1e3; # sample rate of clock error process
+    sync_master = 1; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
+    
+    sync_osc_type = "USO"
+    sync_a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
+    sync_f_osc = 10e6 # local oscillator frequency --> depends on oscillator type
+   
     # positioning parameters
 
     # simulation options
@@ -83,7 +96,9 @@ end
     display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
     include_antenna=true # whether to include projected antenna pattern
     display_input_scene=false # display input scene (targets) and delta between input/output scenes (3 slices at the center of scene) with same scene size as output tomogram scene
-
+    no_sync_flag = false # if flag == true, no sync is used. flag == false results in normal sync process estimation
+    enable_sync_phase_error = true
+  
     # derived parameters
     λ = c/fc # wavelength (m)
     Ns_1 = length(s_loc_1)

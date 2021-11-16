@@ -24,7 +24,7 @@ function interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
         p_xyz = Orbits.interp_orbit(orbit_time,orbit_pos,slow_time)
     end # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
 
-    return p_xyz, Nst
+    return p_xyz, Nst, slow_time
 end
 
 function computeTimePosVel(params)

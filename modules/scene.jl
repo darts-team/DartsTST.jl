@@ -89,9 +89,9 @@ function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,or
 end
 
 # calculate avg heading from platform velocities
-function convert_target_scene_coord_to_XYZ(s_loc_3xN,targets_loc,orbit_pos,params)
+function convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, params)
   @unpack ts_coord_sys, look_angle = params
-  
+
   if ts_coord_sys=="LLH" # convert LLH to XYZ
       t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
       s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)
