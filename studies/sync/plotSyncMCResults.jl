@@ -39,7 +39,8 @@ begin
   
   # filename = "sync data/syncModule_MonteCarlo_mode_2_USO_sync_pri_sweep_wFreq.jld2"# this uses sync_data/*, a folder which isn't used on the master branch
   # filename = "sync data/syncModule_MonteCarlo_mode_2_USO_NOsync_pri_sweep_noFreq.jld2"
-  filename = "sync data/syncModule_MonteCarlo_mode_2_USO_sync_pri_sweep_noFreq.jld2"
+  # filename = "sync data/syncModule_MonteCarlo_mode_2_USO_sync_pri_sweep_noFreq.jld2"
+  filename = "syncModule_MonteCarlo_mode_2_MicroSemi_sync_pri_sweep_noFreq.jld2"
   
   @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs
   
