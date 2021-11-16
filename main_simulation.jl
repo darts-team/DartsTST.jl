@@ -56,18 +56,18 @@ if params.enable_thermal_noise # adding random noise based on SNR after range (f
     rawdata = Error_Sources.random_noise(rawdata, params)
 end 
 
+# Add phase error
+sync_osc_coeffs = repeat(params.sync_a_coeff_dB, Np)
+if params.enable_sync_phase_error
+    rawdata = Error_Sources.synchronization_errors!(rawdata, slow_time, p_xyz, sync_osc_coeffs, params)
+end
+
 # Process raw data to generate image
 if processing_steps === :bp3d # 1-step processing
     image_3D = Process_Raw_Data.main_SAR_tomo_3D(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
 elseif processing_steps === :bp2d3d # 2-step processing, first SAR (along-track), then tomographic
     SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
     image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
-end
-
-# Add phase error
-sync_osc_coeffs = repeat(params.sync_a_coeff_dB, Np)
-if params.enable_sync_phase_error
-    rawdata = Error_Sources.synchronization_errors!(rawdata, slow_time, p_xyz, sync_osc_coeffs, params)
 end
 
 # Calculate point target performance metrics
