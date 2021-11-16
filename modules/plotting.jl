@@ -55,7 +55,7 @@ function plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,coords) #TODO smar
     display(scatter!(s_loc[1,:],s_loc[2,:],s_loc[3,:],markersize=0.3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Platforms and Targets and Scene")) #display grid in 3D
 end
 
-function plot_tomogram(PSF_image_point,display_tomograms,image_1xN,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,coords,mode,scene_axis11,scene_axis22,scene_axis33,PSF_cuts,PSF_metrics)
+function plot_tomogram(PSF_image_point,display_tomograms,image_3D,s_loc_1,s_loc_2,s_loc_3,s_loc_3xN,t_loc_1,t_loc_2,t_loc_3,coords,mode,scene_axis11,scene_axis22,scene_axis33,PSF_cuts,PSF_metrics)
     image_3D=image_3D/maximum(image_3D)
     brightest=maximum(image_3D)
     faintest=minimum(image_3D)
