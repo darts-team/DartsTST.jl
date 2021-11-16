@@ -4,7 +4,7 @@ use_orbits_flag = true # true if using an orbit file to inform number of platfor
 disable_freq_offset = true  # true = no linear phase ramp (ideal osc frequency), false = linear phase ramp error
 if !use_orbits_flag
     setNumPlatforms = 3 # manually select number of Rx platforms
-end
+
 sync_pri = 2 # (s) repetition interval of sync
 
 sync_processing_time = 0.001 # processing time between stage 1 and stage 2 sync
@@ -14,10 +14,11 @@ sync_fs = 25e6; # sync receiver sampling rate
 sync_fbw = sync_fs # LFM bandwidth
 
 # osc_type = "USO" # putting a oscillator type variable here to auto-name save files
-osc_type = "USRP"
+# osc_type = "USRP"
 # osc_type = "Wenzel5MHz"
 # osc_type = "Wenzel100MHz"
-# osc_type = "MicroSemi" #Microsemi GPS-3500
+osc_type = "MicroSemi" #Microsemi GPS-3500
+
 
 
 
@@ -45,7 +46,7 @@ end
 # ------this is ugly code that needs to be replaced------
 # orbit_dataset=Dataset("inputs/orbitOutput_082020.nc") # Read orbits data in NetCDF format
 if use_orbits_flag
-    orbit_dataset=Dataset("inputs/"*orbit_filename)
+    orbit_dataset=Dataset("inputs/"*orbit_filename) 
     orbit_pos=orbit_dataset["position"][:,:,orbit_time_index] # read in position data
     nplat=size(orbit_pos)[2] # number of platforms
 else
@@ -64,8 +65,9 @@ else
 end
 
 
-# sync_fmin = 1.0 # minimum frequency > 0 in Hz to window PSD -- Float64
-sync_fmin = .0010 # minimum frequency > 0 in Hz to window PSD -- Float64
+
+sync_fmin = 1.0 # minimum frequency > 0 in Hz to window PSD -- Float64
+# f_osc = 10e6 # local oscillator frequency
 sync_clk_fs = 1e3; # sample rate of clock error process
 master = 1; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
 

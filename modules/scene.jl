@@ -4,6 +4,8 @@ module Scene
 #external packages
 using LinearAlgebra
 using Optim
+using Parameters
+using StaticArrays
 
 #local packages
 include("geometry.jl")
@@ -11,10 +13,13 @@ using .Geometry
 
 
 mutable struct target_str
-  loc # target location
-  ref # target reflectivity
+  #loc # target location
+  #ref # target reflectivity
 end
-function construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref)
+
+function construct_targets_str(params)
+  @unpack target_pos_mode, t_loc_1, t_loc_2, t_loc_3, t_ref = params
+  
   if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
       t_loc_3xN=Scene.form3Dgrid_for(t_loc_1,t_loc_2,t_loc_3) # using 3 nested for loops
       #t_loc_3xN=Scene.form3Dgrid_array(trg_prm.loc_1,trg_prm.loc_2,trg_prm.loc_3) # using array processing
@@ -25,15 +30,19 @@ function construct_targets_str(target_pos_mode,t_loc_1,t_loc_2,t_loc_3,t_ref)
       t_ref_1xN=t_ref
   end
   Nt=size(t_loc_3xN,2) # number of targets
-  targets=Array{target_str}(undef,Nt)
-  for i=1:Nt;targets[i]=target_str(t_loc_3xN[:,i],t_ref_1xN[i]);end
-  return targets, Nt
+  #targets=Array{target_str}(undef,Nt)
+  #for i=1:Nt;
+  #  targets[i]=target_str(t_loc_3xN[:,i],t_ref_1xN[i])
+  #end
+  return t_loc_3xN, t_ref_1xN, Nt
 end
 
 """
 Generate Input Target Scene in 3D (scene limited by input scene arrays)
 """
-function generate_input_scene_3D(s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,targets_ref,Nt,target_pos_mode)
+function generate_input_scene_3D(targets_ref, Nt, params)
+    @unpack s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,target_pos_mode = params
+
     inputscene_3D=zeros(length(s_loc_1),length(s_loc_2),length(s_loc_3))
     # TODO check if target is inside the scene. gives error if target is outside the scene.
     ind_1=Int.(ones(Nt,1));ind_2=Int.(ones(Nt,1));ind_3=Int.(ones(Nt,1))
@@ -78,8 +87,11 @@ function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,or
   end
   return t_xyz_3xN,s_xyz_3xN,avg_peg
 end
+
 # calculate avg heading from platform velocities
-function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,look_angle,earth_radius,earth_eccentricity)
+function convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, params)
+  @unpack ts_coord_sys, look_angle = params
+
   if ts_coord_sys=="LLH" # convert LLH to XYZ
       t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
       s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)

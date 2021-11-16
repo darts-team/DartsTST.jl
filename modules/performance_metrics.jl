@@ -2,6 +2,29 @@ module Performance_Metrics
 using Plots
 using Statistics
 using Interpolations
+using Parameters
+
+function computePTPerformanceMetrics(image_3D, params)
+    @unpack s_loc_1, s_loc_2, s_loc_3, t_loc_1, t_loc_2, t_loc_3,
+            res_dB, PSF_image_point, PSF_cuts, PSF_direction = params
+
+    target_index1 = findall(t_loc_1 .== s_loc_1)
+    target_index2 = findall(t_loc_2 .== s_loc_2)
+    target_index3 = findall(t_loc_3 .== s_loc_3)
+
+    if isempty(target_index1) || isempty(target_index2) || isempty(target_index3)
+        @warn "Target outside the scene. PSF related performance metrics cannot be calculated."
+        resolutions = PSLRs = ISLRs = loc_errors = NaN
+        scene_axis11 = scene_axis22 = scene_axis33 = NaN
+        PSF_metrics = false
+    else
+        PSF_metrics = true
+        target_location=[t_loc_1 t_loc_2 t_loc_3] # point target location
+        resolutions,PSLRs,ISLRs,loc_errors,scene_axis11,scene_axis22,scene_axis33 = Performance_Metrics.PSF_metrics(image_3D,res_dB,target_location,s_loc_1,s_loc_2,s_loc_3,PSF_image_point,PSF_cuts,PSF_direction) # resolutions in each of the 3 axes
+    end
+    return resolutions, PSLRs, ISLRs, loc_errors, scene_axis11, scene_axis22, scene_axis33, PSF_metrics
+
+end
 
 #TODO add function definitions, comments, define input types
 function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target,PSF_cuts,PSF_direction_xyz)
@@ -43,8 +66,8 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
         image_1D,scene_res,scene_axis11,scene_axis22,scene_axis33=obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
         image_1D_itp,scene_res_itp,scene_axis_itp=upsample_PSFcut(image_1D,scene_res,100)
         scene_axis=(0:scene_res:(length(image_1D)-1)*scene_res).-(length(image_1D)-1)*scene_res/2
-        plotly();plot(scene_axis,20*log10.(image_1D/maximum(image_1D)),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false) # plot the PSF along specified direction
-        # display(plot!(scene_axis_itp,20*log10.(image_1D_itp/maximum(image_1D_itp)))) # plot the PSF along specified direction
+        plotly();plot(scene_axis,20*log10.(abs.(image_1D)/maximum(abs.(image_1D))),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false) # plot the PSF along specified direction
+        display(plot!(scene_axis_itp,20*log10.(abs.(image_1D_itp)/maximum(abs.(image_1D_itp))))) # plot the PSF along specified direction
         resolutions,res_ind_1,res_ind_2=resolution_1D(image_1D_itp,scene_res_itp,res_dB)
         PSLRs,ISLRs=sidelobe_1D(image_1D_itp,1,res_ind_1,res_ind_2)
         loc_errors=NaN
@@ -173,7 +196,7 @@ function location_error(image_1D,target_location_1D,scene_axis)
 end
 
 function resolution_1D(image_1D,scene_res,res_dB) # image1D in linear scale (not dB)
-    image_1D=20*log10.(image_1D/maximum(image_1D))
+    image_1D=20*log10.(abs.(image_1D)/maximum(abs.(image_1D)))
     max_ind=findall(image_1D .==maximum(image_1D));max_ind=max_ind[1]
     res_ind_2=findfirst(image_1D[max_ind].-image_1D[max_ind:end] .>=res_dB)+max_ind-1 #TODO warn if scene extent is smaller than resolution
     res_ind_1=findlast(image_1D[max_ind].-image_1D[1:max_ind] .>=res_dB)
