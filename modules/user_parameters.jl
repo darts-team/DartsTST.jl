@@ -1,4 +1,4 @@
-module UserParameters 
+module UserParameters
 
 using Parameters
 using StaticArrays
@@ -12,9 +12,9 @@ export c
     earth_radius = 6378.137e3 # Earth semi-major axis at equator
     earth_eccentricity = sqrt(0.00669437999015) # Earth eccentricity
 end
-   
+
 @with_kw struct inputParameters
-    
+
     mode::Int  = 2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     tx_el::Int = 1 # which element transmits for SIMO (max value N)
     processing_steps = :bp3d  # :bp3d --> 1-step, :bp2d3d --> 2-step for SAR and tomographic processing
@@ -29,7 +29,7 @@ end
     # platform locations in xyz (including slow-time locations)
     user_defined_orbit::Int = 1 # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
     orbit_filename = "orbit_output_062021.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
-    
+
     # User defined orbits, set either SCH or TCN, see user_defined_orbit
     p_t0_LLH           = [0;0;750e3] # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
     Vtan::Float64      = 7500 # tangential (along-track) velocity (m/s), radial velocity is assumed 0 (circular orbit)
@@ -39,7 +39,7 @@ end
     display_custom_orbit=false #whether to show orbit on Earth sphere (for a duration of Torbit)
     pos_n   = [-7.5 -5 -2 0 3.7 5.5 6.5]*1e3 # SCH option: relative position of each platform along n (m), 0 is the reference location
     pos_TCN = [0 0 0;0 5e3 0;1e3 -3e3 1e3]   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
-    
+
     # target locations and reflectvities
     target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
     ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
@@ -49,25 +49,24 @@ end
     t_loc_2 = [0.] # deg longitude if LLH, cross-track if SCH, Y if XYZ
     t_loc_3 = [0.] # m  heights if LLH or SCH, Z if XYZ
     t_ref   = [1.] # reflectivities
-    @assert length(t_loc_1)==length(t_loc_2)==length(t_loc_3) "Size of target location arrays must be equal."
 
     # image/scene pixel coordinates
     s_loc_1 = 0 # deg latitude if LLH, along-track if SCH, X if XYZ
-    s_loc_2 = -60:0.5:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    s_loc_3 = -60:0.5:60 # m  heights if LLH or SCH, Z if XYZ
+    s_loc_2 = -60:2:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    s_loc_3 = -60:2:60 # m  heights if LLH or SCH, Z if XYZ
 
     # range spread function (RSF) parameters
     pulse_length::Float64 = 10e-6 # s pulse length
     Δt::Float64 = 1e-9 # s fast-time resolution (ADC sampling rate effect is excluded for now)
     bandwidth::Float64 = 40e6 # bandwidth (Hz)
-    
+
     # performance metrics
     res_dB::Float64 =5 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
     PSF_image_point::Int = 3 # 1: peak location, 2: target location, 3: center of 3D scene
     PSF_cuts = 2 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
     PSF_direction = [0 1 tand(34)] # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored
     #PSF_direction= [0 1 tand(inc_angle)] for along-n cut and [0 1 -1/tand(inc_angle)] for along-r cut; inc_angle=asind((earth_radius+h)./earth_radius.*sind(look_angle)), h:altitude
-    
+
     # antenna settings
     antennaFile = "inputs/darts_ant_03192021.nc"
 
@@ -81,11 +80,11 @@ end
     sync_fmin = 1.0 # minimum frequency > 0 in Hz to window PSD
     sync_clk_fs = 1e3; # sample rate of clock error process
     sync_master = 1; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
-    
+
     sync_osc_type = "USO"
     sync_a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
     sync_f_osc = 10e6 # local oscillator frequency --> depends on oscillator type
-   
+
     # positioning parameters
 
     # simulation options
@@ -97,8 +96,8 @@ end
     include_antenna=true # whether to include projected antenna pattern
     display_input_scene=false # display input scene (targets) and delta between input/output scenes (3 slices at the center of scene) with same scene size as output tomogram scene
     no_sync_flag = false # if flag == true, no sync is used. flag == false results in normal sync process estimation
-    enable_sync_phase_error = true
-  
+    enable_sync_phase_error = false
+
     # derived parameters
     λ = c/fc # wavelength (m)
     Ns_1 = length(s_loc_1)

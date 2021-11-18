@@ -21,6 +21,11 @@ using .UserParameters
 # Define user parameters
 params = UserParameters.inputParameters()
 
+# Check whether target coordinates for target_pos_mode=CR have equal number of elements
+if params.target_pos_mode == "CR"
+    @assert length(params.t_loc_1) == length(params.t_loc_2) == length(params.t_loc_3) "Size of target location arrays must be equal for target_pos_mode=CR."
+end
+
 @unpack pulse_length, ts_coord_sys, display_geometry, display_RSF_rawdata, processing_steps,
     display_input_scene, display_tomograms, display_geometry_coord = params
 
@@ -30,7 +35,7 @@ orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
 # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
 p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
 
-# Create target/scene location 
+# Create target/scene location
 targets_loc, targets_ref, Nt = Scene.construct_targets_str(params) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 s_loc_3xN  = Scene.form3Dgrid_for(params.s_loc_1, params.s_loc_2, params.s_loc_3) # using 3 nested for loops
 t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, params) ## calculate avg heading from platform positions
@@ -54,7 +59,7 @@ ref_range = Geometry.distance(mean(t_xyz_3xN, dims=2), mean(mean(p_xyz,dims=2), 
 rawdata   = Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN, p_xyz, Srx, t_rx, ref_range, targets_ref, params) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
 if params.enable_thermal_noise # adding random noise based on SNR after range (fast-time) processing
     rawdata = Error_Sources.random_noise(rawdata, params)
-end 
+end
 
 # Add phase error
 sync_osc_coeffs = repeat(params.sync_a_coeff_dB, Np)
