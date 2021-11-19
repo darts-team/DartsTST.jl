@@ -28,16 +28,16 @@ function interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
 end
 
 function computeTimePosVel(params)
-    @unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n, 
+    @unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n,
     Torbit, p_t0_LLH, p_heading, Vtan, look_angle, display_custom_orbit = params
 
     ## PLATFORM LOCATIONS and HEADINGS
-    orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
 
     if user_defined_orbit==0 # orbits from file
         orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
         t12_orbits=orbit_dataset["time"][1:2] # first two time samples
         dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
+        orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
         orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
         orbit_pos_ECI=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
         orbit_vel_ECI=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
@@ -61,7 +61,7 @@ function computeTimePosVel(params)
         p_SCHs=cat(p_Ss,p_Cs,p_Hs,dims=1)
         orbit_pos_all=zeros(3,Np,Nt)
         orbit_vel_all=zeros( size(orbit_pos_all) ) # ml: needs revision
-        @warn "Orbit Velocity not defined for SCH option"        
+        @warn "Orbit Velocity not defined for SCH option"
         for i=1:Np
             orbit_pos_all[:,i,:]=Geometry.sch_to_xyz(p_SCHs[:,i,:],peg_t0) # ECEF TODO use mid-aperture peg
         end
@@ -81,6 +81,7 @@ function computeTimePosVel(params)
                 display(scatter!(orbit_pos_all[1,i,:]/1e3,orbit_pos_all[2,i,:]/1e3,orbit_pos_all[3,i,:]/1e3,markersize=0.5))
             end
         end
+        orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
         orbit_pos=orbit_pos_all[:,:,orbit_time_index]
         orbit_time=orbit_time_all[orbit_time_index]
         orbit_vel=orbit_time_all[orbit_time_index] # ml: needs revision
