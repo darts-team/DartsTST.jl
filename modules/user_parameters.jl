@@ -80,7 +80,6 @@ end
     sync_fmin = 1.0 # minimum frequency > 0 in Hz to window PSD
     sync_clk_fs = 1e3; # sample rate of clock error process
     sync_master = 1; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
-
     sync_osc_type = "USO"
     sync_a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
     sync_f_osc = 10e6 # local oscillator frequency --> depends on oscillator type
@@ -89,7 +88,7 @@ end
 
     # simulation options
     enable_thermal_noise=false # whether to enable or disable random additive noise (e.g. thermal noise)
-    enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable
+    # enable_fast_time=true # whether to enable or disable fast-time axis, 0:disable, 1: enable #TODO variable obsolete?
     display_geometry=false # whether to display geometry plots
     display_RSF_rawdata=false # whether to display RSF and rawdata plots
     display_tomograms=1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot

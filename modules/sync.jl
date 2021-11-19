@@ -13,13 +13,13 @@ takes the position vectors and slow time vector to produce a phase error matrix 
 
 # Arguments
 - `time_vector::N times x 1 Array`: slow time vector
-- `pos::3xN Array`: look vector
+- `pos::3xN Array`: positions of platforms at slow time points (ECEF)
 - `parameters::Parameters`: structure of simulation configuration parameters
 - `sync_PSD::Nplatform x Npulses x sync_clk_fs Array`: OPTIONAL INPUT, precalculated synchronization PSDs
 
 """
 
-function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, pos::Array{Float64,3}, osc_coeffs, parameters)
+function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, pos::Array{Float64,3}, osc_coeffs::Matrix{Int64}, parameters)
     # - Inputs -
     # time_vector   : a vector of time values at which the orbit positions for each platform are sampled
     # pos           : a matrix (3 x [Np x Nt] or 3 x Nt) of the orbit positions for each platform
@@ -93,14 +93,14 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
 t_sync = collect(time_vector[1]:sync_pri:time_vector[end]+sync_pri) # create sync PRI time base (the schedule of syncs)
 
 # create the radar TDMA schedule
-if mode == 1 # ping-pong
+if mode == 1 # SAR
     slot_len    = dt/nplat # split the PRI evenly between each tx //TODO: replace with Ilgin's schedule
     tdma_radar  = collect(time_vector[1]:slot_len:time_vector[end]+dt) # creates schedule with radar time slots
     tx_map      = round.(mod.(tdma_radar./slot_len,nplat)).+1 # map of which platform is transmitting at each TDMA time point
     # phase_state keeps track of phase error for each individual platform at each transmit time
     phase_state = Array{Float64}(undef, nplat, length(tdma_radar)) # Nplatforms x N TDMA times
     
-elseif mode == 2 #SIMO
+elseif mode == 2 # SIMO
     # only the one transmitter. So the schedule is given by the input time vector
     tdma_radar = time_vec[1:end-1]
     tx_map = master.*ones(size(tdma_radar)) #only single transmitter
@@ -148,9 +148,9 @@ end
         crlbs      = sig_crlb[i,:]      # grab the CRLB previously calculated
         #interpolate CRLB values to sync PRI times
         push!(crlbs,crlbs[end])
-        itp_crlb = LinearInterpolation(time_vec,crlbs,extrapolation_bc = Line()) # create interpolant with CRLB values sampled at orbit sample times. Repeats last value to avoid extrapolation errors
+        itp_crlb = LinearInterpolation(time_vec, crlbs, extrapolation_bc = Line()) # create interpolant with CRLB values sampled at orbit sample times. Repeats last value to avoid extrapolation errors
 
-        (Sphi, f_psd) = osc_psd_twosided(sync_clk_fs, clk_args_N, a_coeff_db,sync_fmin)    # this gives the basic PSD of the oscillator (no sync involved)
+        (Sphi, f_psd) = osc_psd_twosided(sync_clk_fs, clk_args_N, a_coeff_db, sync_fmin)    # this gives the basic PSD of the oscillator (no sync involved)
         
         phase_err_internal = zeros(0)       # initialize an empty array to collect the phase error values at internal time base
         internal_time_vec = zeros(0)        # initialize an empty array to keep track of internal time base
@@ -168,7 +168,7 @@ end
             
             if no_sync_flag # no sync case
                 Sphi_uc = up_convert_psd .* Sphi
-                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs,no_sync_flag)
+                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs, no_sync_flag)
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi
             else
@@ -220,7 +220,7 @@ end
 
         # reset phase error to 0 at each sync time. Do this by finding the start/stop indices at each of the sync times
         if no_sync_flag
-            
+            #no reset to 0 error
         else        
             for nsync = 1 : length(t_sync)-1
                 sync_time       = t_sync[nsync]
@@ -246,8 +246,14 @@ end
         # Now, create interpolant and interpolate to the TDMA schedule
         itp_tdma = LinearInterpolation(internal_time_vec, phase_err_internal,extrapolation_bc = Flat()) # create interpolant, hold same value at end if out of bounds
         phase_state[i,:] = itp_tdma(tdma_radar);
-         # display(plot(tdma_radar,phase_state[i,:].*180/pi,xlabel="time (s)",ylabel="phase (deg)",title="Phase Error at TDMA Sampling"))
-        
+        # if i==1
+        #     # display(plot(tdma_radar,phase_state[i,:].*180/pi,xlabel="time (s)",ylabel="Oscillator phase (deg)",title="Phase Error at TDMA Sampling"))
+        #     display(plot(tdma_radar,phase_state[i,:].*180/pi.*up_convert,xlabel="time (s)",ylabel="RF phase (deg)",title="Phase Error at TDMA Sampling"))
+        # else
+        #     # display(plot!(tdma_radar,phase_state[i,:].*180/pi,xlabel="time (s)",ylabel="Oscillator phase (deg)",title="Phase Error at TDMA Sampling"))
+        #     display(plot!(tdma_radar,phase_state[i,:].*180/pi.*up_convert,xlabel="time (s)",ylabel="RF phase (deg)",title="Phase Error at TDMA Sampling"))
+        # end
+            
     end # loop over platforms
   
     if mode == 1 # ping-pong
@@ -284,15 +290,15 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     sync_fs                 = parameters.sync_fs
     sync_fbw                = parameters.sync_fbw
     sync_fmin               = parameters.sync_fmin
-    f_osc                   = parameters.f_osc
+    f_osc                   = parameters.sync_f_osc
     sync_clk_fs             = parameters.sync_clk_fs
-    master                  = parameters.master
-    osc_coeffs              = parameters.osc_coeffs
+    master                  = parameters.sync_master
+    # osc_coeffs              = parameters.osc_coeffs
     sync_processing_time    = parameters.sync_processing_time
     mode                    = parameters.mode
     no_sync_flag            = parameters.no_sync_flag
     fc                      = parameters.fc
-    sigma_freq_offsets      = parameters.sigma_freq_offsets
+    # sigma_freq_offsets      = parameters.sigma_freq_offsets
     
     
     # find total elapsed time over the course of the orbits
@@ -421,10 +427,10 @@ end
         end # for platform pulse times
         
         # add in linear phase ramp term (uses frequency offset of oscillator)
-        sigma_freq_offset = sigma_freq_offsets[i]
-        freq_offset = randn(1)*sigma_freq_offset # zero mean random
-        phase_ramp = 2*pi* freq_offset .* internal_time_vec
-        phase_err_internal = phase_err_internal + phase_ramp
+        # sigma_freq_offset = sigma_freq_offsets[i]
+        # freq_offset = randn(1)*sigma_freq_offset # zero mean random
+        # phase_ramp = 2*pi* freq_offset .* internal_time_vec
+        # phase_err_internal = phase_err_internal + phase_ramp
         
         # reset phase error to 0 at each sync time. Do this by finding the start/stop indices at each of the sync times
         if no_sync_flag
@@ -458,7 +464,7 @@ end
         
     end # loop over platforms
   
-    if mode == 1 # ping-pong
+    if mode == 1 # SAR
             for m = 1 : nplat
                 pulse_idx = findall(tx_map->tx_map == m,tx_map) # gives all radar pulse times for given transmitter
                 phase_err[m,:] = up_convert.* phase_state[m,pulse_idx[1:ntimes]]
