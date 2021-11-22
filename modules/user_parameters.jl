@@ -105,11 +105,25 @@ end
 end
 
 
+"""
+    validateInputParams(params)
+
+Check consistency of user parameters in inputParameters object `params`. 
+Return `true` if `params` contains valid parameters.
+
+    # Examples
+```julia-repl
+julia> paramsIsValid = validateInputParams(params)
+true
+```
+"""
 function validateInputParams(params)
     
     if params.target_pos_mode == "CR"
         @assert length(params.t_loc_1) == length(params.t_loc_2) == length(params.t_loc_3) "Size of target location arrays must be equal for target_pos_mode=CR."
     end
+
+    # Add more @assert's here
 
     return true
 end
