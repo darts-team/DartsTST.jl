@@ -74,7 +74,7 @@ end
     sync_pri::Float64 = 1.0 # (s) repetition interval of sync
     sync_processing_time::Float64 = 0.001 # processing time between stage 1 and stage 2 sync
     sync_signal_len::Int64 = 1024 # waveform length
-    sync_fc = fc # waveform center frequency - set to fame as radar freq
+    sync_fc = fc # waveform center frequency - set to same as radar freq
     sync_fs::Float64 = 25e6 # sync receiver sampling rate
     sync_fbw = sync_fs # LFM bandwidth
     sync_fmin::Float64 = 1.0 # minimum frequency > 0 in Hz to window PSD
