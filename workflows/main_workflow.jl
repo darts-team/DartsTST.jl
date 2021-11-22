@@ -19,8 +19,8 @@ using StaticArrays
 using .UserParameters
 
 # Define user parameters
-include("../inputs/input-parameters.jl")
-params = UserParameters.inputParameters(customParams_CR_nadirlooking)
+include("../inputs/predefined-input-parameters.jl")
+params = UserParameters.inputParameters(customParams_test)
 
 #@unpack params.pulse_length, ts_coord_sys, display_geometry, display_RSF_rawdata, processing_steps,
 #    display_input_scene, display_tomograms, display_geometry_coord = params

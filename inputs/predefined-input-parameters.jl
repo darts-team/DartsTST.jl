@@ -1,6 +1,10 @@
-using Parameters
-include("../modules/user_parameters.jl")
-using .UserParameters
+#using Parameters
+#include("../modules/user_parameters.jl")
+#using .UserParameters
+
+customParams_test = UserParameters.inputParameters(
+    look_angle=0, # change only look angle
+)
 
 customParams_CR_nadirlooking = UserParameters.inputParameters(
     # From CR_nadirlooking.jl
