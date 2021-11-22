@@ -41,7 +41,7 @@ s_loc_3xN  = Scene.form3Dgrid_for(params.s_loc_1, params.s_loc_2, params.s_loc_3
 t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, params) ## calculate avg heading from platform positions
 
 # Read number of platforms (todo: move into a struct)
-const Np  = size(orbit_pos)[2] # number of platforms
+const Np  = size(orbit_pos,2) # number of platforms
 
 # Apply antenna pattern
 if params.include_antenna # calculate look angle (average over platforms and slow-time positions)
