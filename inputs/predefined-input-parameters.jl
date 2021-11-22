@@ -3,7 +3,7 @@
 #using .UserParameters
 
 customParams_test = UserParameters.inputParameters(
-    look_angle=0, # change only look angle
+    look_angle=40, # change only look angle
 )
 
 customParams_CR_nadirlooking = UserParameters.inputParameters(
