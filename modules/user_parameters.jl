@@ -60,12 +60,19 @@ end
     Δt::Float64 = 1e-9 # s fast-time resolution (ADC sampling rate effect is excluded for now)
     bandwidth::Float64 = 40e6 # bandwidth (Hz)
 
+    # derived parameters (some are needed further below)
+    λ = c/fc # wavelength (m)
+    h = p_t0_LLH[3] # default altitude
+    inc_angle = asind((earth_radius+h)./earth_radius.*sind(look_angle))
+    Ns_1 = length(s_loc_1)
+    Ns_2 = length(s_loc_2)
+    Ns_3 = length(s_loc_3)
+
     # performance metrics
     res_dB::Float64 =5 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
     PSF_image_point::Int = 3 # 1: peak location, 2: target location, 3: center of 3D scene
     PSF_cuts = 2 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
-    PSF_direction = [0 1 tand(34)] # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored
-    #PSF_direction= [0 1 tand(inc_angle)] for along-n cut and [0 1 -1/tand(inc_angle)] for along-r cut; inc_angle=asind((earth_radius+h)./earth_radius.*sind(look_angle)), h:altitude
+    PSF_direction = [0 1 tand(inc_angle)] # # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored; default cut is along n. For cut along r, use [0 1 -1/tand(inc_angle)] 
 
     # antenna settings
     antennaFile = "inputs/darts_ant_03192021.nc"
@@ -97,11 +104,7 @@ end
     no_sync_flag = false # if flag == true, no sync is used. flag == false results in normal sync process estimation
     enable_sync_phase_error = false
 
-    # derived parameters
-    λ = c/fc # wavelength (m)
-    Ns_1 = length(s_loc_1)
-    Ns_2 = length(s_loc_2)
-    Ns_3 = length(s_loc_3)
+   
 end
 
 

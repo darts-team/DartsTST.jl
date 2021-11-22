@@ -20,7 +20,7 @@ using .UserParameters
 
 # Define user parameters
 include("../inputs/predefined-input-parameters.jl")
-params = UserParameters.inputParameters()
+params = UserParameters.inputParameters(look_angle = 45)
 
 # Check consistency of input parameters
 paramsIsValid = UserParameters.validateInputParams(params)

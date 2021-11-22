@@ -6,6 +6,7 @@ customParams_test = UserParameters.inputParameters(
     look_angle=40, # change only look angle
 )
 
+
 customParams_CR_nadirlooking = UserParameters.inputParameters(
     # From CR_nadirlooking.jl
     look_angle=0, # nadir looking
