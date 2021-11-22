@@ -21,13 +21,12 @@ function construct_targets_str(params)
   @unpack target_pos_mode, t_loc_1, t_loc_2, t_loc_3, t_ref = params
   
   if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
-      t_loc_3xN=Scene.form3Dgrid_for(t_loc_1,t_loc_2,t_loc_3) # using 3 nested for loops
+      t_loc_3xN = Scene.form3Dgrid_for(t_loc_1, t_loc_2, t_loc_3) # using 3 nested for loops
       #t_loc_3xN=Scene.form3Dgrid_array(trg_prm.loc_1,trg_prm.loc_2,trg_prm.loc_3) # using array processing
-      t_ref_1xN=Scene.convert_3D_to_1xN(t_ref)
+      t_ref_1xN = Scene.convert_3D_to_1xN(t_ref)
   elseif target_pos_mode=="CR" # target positions are defined as 3xN (useful for a few discrete targets)
-      @assert length(t_loc_1)==length(t_loc_1)==length(t_loc_1) "each of the 3 target axes should have the same number of targets in the CR mode!"
-      t_loc_3xN=vcat(t_loc_1,t_loc_2,t_loc_3)
-      t_ref_1xN=t_ref
+      t_loc_3xN = vcat(t_loc_1, t_loc_2, t_loc_3)
+      t_ref_1xN = t_ref
   end
   Nt=size(t_loc_3xN,2) # number of targets
   #targets=Array{target_str}(undef,Nt)

@@ -20,13 +20,10 @@ using .UserParameters
 
 # Define user parameters
 include("../inputs/predefined-input-parameters.jl")
-params = UserParameters.inputParameters(look_angle = 45)
+params = UserParameters.inputParameters()
 
 # Check consistency of input parameters
 paramsIsValid = UserParameters.validateInputParams(params)
-
-#@unpack params.pulse_length, ts_coord_sys, display_geometry, display_RSF_rawdata, processing_steps,
-#    display_input_scene, display_tomograms, display_geometry_coord = params
 
 # Compute orbits time, position, and velocity
 const orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)

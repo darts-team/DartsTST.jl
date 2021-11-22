@@ -31,7 +31,7 @@ end
     orbit_filename = "orbit_output_062021.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
 
     # User defined orbits, set either SCH or TCN, see user_defined_orbit
-    p_t0_LLH           = [0;0;750e3] # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
+    p_t0_LLH           = [0; 0; 750e3] # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
     Vtan::Float64      = 7500 # tangential (along-track) velocity (m/s), radial velocity is assumed 0 (circular orbit)
     Torbit::Float64    = 10*60 # orbital duration (s) (should be larger than SAR_start_time+SAR_duration)
     dt_orbits::Float64 = 0.5 # orbit time resolution (s)
@@ -69,7 +69,7 @@ end
     Ns_3 = length(s_loc_3)
 
     # performance metrics
-    res_dB::Float64 =5 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
+    res_dB::Float64 = 3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
     PSF_image_point::Int = 3 # 1: peak location, 2: target location, 3: center of 3D scene
     PSF_cuts = 2 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
     PSF_direction = [0 1 tand(inc_angle)] # # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored; default cut is along n. For cut along r, use [0 1 -1/tand(inc_angle)] 
