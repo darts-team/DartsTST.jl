@@ -18,7 +18,7 @@ Creates a Peg point based on peg coordinates
 # Output
  - `peg::PegPoint`, in addition to peg coordinates also contains other parameters necessary for peg calculations
 """
-mutable struct PegPoint
+struct PegPoint
     pegLat::Float64 # peg latitude (deg)
     pegLon::Float64 # peg longitude (deg)
     pegHdg::Float64 # peg heading (deg)
