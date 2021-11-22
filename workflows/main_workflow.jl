@@ -22,10 +22,8 @@ using .UserParameters
 include("../inputs/predefined-input-parameters.jl")
 params = UserParameters.inputParameters(customParams_test)
 
-# Check whether target coordinates for target_pos_mode=CR have equal number of elements
-if params.target_pos_mode == "CR"
-    @assert length(params.t_loc_1) == length(params.t_loc_2) == length(params.t_loc_3) "Size of target location arrays must be equal for target_pos_mode=CR."
-end
+# Check consistency of input parameters
+paramsIsValid = UserParameters.validateInputParams(params)
 
 #@unpack params.pulse_length, ts_coord_sys, display_geometry, display_RSF_rawdata, processing_steps,
 #    display_input_scene, display_tomograms, display_geometry_coord = params

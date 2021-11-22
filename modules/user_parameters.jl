@@ -104,4 +104,14 @@ end
     Ns_3 = length(s_loc_3)
 end
 
+
+function validateInputParams(params)
+    
+    if params.target_pos_mode == "CR"
+        @assert length(params.t_loc_1) == length(params.t_loc_2) == length(params.t_loc_3) "Size of target location arrays must be equal for target_pos_mode=CR."
+    end
+
+    return true
+end
+
 end
