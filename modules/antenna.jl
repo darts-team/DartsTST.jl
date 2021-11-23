@@ -9,12 +9,12 @@ using Statistics
 using Plots
 
 function applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, params)
-   @unpack ts_coord_sys, t_loc_1, t_loc_2, t_loc_3, user_defined_orbit= params
+   @unpack ts_coord_sys, t_loc_1, t_loc_2, t_loc_3, user_defined_orbit, look_angle = params
 
    if user_defined_orbit > 0
       @warn "Antenna pattern not tested with custom orbits. Skipping."
       return
-   end   
+   end
 
    avg_p_xyz=reshape(mean(mean(p_xyz,dims=2),dims=3),3)
    avg_p_vel=reshape(mean(mean(orbit_vel,dims=2),dims=3),3)
@@ -38,9 +38,9 @@ function applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, params)
    ant = SimSetup.sc_ant(vgrid); #create antenna structure, additional arguments are rotation and origin
    sc = SimSetup.spacecraft(avg_p_xyz, Float64.(avg_p_vel), ant = ant, look_angle = look_ang, side = "right"); ##create spacecraft structure; ant, look_angle, side are optional
    co_pol,cross_pol = SimSetup.interpolate_pattern(sc, t_xyz_3xN);#inteprolate pattern (cp:co-pol, xp: cross-pol), outputs are 1xNt complex vectors
-   
+
    targets_ref=targets_ref.*transpose(co_pol).^2/maximum(abs.(co_pol))^2 #TODO separate TX and RX, include range effect?
-   
+
    if target_pos_mode=="grid" # plotting projected pattern only for grid type target distribution
        projected_pattern_3D=Scene.convert_image_1xN_to_3D(abs.(co_pol),length(t_loc_1),length(t_loc_2),length(t_loc_3))#take magnitude and reshape to 3D
        include("modules/plotting.jl");coords_txt=Plotting.coordinates(ts_coord_sys)
