@@ -52,7 +52,7 @@ end
     t_loc_1 = [0.] # deg latitude if LLH, along-track if SCH, X if XYZ
     t_loc_2 = [0.] # deg longitude if LLH, cross-track if SCH, Y if XYZ
     t_loc_3 = [0.] # m heights if LLH or SCH, Z if XYZ
-    t_ref   = [1.] # reflectivities: a list of CRs in CR mode; an arbitrary profile that will be interpolated on t_loc_3 axis in *grid modes 
+    t_ref   = [1.] # reflectivities: a list of CRs in CR mode; an arbitrary vertical profile that will be interpolated on t_loc_3 axis in *grid modes 
 
     # image/scene pixel coordinates
     s_loc_1 = 0 # deg latitude if LLH, along-track if SCH, X if XYZ
