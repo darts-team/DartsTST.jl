@@ -13,7 +13,11 @@ export c
     earth_eccentricity = sqrt(0.00669437999015) # Earth eccentricity
 end
 
-@with_kw struct inputParameters
+# Input parameters structure with default values
+# To run simulations with different values of input parameters, 
+# create a predefined struct in predefined-input-parameters.jl or 
+# or add parameter=value pairs directly in the workflow when creating the inputParameter object. 
+@with_kw struct inputParameters 
 
     mode::Int  = 2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     tx_el::Int = 1 # which element transmits for SIMO (max value N)
@@ -41,14 +45,14 @@ end
     pos_TCN = [0 0 0;0 5e3 0;1e3 -3e3 1e3]   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
 
     # target locations and reflectvities
-    target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
+    target_pos_mode="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("layered-grid" or "shaped-grid") or a 3xN array ("CR" for corner reflectors)
     ts_coord_sys="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
     display_geometry_coord="SCH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
     look_angle=30 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
     t_loc_1 = [0.] # deg latitude if LLH, along-track if SCH, X if XYZ
     t_loc_2 = [0.] # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3 = [0.] # m  heights if LLH or SCH, Z if XYZ
-    t_ref   = [1.] # reflectivities
+    t_loc_3 = [0.] # m heights if LLH or SCH, Z if XYZ
+    t_ref   = [1.] # reflectivities: a list of CRs in CR mode; an arbitrary profile that will be interpolated on t_loc_3 axis in *grid modes 
 
     # image/scene pixel coordinates
     s_loc_1 = 0 # deg latitude if LLH, along-track if SCH, X if XYZ
@@ -69,7 +73,7 @@ end
     Ns_3 = length(s_loc_3)
 
     # performance metrics
-    res_dB::Float64 = 3 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
+    res_dB::Float64 = 4 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
     PSF_image_point::Int = 3 # 1: peak location, 2: target location, 3: center of 3D scene
     PSF_cuts = 2 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
     PSF_direction = [0 1 tand(inc_angle)] # # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored; default cut is along n. For cut along r, use [0 1 -1/tand(inc_angle)] 
@@ -104,7 +108,9 @@ end
     no_sync_flag = false # if flag == true, no sync is used. flag == false results in normal sync process estimation
     enable_sync_phase_error = false
 
-   
+    # logging level
+
+
 end
 
 
@@ -123,8 +129,10 @@ true
 function validateInputParams(params)
     
     if params.target_pos_mode == "CR"
-        @assert length(params.t_loc_1) == length(params.t_loc_2) == length(params.t_loc_3) "Size of target location arrays must be equal for target_pos_mode=CR."
+        @assert length(params.t_loc_1) == length(params.t_loc_2) == length(params.t_loc_3) "Size of target location arrays must be equal for target_pos_mode=CR"
     end
+
+    @assert params.target_pos_mode in ["CR", "layered-grid", "shaped-grid", "grid"]  "Target position mode is not valid"
 
     # Add more @assert's here
 
