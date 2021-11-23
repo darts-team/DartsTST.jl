@@ -179,9 +179,6 @@ function make_orbit(pos, hdg, baselines, tvec)
     ehat,nhat,uhat = Geometry.enu_from_geo(pos_llh[1], pos_llh[2]); #ENU basis
     vel = cosd(hdg)*nhat + sind(hdg)*ehat;
 
-    println(size(vel[:,1]))
-    println(size(pos))
-
     #compute TCN frame for that position
     tcnquat = Geometry.tcn_quat(pos,vel[:,1]);
 
@@ -195,7 +192,10 @@ function make_orbit(pos, hdg, baselines, tvec)
         # to platform position and repeating for all slow time samples
         # Note: we use rotate_vec instead of rotate_frame because tcn_quat describes
         #       rotation from XYZ to TCN
-        platf_pos[:,ii,:] = pos .+ repeat(Geometry.rotate_vec(baselines[:,ii], tcnquat[1]),1,length(tvec));
+        #platf_pos[:,ii,:] = pos .+ repeat(Geometry.rotate_vec(baselines[:,ii], tcnquat[1]),1,length(tvec));
+        for jj=1:length(tvec)
+            platf_pos[:,ii,jj] = pos .+ Geometry.rotate_vec(baselines[:,ii], tcnquat[1]) + platf_vel[:,ii,jj]*tvec[jj];
+        end
     end
 
     return platf_pos, platf_vel
