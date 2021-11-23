@@ -38,4 +38,9 @@ customParams_CR_nadirlooking_tiltedcuts = UserParameters.inputParameters(
     PSF_direction=[1 7 0]
 )
 
+customParams_resdB = UserParameters.inputParameters(
+    res_dB = 3.4
+    # ... more variables
+)
+
 # add more custom struct here
