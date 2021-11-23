@@ -3,7 +3,25 @@
 #using .UserParameters
 
 customParams_test = UserParameters.inputParameters(
-    look_angle=0, # change only look angle
+    look_angle=40, # change only look angle
+)
+
+customParams_profileTest = UserParameters.inputParameters(
+    target_pos_mode="layered-grid", 
+    t_loc_1 = [0.], # deg latitude if LLH, along-track if SCH, X if XYZ
+    t_loc_2 = -2:1:2, # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    t_loc_3 = -2:1:2, # m  heights if LLH or SCH, Z if XYZ
+    t_ref   = [2, 1, 3], # reflectivities
+    display_input_scene = true 
+)
+
+customParams_shapedProfileTest = UserParameters.inputParameters(
+    target_pos_mode="shaped-grid", 
+    t_loc_1 = [0.], # deg latitude if LLH, along-track if SCH, X if XYZ
+    t_loc_2 = -2:1:2, # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    t_loc_3 = -2:1:2, # m  heights if LLH or SCH, Z if XYZ
+    t_ref   = [2, 1, 3], # reflectivities
+    display_input_scene = true 
 )
 
 customParams_CR_nadirlooking = UserParameters.inputParameters(

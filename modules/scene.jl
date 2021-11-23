@@ -6,6 +6,7 @@ using LinearAlgebra
 using Optim
 using Parameters
 using StaticArrays
+using Interpolations
 
 #local packages
 include("geometry.jl")
@@ -20,20 +21,37 @@ end
 function construct_targets_str(params)
   @unpack target_pos_mode, t_loc_1, t_loc_2, t_loc_3, t_ref = params
   
-  if target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
-      t_loc_3xN=Scene.form3Dgrid_for(t_loc_1,t_loc_2,t_loc_3) # using 3 nested for loops
-      #t_loc_3xN=Scene.form3Dgrid_array(trg_prm.loc_1,trg_prm.loc_2,trg_prm.loc_3) # using array processing
-      t_ref_1xN=Scene.convert_3D_to_1xN(t_ref)
+  if target_pos_mode=="layered-grid"
+    t_loc_3xN = Scene.form3Dgrid_for(t_loc_1, t_loc_2, t_loc_3) # using 3 nested for loops
+    
+    # create and flatten 3D grid of layered reflectivities from arbitrary t_ref profile
+    itp = LinearInterpolation( range(1, stop=length(t_loc_3), length=length(t_ref)), t_ref )
+    t_ref_interpolatedProfile = itp( range(1, stop=length(t_loc_3), length=length(t_loc_3)) ) # t_ref interpolated on the t_loc_3 axes
+    t_ref_3d  = repeat( t_ref_interpolatedProfile, length(t_loc_1), length(t_loc_2), 1) # repeat the reflectivity in "horizontal S-C layers" 
+    t_ref_1xN = Scene.convert_3D_to_1xN(t_ref_3d)
+  
+  elseif target_pos_mode=="shaped-grid" # target positions are defined as a volumetric grid (useful for distributed target)
+    @warn "Target position mode shaped-grid not implemented yet" 
+
+  elseif target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
+    @warn "Grid target_pos_mode is deprecated, use layered-grid or shaped-grid instead" 
+    t_loc_3xN = Scene.form3Dgrid_for(t_loc_1, t_loc_2, t_loc_3) # using 3 nested for loops
+    #t_loc_3xN=Scene.form3Dgrid_array(trg_prm.loc_1,trg_prm.loc_2,trg_prm.loc_3) # using array processing
+    t_ref_1xN = Scene.convert_3D_to_1xN(t_ref)
+  
   elseif target_pos_mode=="CR" # target positions are defined as 3xN (useful for a few discrete targets)
-      @assert length(t_loc_1)==length(t_loc_1)==length(t_loc_1) "each of the 3 target axes should have the same number of targets in the CR mode!"
-      t_loc_3xN=vcat(t_loc_1,t_loc_2,t_loc_3)
-      t_ref_1xN=t_ref
+    t_loc_3xN = vcat(t_loc_1, t_loc_2, t_loc_3)
+    t_ref_1xN = t_ref
   end
-  Nt=size(t_loc_3xN,2) # number of targets
+
+  Nt = size(t_loc_3xN, 2) # number of targets
+  @info "Number of targets and interpolated profile" Nt, t_ref_interpolatedProfile
+  
   #targets=Array{target_str}(undef,Nt)
   #for i=1:Nt;
   #  targets[i]=target_str(t_loc_3xN[:,i],t_ref_1xN[i])
   #end
+  
   return t_loc_3xN, t_ref_1xN, Nt
 end
 
@@ -41,7 +59,8 @@ end
 Generate Input Target Scene in 3D (scene limited by input scene arrays)
 """
 function generate_input_scene_3D(targets_ref, Nt, params)
-    @unpack s_loc_1,s_loc_2,s_loc_3,t_loc_1,t_loc_2,t_loc_3,target_pos_mode = params
+    @unpack s_loc_1, s_loc_2, s_loc_3,
+            t_loc_1, t_loc_2, t_loc_3, target_pos_mode = params
 
     inputscene_3D=zeros(length(s_loc_1),length(s_loc_2),length(s_loc_3))
     # TODO check if target is inside the scene. gives error if target is outside the scene.

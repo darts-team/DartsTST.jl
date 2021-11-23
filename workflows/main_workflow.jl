@@ -20,13 +20,10 @@ using .UserParameters
 
 # Define user parameters
 include("../inputs/predefined-input-parameters.jl")
-params = UserParameters.inputParameters(customParams_test)
+params = UserParameters.inputParameters()
 
 # Check consistency of input parameters
 paramsIsValid = UserParameters.validateInputParams(params)
-
-#@unpack params.pulse_length, ts_coord_sys, display_geometry, display_RSF_rawdata, processing_steps,
-#    display_input_scene, display_tomograms, display_geometry_coord = params
 
 # Compute orbits time, position, and velocity
 const orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
@@ -83,7 +80,7 @@ if size(t_xyz_3xN,2) == 1 # PSF related performance metrics are calculated when 
     println("ISLRs: ",round.(ISLRs,digits=2)," dB")
     println("PSF Peak Amplitude: ",round(maximum(20*log10.(image_3D)),digits=2)," dB")
 else
-    println("PSF related performance metrics cannot be calculated for more than 1 target.")
+    @warn "PSF related performance metrics cannot be calculated for more than 1 target."
 end
 
 # Relative Radiometric Accuracy (amplitude difference between input 3D scene and output 3D image, max normalized to 1)
