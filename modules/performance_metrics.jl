@@ -66,8 +66,8 @@ function PSF_metrics(image_3D,res_dB,target_location,scene_axis1,scene_axis2,sce
         image_1D,scene_res,scene_axis11,scene_axis22,scene_axis33=obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction_xyz)
         image_1D_itp,scene_res_itp,scene_axis_itp=upsample_PSFcut(image_1D,scene_res,100)
         scene_axis=(0:scene_res:(length(image_1D)-1)*scene_res).-(length(image_1D)-1)*scene_res/2
-        plotly();plot(scene_axis,20*log10.(abs.(image_1D)/maximum(abs.(image_1D))),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false) # plot the PSF along specified direction
-        display(plot!(scene_axis_itp,20*log10.(abs.(image_1D_itp)/maximum(abs.(image_1D_itp))))) # plot the PSF along specified direction
+        # plotly();plot(scene_axis,20*log10.(abs.(image_1D)/maximum(abs.(image_1D))),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false) # plot the PSF along specified direction
+        # display(plot!(scene_axis_itp,20*log10.(abs.(image_1D_itp)/maximum(abs.(image_1D_itp))))) # plot the PSF along specified direction
         resolutions,res_ind_1,res_ind_2=resolution_1D(image_1D_itp,scene_res_itp,res_dB)
         PSLRs,ISLRs=sidelobe_1D(image_1D_itp,1,res_ind_1,res_ind_2)
         loc_errors=NaN

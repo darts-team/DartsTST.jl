@@ -30,6 +30,9 @@ function construct_targets_str(params)
     t_ref_3d  = repeat( t_ref_interpolatedProfile, length(t_loc_1), length(t_loc_2), 1) # repeat the reflectivity in "horizontal S-C layers" 
     t_ref_1xN = Scene.convert_3D_to_1xN(t_ref_3d)
   
+    Nt = size(t_loc_3xN, 2) # number of targets
+    @info "Number of targets and interpolated profile" Nt, t_ref_interpolatedProfile
+    
   elseif target_pos_mode=="shaped-grid" # target positions are defined as a volumetric grid (useful for distributed target)
     @warn "Target position mode shaped-grid not implemented yet" 
 
@@ -45,7 +48,6 @@ function construct_targets_str(params)
   end
 
   Nt = size(t_loc_3xN, 2) # number of targets
-  @info "Number of targets and interpolated profile" Nt, t_ref_interpolatedProfile
   
   #targets=Array{target_str}(undef,Nt)
   #for i=1:Nt;
