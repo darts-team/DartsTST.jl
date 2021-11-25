@@ -56,8 +56,8 @@ function plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,coords) #TODO smar
     scatter!(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],markersize=1) #display grid in 3D
     display(scatter!(s_loc[1,:],s_loc[2,:],s_loc[3,:],markersize=0.3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Platforms and Targets and Scene")) #display grid in 3D
 end
-            
-function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis33, PSF_metrics, params)
+
+function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis33, params)
     @unpack mode, PSF_cuts, t_loc_1,t_loc_2,t_loc_3, s_loc_1,s_loc_2,s_loc_3, PSF_image_point,display_tomograms = params
 
     image_3D=image_3D/maximum(image_3D)
@@ -88,38 +88,32 @@ function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis3
         if Ns_2>1 && Ns_3>1
             display(heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
             c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-1="*string(s_loc_1[k1])
-            if PSF_metrics
-                heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
-                c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize)
-                if PSF_cuts==1
-                    plot!(s_loc_2[k2]*ones(Ns_3),s_loc_3,lc=[:white],leg=false)
-                    display(plot!(s_loc_2,s_loc_3[k3]*ones(Ns_2),lc=[:white],leg=false))
-                elseif PSF_cuts==2;display(plot!(scene_axis22,scene_axis33,lc=[:white],leg=false));end
-            end
+            heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
+            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize)
+            if PSF_cuts==1
+                plot!(s_loc_2[k2]*ones(Ns_3),s_loc_3,lc=[:white],leg=false)
+                display(plot!(s_loc_2,s_loc_3[k3]*ones(Ns_2),lc=[:white],leg=false))
+            elseif PSF_cuts==2;display(plot!(scene_axis22,scene_axis33,lc=[:white],leg=false));end
         end
         if Ns_1>1 && Ns_3>1
             display(heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[1]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
             c=:thermal,xticks=s_loc_1[1]:10:s_loc_1[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-2="*string(s_loc_2[k2])
-            if PSF_metrics
-                heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[1]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
-                c=:thermal,xticks=s_loc_1[1]:10:s_loc_1[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize)
-                if PSF_cuts==1
-                    plot!(s_loc_1[k1]*ones(Ns_3),s_loc_3,lc=[:white],leg=false)
-                    display(plot!(s_loc_1,s_loc_3[k3]*ones(Ns_1),lc=[:white],leg=false))
-                elseif PSF_cuts==2;display(plot!(scene_axis11,scene_axis33,lc=[:white],leg=false));end
-            end
+            heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[1]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
+            c=:thermal,xticks=s_loc_1[1]:10:s_loc_1[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize)
+            if PSF_cuts==1
+                plot!(s_loc_1[k1]*ones(Ns_3),s_loc_3,lc=[:white],leg=false)
+                display(plot!(s_loc_1,s_loc_3[k3]*ones(Ns_1),lc=[:white],leg=false))
+            elseif PSF_cuts==2;display(plot!(scene_axis11,scene_axis33,lc=[:white],leg=false));end
         end
         if Ns_1>1 && Ns_2>1
             display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[1]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
             c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_1[1]:10:s_loc_1[end],clims=(faintest,brightest),size=psize));savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-3="*string(s_loc_3[k3])
-            if PSF_metrics
-                heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[1]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
-                c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_1[1]:10:s_loc_1[end],clims=(faintest,brightest),size=psize)
-                if PSF_cuts==1
-                    plot!(s_loc_2[k2]*ones(Ns_1),s_loc_1,lc=[:white],leg=false)
-                    display(plot!(s_loc_2,s_loc_1[k1]*ones(Ns_2),lc=[:white],leg=false))
-                elseif PSF_cuts==2;display(plot!(scene_axis22,scene_axis11,lc=[:white],leg=false));end
-            end
+            heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[1]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
+            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_1[1]:10:s_loc_1[end],clims=(faintest,brightest),size=psize)
+            if PSF_cuts==1
+                plot!(s_loc_2[k2]*ones(Ns_1),s_loc_1,lc=[:white],leg=false)
+                display(plot!(s_loc_2,s_loc_1[k1]*ones(Ns_2),lc=[:white],leg=false))
+            elseif PSF_cuts==2;display(plot!(scene_axis22,scene_axis11,lc=[:white],leg=false));end
         end
     elseif display_tomograms==2
         gr()
