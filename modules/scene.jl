@@ -7,6 +7,7 @@ using Optim
 using Parameters
 using StaticArrays
 using Interpolations
+using Plots
 
 #local packages
 include("geometry.jl")
@@ -20,40 +21,38 @@ end
 
 function construct_targets_str(params)
   @unpack target_pos_mode, t_loc_1, t_loc_2, t_loc_3, t_ref = params
-  
+
   if target_pos_mode=="layered-grid"
     t_loc_3xN = Scene.form3Dgrid_for(t_loc_1, t_loc_2, t_loc_3) # using 3 nested for loops
-    
+
     # create and flatten 3D grid of layered reflectivities from arbitrary t_ref profile
     itp = LinearInterpolation( range(1, stop=length(t_loc_3), length=length(t_ref)), t_ref )
     t_ref_interpolatedProfile = itp( range(1, stop=length(t_loc_3), length=length(t_loc_3)) ) # t_ref interpolated on the t_loc_3 axes
-    t_ref_3d  = repeat( t_ref_interpolatedProfile, length(t_loc_1), length(t_loc_2), 1) # repeat the reflectivity in "horizontal S-C layers" 
+    t_ref_3d  = repeat( t_ref_interpolatedProfile, length(t_loc_1), length(t_loc_2), 1) # repeat the reflectivity in "horizontal S-C layers"
     t_ref_1xN = Scene.convert_3D_to_1xN(t_ref_3d)
-  
-    Nt = size(t_loc_3xN, 2) # number of targets
-    @info "Number of targets and interpolated profile" Nt, t_ref_interpolatedProfile
-    
+
   elseif target_pos_mode=="shaped-grid" # target positions are defined as a volumetric grid (useful for distributed target)
-    @warn "Target position mode shaped-grid not implemented yet" 
+    @warn "Target position mode shaped-grid not implemented yet"
 
   elseif target_pos_mode=="grid" # target positions are defined as a volumetric grid (useful for distributed target)
-    @warn "Grid target_pos_mode is deprecated, use layered-grid or shaped-grid instead" 
+    @warn "Grid target_pos_mode is deprecated, use layered-grid or shaped-grid instead"
     t_loc_3xN = Scene.form3Dgrid_for(t_loc_1, t_loc_2, t_loc_3) # using 3 nested for loops
     #t_loc_3xN=Scene.form3Dgrid_array(trg_prm.loc_1,trg_prm.loc_2,trg_prm.loc_3) # using array processing
     t_ref_1xN = Scene.convert_3D_to_1xN(t_ref)
-  
+
   elseif target_pos_mode=="CR" # target positions are defined as 3xN (useful for a few discrete targets)
     t_loc_3xN = vcat(t_loc_1, t_loc_2, t_loc_3)
     t_ref_1xN = t_ref
   end
 
   Nt = size(t_loc_3xN, 2) # number of targets
-  
+  @info "Number of targets and interpolated profile" Nt, t_ref_interpolatedProfile
+
   #targets=Array{target_str}(undef,Nt)
   #for i=1:Nt;
   #  targets[i]=target_str(t_loc_3xN[:,i],t_ref_1xN[i])
   #end
-  
+
   return t_loc_3xN, t_ref_1xN, Nt
 end
 
@@ -347,6 +346,138 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
       end
     end
     return array_1xN
+  end
+
+  #TODO add function definition
+  function take_1D_cuts(image_3D, params)
+    @unpack s_loc_1, s_loc_2, s_loc_3, t_loc_1, t_loc_2, t_loc_3, res_dB, PSF_image_point, PSF_cuts, PSF_direction, PSF_image_point = params
+    target_location = [t_loc_1 t_loc_2 t_loc_3]
+
+    if PSF_cuts == 1
+      scene_axis11=s_loc_1;scene_axis22=s_loc_2;scene_axis33=s_loc_3
+      image_1D_1, image_1D_2, image_1D_3 = obtain_1D_slices(image_3D, target_location, s_loc_1, s_loc_2, s_loc_3, PSF_image_point)
+      # Calculate Scene Resolutions and Plot 1D cuts
+      if length(image_1D_1)>1
+        scene_res1=s_loc_1[2]-s_loc_1[1] # scene resolution along the 1st axis
+        plotly();display(plot(s_loc_1,20*log10.(image_1D_1/maximum(image_1D_1)),xaxis=("scene axis 1 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the cut along axis 1
+      else;scene_res1=NaN;end
+      if length(image_1D_2)>1
+        scene_res2=s_loc_2[2]-s_loc_2[1] # scene resolution along the 2nd axis
+        plotly();display(plot(s_loc_2,20*log10.(image_1D_2/maximum(image_1D_2)),xaxis=("scene axis 2 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the cut along axis 2
+      else;scene_res2=NaN;end
+      if length(image_1D_3)>1
+        scene_res3=s_loc_3[2]-s_loc_3[1] # scene resolution along the 3rd axis
+        plotly();display(plot(s_loc_3,20*log10.(image_1D_3/maximum(image_1D_3)),xaxis=("scene axis 3 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the cut along axis 3
+      else;scene_res3=NaN;end
+      scene_res=[scene_res1 scene_res2 scene_res3]
+    elseif PSF_cuts == 2 # tilted cut is taken from the scene center
+      image_1D_1, scene_axis11, scene_axis22, scene_axis33 = obtain_1D_slice_tilted(image_3D, s_loc_1, s_loc_2, s_loc_3, PSF_direction)
+      image_1D_2=NaN
+      image_1D_3=NaN
+      # Plot tilted 1D cut
+      scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
+      scene_axis=(0:scene_res:(length(image_1D_1)-1)*scene_res).-(length(image_1D_1)-1)*scene_res/2
+      plotly();display(plot(scene_axis,20*log10.(abs.(image_1D_1)/maximum(abs.(image_1D_1))),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false)) # plot the tilted cut
+    end
+
+    return scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res
+  end
+
+  #TODO add function definition
+  function obtain_1D_slice_tilted(image_3D,scene_axis1,scene_axis2,scene_axis3,PSF_direction)
+      Ns_1=length(scene_axis1);Ns_2=length(scene_axis2);Ns_3=length(scene_axis3)
+      slice_index1=Int(ceil(Ns_1/2));slice_index2=Int(ceil(Ns_2/2));slice_index3=Int(ceil(Ns_3/2))
+      xc=scene_axis1[slice_index1];yc=scene_axis2[slice_index2];zc=scene_axis3[slice_index3]
+      x2=PSF_direction[1];y2=PSF_direction[2];z2=PSF_direction[3]
+      # 3D line equation: (x-x1)/(x2-x1)=(y-y1)/(y2-y1)=(z-z1)/(z2-z1) and x1=0;y1=0;z1=0 is the origin at center of scene
+      scene_axis10=scene_axis1.-xc
+      scene_axis20=scene_axis2.-yc
+      scene_axis30=scene_axis3.-zc
+      if x2!=0
+          scene_axis1_int=scene_axis10
+          scene_axis2_int=scene_axis1_int*(y2/x2)
+          scene_axis3_int=scene_axis1_int*(z2/x2)
+      elseif y2!=0
+          scene_axis2_int=scene_axis20
+          scene_axis1_int=scene_axis2_int*(x2/y2)
+          scene_axis3_int=scene_axis2_int*(z2/y2)
+      elseif z2!=0
+          scene_axis3_int=scene_axis30
+          scene_axis1_int=scene_axis3_int*(x2/z2)
+          scene_axis2_int=scene_axis3_int*(y2/z2)
+      else;println("The PSF direction relative to center/origin cannot be [0,0,0]!");end
+      if Ns_1>1;scene_axis1_ind=round.(Int64,(scene_axis1_int.-scene_axis10[1])/(scene_axis10[2]-scene_axis10[1]).+1);else;image_3D=dropdims(image_3D,dims=1);end
+      if Ns_2>1;scene_axis2_ind=round.(Int64,(scene_axis2_int.-scene_axis20[1])/(scene_axis20[2]-scene_axis20[1]).+1);else;image_3D=dropdims(image_3D,dims=2);end
+      if Ns_3>1;scene_axis3_ind=round.(Int64,(scene_axis3_int.-scene_axis30[1])/(scene_axis30[2]-scene_axis30[1]).+1);else;image_3D=dropdims(image_3D,dims=3);end
+      itp=interpolate(image_3D,BSpline(Cubic(Free(OnGrid()))))
+      image_1D=zeros(Float64,length(scene_axis1_int))
+      for i=1:length(scene_axis1_int)
+          if Ns_1>1 && Ns_2>1 && Ns_3>1
+              if scene_axis1_ind[i]>0 && scene_axis1_ind[i]<=Ns_1 && scene_axis2_ind[i]>0 && scene_axis2_ind[i]<=Ns_2 && scene_axis3_ind[i]>0 && scene_axis3_ind[i]<=Ns_3
+                  image_1D[i]=itp(scene_axis1_ind[i],scene_axis2_ind[i],scene_axis3_ind[i])
+              else;image_1D[i]=NaN;end
+          elseif Ns_1==1
+              if scene_axis2_ind[i]>0 && scene_axis2_ind[i]<=Ns_2 && scene_axis3_ind[i]>0 && scene_axis3_ind[i]<=Ns_3
+                  image_1D[i]=itp(scene_axis2_ind[i],scene_axis3_ind[i])
+              else;image_1D[i]=NaN;end
+          elseif Ns_2==1
+              if scene_axis1_ind[i]>0 && scene_axis1_ind[i]<=Ns_1 && scene_axis3_ind[i]>0 && scene_axis3_ind[i]<=Ns_3
+                  image_1D[i]=itp(scene_axis1_ind[i],scene_axis3_ind[i])
+              else;image_1D[i]=NaN;end
+          elseif Ns_3==1
+              if scene_axis2_ind[i]>0 && scene_axis2_ind[i]<=Ns_2 && scene_axis1_ind[i]>0 && scene_axis1_ind[i]<=Ns_1
+                  image_1D[i]=itp(scene_axis1_ind[i],scene_axis2_ind[i])
+              else;image_1D[i]=NaN;end
+          end
+      end
+      image_1D=deleteat!(vec(image_1D),findall(isnan,vec(image_1D)))
+      scene_axis11=scene_axis1_int.+xc
+      scene_axis22=scene_axis2_int.+yc
+      scene_axis33=scene_axis3_int.+zc
+      #NaN_ind=findall(image_1D==NaN)
+      return image_1D,scene_axis11,scene_axis22,scene_axis33
+  end
+
+  #TODO add function definition
+  function obtain_1D_slices(image_3D,target_location,scene_axis1,scene_axis2,scene_axis3,PSF_peak_target)
+      if PSF_peak_target==1 # 1D slices from PSF peak
+          max_ind=findall(image_3D .==maximum(image_3D))
+          slice_index1=max_ind[1][1]
+          slice_index2=max_ind[1][2]
+          slice_index3=max_ind[1][3]
+      elseif PSF_peak_target==2 # PSF slices from actual target location
+          slice_index1=findall(target_location[1] .==scene_axis1)
+          slice_index2=findall(target_location[2] .==scene_axis2)
+          slice_index3=findall(target_location[3] .==scene_axis3)
+      elseif PSF_peak_target==3 # PSF slices from 3D scene center
+          Ns_1=length(scene_axis1)
+          Ns_2=length(scene_axis2)
+          Ns_3=length(scene_axis3)
+          slice_index1=Int(ceil(Ns_1/2))
+          slice_index2=Int(ceil(Ns_2/2))
+          slice_index3=Int(ceil(Ns_3/2))
+      end
+      if PSF_peak_target==2 && (isempty(slice_index1) || isempty(slice_index2) || isempty(slice_index3))
+          image_1D_1=NaN;image_1D_2=NaN;image_1D_3=NaN
+      else
+          gr() # or plotly()
+          if length(scene_axis1)>1
+              image_slice=image_3D[:,slice_index2,slice_index3]
+              image_1D_1=zeros(Float64,length(image_slice))
+              image_1D_1[:]=image_slice
+          else;image_1D_1=NaN;println("PSF metrics along 1st dimension cannot be calculated since image has no 1st dimension.");end
+          if length(scene_axis2)>1
+              image_slice=image_3D[slice_index1,:,slice_index3]
+              image_1D_2=zeros(Float64,length(image_slice))
+              image_1D_2[:]=image_slice
+          else;image_1D_2=NaN;println("PSF metrics along 2nd dimension cannot be calculated since image has no 2nd dimension.");end
+          if length(scene_axis3)>1
+              image_slice=image_3D[slice_index1,slice_index2,:]
+              image_1D_3=zeros(Float64,length(image_slice))
+              image_1D_3[:]=image_slice
+          else;image_1D_3=NaN;println("PSF metrics along 3rd dimension cannot be calculated since image has no 3rd dimension.");end
+      end
+      return image_1D_1,image_1D_2,image_1D_3
   end
 
   """

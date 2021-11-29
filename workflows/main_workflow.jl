@@ -10,7 +10,6 @@ include("../modules/performance_metrics.jl")
 include("../modules/antenna.jl")
 include("../modules/simsetup.jl")
 include("../modules/user_parameters.jl")
-include("../modules/plotting.jl")
 using NCDatasets
 using Statistics
 using Parameters
@@ -31,7 +30,7 @@ const orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
 # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
 const p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
 
-# Create target/scene location 
+# Create target/scene location
 const targets_loc, targets_ref, Nt = Scene.construct_targets_str(params) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 const s_loc_3xN  = Scene.form3Dgrid_for(params.s_loc_1, params.s_loc_2, params.s_loc_3) # using 3 nested for loops
 t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, params) ## calculate avg heading from platform positions
@@ -55,7 +54,7 @@ const ref_range = Geometry.distance(mean(t_xyz_3xN, dims=2), mean(mean(p_xyz,dim
 const rawdata = Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN, p_xyz, Srx, t_rx, ref_range, targets_ref, params) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
 if params.enable_thermal_noise # adding random noise based on SNR after range (fast-time) processing
     const rawdata = Error_Sources.random_noise(rawdata, params)
-end 
+end
 
 # Add phase error
 const sync_osc_coeffs = repeat(params.sync_a_coeff_dB, Np)
@@ -64,16 +63,19 @@ if params.enable_sync_phase_error
 end
 
 # Process raw data to generate image
-if params.processing_steps === :bp3d # 1-step processing
+if params.processing_steps === :bp3d # 1-step processing TODO do we need this option?
     const image_3D = Process_Raw_Data.main_SAR_tomo_3D(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
 elseif params.processing_steps === :bp2d3d # 2-step processing, first SAR (along-track), then tomographic
     const SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
     const image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
 end
 
+# Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
+scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
+
 # Calculate point target performance metrics
 if size(t_xyz_3xN,2) == 1 # PSF related performance metrics are calculated when there is only one point target
-    const resolutions, PSLRs, ISLRs, loc_errors, scene_axis11,scene_axis22,scene_axis33, PSF_metrics = Performance_Metrics.computePTPerformanceMetrics(image_3D, params)
+    const resolutions, PSLRs, ISLRs, loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
     println("Resolutions: ",round.(resolutions,digits=8)," in scene axes units")
     println("Location Errors: ",round.(loc_errors,digits=8)," in scene axes units")
     println("PSLRs: ",round.(PSLRs,digits=2)," dB")
@@ -91,6 +93,7 @@ println("Relative Radiometric Accuracy: Mean: ", round(mean_diff_image, digits=2
 
 # Plots (1D PSF cuts are displayed by default in the performance.metrics module)
 if params.display_geometry || params.display_RSF_rawdata || params.display_input_scene || params.display_tomograms != 0
+    include("../modules/plotting.jl")
     const display_geometry_coord_txt=Plotting.coordinates(params.display_geometry_coord)
     const ts_coord_txt=Plotting.coordinates(params.ts_coord_sys)
     if params.display_RSF_rawdata; Plotting.plot_RSF_rawdata(ft, t_rx, MF, Srx, Np, Nst, rawdata, params); end
@@ -100,6 +103,6 @@ if params.display_geometry || params.display_RSF_rawdata || params.display_input
         Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt)
     end
     if params.display_input_scene; Plotting.plot_input_scene(inputscene_3D, ts_coord_txt, params);end
-    if params.display_tomograms != 0; Plotting.plot_tomogram(image_3D, ts_coord_txt, scene_axis11, scene_axis22, scene_axis33, PSF_metrics, params);end
+    if params.display_tomograms != 0; Plotting.plot_tomogram(image_3D, ts_coord_txt, scene_axis11, scene_axis22, scene_axis33, params);end
     if params.display_input_scene; Plotting.plot_input_scene(diff_image3D, ts_coord_txt, params);end
 end
