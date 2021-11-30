@@ -1,6 +1,8 @@
 module Orbits
 
-include("geometry.jl")
+#include("geometry.jl")
+
+using ..Geometry
 
 using SatelliteToolbox
 using NCDatasets
