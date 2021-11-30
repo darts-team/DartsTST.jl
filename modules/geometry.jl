@@ -4,6 +4,8 @@ module Geometry
 using ReferenceFrameRotations
 using LinearAlgebra
 using Statistics
+using StaticArrays
+using Parameters
 
 """
 Creates a Peg point based on peg coordinates
@@ -16,7 +18,7 @@ Creates a Peg point based on peg coordinates
 # Output
  - `peg::PegPoint`, in addition to peg coordinates also contains other parameters necessary for peg calculations
 """
-mutable struct PegPoint
+struct PegPoint
     pegLat::Float64 # peg latitude (deg)
     pegLon::Float64 # peg longitude (deg)
     pegHdg::Float64 # peg heading (deg)
@@ -68,7 +70,9 @@ rotate_frame(v,q) = convert(Array{Float64,1}, vect(inv(q)*v*q))
 " Rotate vector, given a rotation quaternion "
 rotate_vec(v,q) = convert(Array{Float64,1}, vect(q*v*inv(q)))
 
-function convert_platform_target_scene_coordinates(Np,Nst,Nt,p_xyz,t_xyz_3xN,targets_loc,s_xyz_3xN,s_loc_3xN,avg_peg,display_geometry_coord,ts_coord_sys)
+function convert_platform_target_scene_coordinates(Np,Nst,Nt,p_xyz,t_xyz_3xN,targets_loc,s_xyz_3xN,s_loc_3xN,avg_peg, params)
+    @unpack display_geometry_coord, ts_coord_sys = params
+    
     Nsc=size(s_loc_3xN,2)
     p_loc=zeros(3,Np,Nst)
     t_loc=zeros(3,Nt)

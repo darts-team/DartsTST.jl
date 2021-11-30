@@ -4,6 +4,55 @@ module Antenna
 using LinearAlgebra
 using NCDatasets
 using Interpolations
+using Parameters
+using Statistics
+using Plots
+
+function applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, params)
+   @unpack ts_coord_sys, t_loc_1, t_loc_2, t_loc_3, user_defined_orbit, look_angle = params
+
+   if user_defined_orbit > 0
+      @warn "Antenna pattern not tested with custom orbits. Skipping."
+      return
+   end
+
+   avg_p_xyz=reshape(mean(mean(p_xyz,dims=2),dims=3),3)
+   avg_p_vel=reshape(mean(mean(orbit_vel,dims=2),dims=3),3)
+   if ts_coord_sys=="SCH"
+       look_ang=look_angle
+   elseif ts_coord_sys=="XYZ" || ts_coord_sys=="LLH"
+       platform_heights=zeros(Np);slant_ranges=zeros(Np)
+       avg_t_xyz=mean(t_xyz_3xN,dims=2) # average target location in XYZ
+       avg_rs=Geometry.distance(avg_t_xyz,avg_p_xyz) # average slant range
+       for i=1:Np
+           p_xyz_i=p_xyz[:,i,:] # p_xyz: 3 x Np x Nst
+           p_xyz_i=reshape(p_xyz_i,3,Nst) # p_xyz: 3 x Nst
+           p_LLH=Geometry.xyz_to_geo(p_xyz_i)
+           platform_heights[i]=mean(p_LLH[3,:]) # average platform heights over slow-time for each platform
+       end
+       avg_p_h=mean(platform_heights) # average platform height over platforms and slow-time
+       if avg_rs<avg_p_h;avg_rs=avg_p_h;end
+       avg_rg,look_ang=Scene.slantrange_to_lookangle(earth_radius,avg_rs,avg_p_h,0) # assuming target height is 0 (negligible effect), look_ang: average look angle
+   end
+   vgrid = Antenna.AntGrid(antennaFile) # read in vpol grid, takes time to load
+   ant = SimSetup.sc_ant(vgrid); #create antenna structure, additional arguments are rotation and origin
+   sc = SimSetup.spacecraft(avg_p_xyz, Float64.(avg_p_vel), ant = ant, look_angle = look_ang, side = "right"); ##create spacecraft structure; ant, look_angle, side are optional
+   co_pol,cross_pol = SimSetup.interpolate_pattern(sc, t_xyz_3xN);#inteprolate pattern (cp:co-pol, xp: cross-pol), outputs are 1xNt complex vectors
+
+   targets_ref=targets_ref.*transpose(co_pol).^2/maximum(abs.(co_pol))^2 #TODO separate TX and RX, include range effect?
+
+   if target_pos_mode=="grid" # plotting projected pattern only for grid type target distribution
+       projected_pattern_3D=Scene.convert_image_1xN_to_3D(abs.(co_pol),length(t_loc_1),length(t_loc_2),length(t_loc_3))#take magnitude and reshape to 3D
+       include("modules/plotting.jl");coords_txt=Plotting.coordinates(ts_coord_sys)
+       Nt_1=length(t_loc_1)
+       Nt_2=length(t_loc_2)
+       Nt_3=length(t_loc_3)
+       gr()
+       if Nt_2>1 && Nt_1>1;display(heatmap(t_loc_2,t_loc_1, 20*log10.(projected_pattern_3D[:,:,1]),ylabel=coords_txt[1],xlabel=coords_txt[2],title = "Antenna Pattern Projected on Targets (V-copol)", fill=true,size=(1600,900)));end #, clim=(-80,40),aspect_ratio=:equal
+       if Nt_3>1 && Nt_2>1;display(heatmap(t_loc_3,t_loc_2, 20*log10.(projected_pattern_3D[1,:,:]),ylabel=coords_txt[2],xlabel=coords_txt[3],title = "Antenna Pattern Projected on Targets (V-copol)", fill=false,size=(1600,900)));end #, clim=(-80,40),aspect_ratio=:equal
+       if Nt_3>1 && Nt_1>1;display(heatmap(t_loc_3,t_loc_1, 20*log10.(projected_pattern_3D[:,1,:]),ylabel=coords_txt[1],xlabel=coords_txt[3],title = "Antenna Pattern Projected on Targets (V-copol)", fill=false,size=(1600,900)));end #, clim=(-80,40),aspect_ratio=:equal
+   end
+end
 
 
 function pattern_sinc(sidelobe_dB,theta, hpbw)

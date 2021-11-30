@@ -1,4 +1,5 @@
-*ipynb_checkpoints
+
+*.png
+*.ipynb
+*.jld2
 *.nc
-*.jld2
-*.jld2

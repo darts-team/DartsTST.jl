@@ -1,21 +1,18 @@
-include("modules/generate_raw_data.jl")
-include("modules/process_raw_data.jl")
-include("modules/geometry.jl")
-include("modules/scene.jl")
-#include("inputs/input_parameters_SCH_tree.jl")
-#include("inputs/input_parameters_antenna_pattern_grid.jl")
-#include("inputs/input_parameters_CR_nadirlooking.jl")
-#include("inputs/input_parameters_CR_slantlooking.jl")
-#include("inputs/input_parameters_CR_nadirlooking_tiltedcuts.jl")
-include("inputs/input_parameters_CR_slantlooking_tiltedcuts.jl")
-#include("inputs/input_parameters_CRs_cross.jl")
-include("modules/range_spread_function.jl") # as RSF
-include("modules/orbits.jl")
-include("modules/sync.jl")
-include("modules/error_sources.jl")
-include("modules/performance_metrics.jl")
-include("modules/antenna.jl")
-include("modules/simsetup.jl")
+include("../../modules/generate_raw_data.jl")
+include("../../modules/process_raw_data.jl")
+include("../../modules/geometry.jl")
+include("../../modules/scene.jl")
+include("../../inputs/input_parameters_CR_slantlooking_tiltedcuts.jl")
+include("../../modules/range_spread_function.jl") # as RSF
+include("../../modules/orbits.jl")
+include("../../modules/sync.jl")
+include("../../modules/error_sources.jl")
+include("../../modules/performance_metrics.jl")
+include("../../modules/antenna.jl")
+include("../../modules/simsetup.jl")
+include("../../modules/sync.jl")
+include("../../modules/error_sources.jl")
+
 using NCDatasets
 using Statistics
 using Dates
@@ -34,9 +31,7 @@ catch #if not generate from Orbits
     local epoch = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
     global dcm = Orbits.eci_dcm(orbit_time, epoch);
 end
-#orbit_pos=orbit_pos_ECI
-#orbit_vel=orbit_vel_ECI
-#orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
+
 orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF TODO velocity conversion function not ready yet
 slow_time=(SAR_start_time:1/fp:SAR_start_time+SAR_duration) # create slow time axis
 if length(slow_time)==1;p_xyz=orbit_pos
@@ -105,19 +100,23 @@ else # without fastime, with slowtime; matched filter gain is included inside th
 end
 if !enable_fast_time;SNR=SNR*pulse_length*bandwidth;end # SNR increases after matched filter
 if enable_thermal_noise;rawdata=Error_Sources.random_noise(rawdata,SNR,enable_fast_time,mode);end # adding random noise based on SNR after range (fast-time) processing
+
+## Add Sync effects
+include("../../inputs/input_parameters_sync.jl")
+rawdata_sync = Error_Sources.synchronization_errors(rawdata,slow_time,p_xyz,enable_fast_time,parameters)
+
 ## PROCESS RAW DATA TO GENERATE IMAGE
-#image_3xN=Process_Raw_Data.main(rawdata,s_xyz_3xN,p_xyz_grid,mode,tx_el,fc) # without fastime, without slowtime
-#image_3xN=Process_Raw_Data.main_RSF(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)  # with fastime, without slowtime
 if enable_fast_time # with fastime, with slowtime
-    image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
+    image_1xN=Process_Raw_Data.main_RSF_slowtime(rawdata_sync,s_xyz_3xN,p_xyz,mode,tx_el,fc,t_rx,ref_range)
 else # without fastime, with slowtime
-    image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata,s_xyz_3xN,p_xyz,mode,tx_el,fc)
+    image_1xN=Process_Raw_Data.main_noRSF_slowtime(rawdata_sync,s_xyz_3xN,p_xyz,mode,tx_el,fc)
 end
 Ns_1=length(s_loc_1);Ns_2=length(s_loc_2);Ns_3=length(s_loc_3)
-image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)
+image_3D=Scene.convert_image_1xN_to_3D(image_1xN,Ns_1,Ns_2,Ns_3)## PERFORMANCE METRICS
+
 ## PERFORMANCE METRICS
 # PSF metrics
-include("modules/performance_metrics.jl")
+include("../../modules/performance_metrics.jl")
 if size(t_xyz_3xN,2)==1 # PSF related performance metrics are calculated when there is only one point target
     target_index1=findall(t_loc_1 .==s_loc_1)
     target_index2=findall(t_loc_2 .==s_loc_2)
@@ -147,7 +146,7 @@ diff_image3D,mean_diff_image,std_diff_image=Performance_Metrics.relative_radiome
 println("Relative Radiometric Accuracy: Mean: ",round(mean_diff_image,digits=2),", Std: ",round(std_diff_image,digits=2)) # mean=0 & std_dev=0 means perfect result
 ## PLOTS (1D PSF cuts are displayed by default in the performance.metrics module)
 if display_geometry || display_RSF_rawdata || display_input_scene || display_tomograms!=0
-    include("modules/plotting.jl")
+    include("../../modules/plotting.jl")
     display_geometry_coord_txt=Plotting.coordinates(display_geometry_coord)
     ts_coord_txt=Plotting.coordinates(ts_coord_sys)
     if display_RSF_rawdata;Plotting.plot_RSF_rawdata(enable_fast_time,mode,ft,t_rx,MF,Srx,Np,Nst,rawdata);end
