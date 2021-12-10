@@ -14,10 +14,10 @@ export c
 end
 
 # Input parameters structure with default values
-# To run simulations with different values of input parameters, 
-# create a predefined struct in predefined-input-parameters.jl or 
-# or add parameter=value pairs directly in the workflow when creating the inputParameter object. 
-@with_kw struct inputParameters 
+# To run simulations with different values of input parameters,
+# create a predefined struct in predefined-input-parameters.jl or
+# or add parameter=value pairs directly in the workflow when creating the inputParameter object.
+@with_kw struct inputParameters
 
     mode::Int  = 2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     tx_el::Int = 1 # which element transmits for SIMO (max value N)
@@ -52,7 +52,7 @@ end
     t_loc_1 = [0.] # deg latitude if LLH, along-track if SCH, X if XYZ
     t_loc_2 = [0.] # deg longitude if LLH, cross-track if SCH, Y if XYZ
     t_loc_3 = [0.] # m heights if LLH or SCH, Z if XYZ
-    t_ref   = [1.] # reflectivities: a list of CRs in CR mode; an arbitrary profile that will be interpolated on t_loc_3 axis in *grid modes 
+    t_ref   = [1.] # reflectivities: a list of CRs in CR mode; an arbitrary profile that will be interpolated on t_loc_3 axis in *grid modes
 
     # image/scene pixel coordinates
     s_loc_1 = 0 # deg latitude if LLH, along-track if SCH, X if XYZ
@@ -76,7 +76,7 @@ end
     res_dB::Float64 = 4 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
     PSF_image_point::Int = 3 # 1: peak location, 2: target location, 3: center of 3D scene
     PSF_cuts::Int = 2 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
-    PSF_direction = [0 1 tand(inc_angle)] # # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored; default cut is along n. For cut along r, use [0 1 -1/tand(inc_angle)] 
+    PSF_direction = [0 1 tand(inc_angle)] # # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored; default cut is along n. For cut along r, use [0 1 -1/tand(inc_angle)]
 
     # antenna settings
     antennaFile::String = "inputs/darts_ant_03192021.nc"
@@ -102,6 +102,7 @@ end
     enable_thermal_noise::Bool    = false # whether to enable or disable random additive noise (e.g. thermal noise)
     enable_fast_time::Bool        = true # whether to enable or disable fast-time axis, 0:disable, 1: enable
     display_geometry::Bool        = false # whether to display geometry plots
+    display_1D_cuts::Bool         = false # whether to 1D cuts from Scene module
     display_RSF_rawdata::Bool     = false # whether to display RSF and rawdata plots
     display_tomograms::Int        = 1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
     include_antenna::Bool         = true # whether to include projected antenna pattern
@@ -118,7 +119,7 @@ end
 """
     validateInputParams(params)
 
-Check consistency of user parameters in inputParameters object `params`. 
+Check consistency of user parameters in inputParameters object `params`.
 Return `true` if `params` contains valid parameters.
 
     # Examples
@@ -128,7 +129,7 @@ true
 ```
 """
 function validateInputParams(params)
-    
+
     if params.target_pos_mode == "CR"
         @assert length(params.t_loc_1) == length(params.t_loc_2) == length(params.t_loc_3) "Size of target location arrays must be equal for target_pos_mode=CR"
     end
