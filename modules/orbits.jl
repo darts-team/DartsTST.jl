@@ -31,7 +31,7 @@ end
 
 function computeTimePosVel(params)
     @unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n,
-    Torbit, p_t0_LLH, p_heading, Vtan, look_angle, display_custom_orbit, orbit_filename = params
+    Torbit, p_t0_LLH, p_heading, Vtan, look_angle, display_custom_orbit, orbit_filename, pos_TCN = params
 
     ## PLATFORM LOCATIONS and HEADINGS
 
