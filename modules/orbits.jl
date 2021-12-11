@@ -257,7 +257,7 @@ Arguments
     - `platf_pos`
     - `platf_vel`
 """
-function make_orbit(pos, hdg, baselines, tvec)
+function make_orbit(pos, hdg, baselines, tvec, mu = 3.986004418e14)
     @assert ndims(pos)==1 "POS needs to be 3 x 1 Vector"
 
     # create velocity vector from heading
@@ -272,6 +272,9 @@ function make_orbit(pos, hdg, baselines, tvec)
     platf_pos = zeros(3,size(baselines,2), length(tvec));
     platf_vel = repeat(vel, 1, size(baselines,2), length(tvec)); #repeat velocity vector for now. TODO: update if necessary
 
+    #spacecraf speed
+    sc_speed = sqrt(mu./norm(pos)); #sqrt(GM/R)->https://en.wikipedia.org/wiki/Orbital_speed
+
     #iterate over all baselines to create synthetic orbits
     for ii=1:size(baselines,2)
         # compute platform position for each platform by adding baseline (in XYZ)
@@ -280,7 +283,7 @@ function make_orbit(pos, hdg, baselines, tvec)
         #       rotation from XYZ to TCN
         #platf_pos[:,ii,:] = pos .+ repeat(Geometry.rotate_vec(baselines[:,ii], tcnquat[1]),1,length(tvec));
         for jj=1:length(tvec)
-            platf_pos[:,ii,jj] = pos .+ Geometry.rotate_vec(baselines[:,ii], tcnquat[1]) + platf_vel[:,ii,jj]*tvec[jj];
+            platf_pos[:,ii,jj] = pos .+ Geometry.rotate_vec(baselines[:,ii], tcnquat[1]) + platf_vel[:,ii,jj]*tvec[jj]*sc_speed;
         end
     end
 
