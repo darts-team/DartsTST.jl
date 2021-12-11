@@ -94,7 +94,9 @@ else
     sync_text = "wSync"
 end
 
-outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$osc_type"*"_coeff_number"*"$coeff_number"*"_sync_osc_sweep_"*sync_text* ".jld2" # this is the output filename that the data is saved to using JLD2
+@unpack  s_loc_1, s_loc_2, s_loc_3, mode, sync_osc_type = params
+
+outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$sync_osc_type"*"_coeff_number"*"$coeff_number"*"_sync_osc_sweep_"*sync_text* ".jld2" # this is the output filename that the data is saved to using JLD2
 # this saves the data into a JLD2 file. Data includes the estimates
 @save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors osc_coeff_sweep s_loc_1 s_loc_2 s_loc_3
 

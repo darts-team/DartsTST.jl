@@ -124,7 +124,7 @@ tomo_data   = SharedArray{Float64}(params.Ns_1,params.Ns_2,params.Ns_3,numSRI,Nt
         ISLRs[:,k,ntrial]       = ISLR
     end#N SRIs
 end#Ntrials
-
+@unpack mode, s_loc_1, s_loc_2, s_loc_3 = params
 outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$sync_osc_type"*"_sync_pri_sweep.jld2" # this is the output filename that the data is saved to using JLD2
 # this saves the data into a JLD2 file. Data includes the estimates
 @save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs s_loc_1 s_loc_2 s_loc_3
