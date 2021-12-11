@@ -86,7 +86,7 @@ function computeTimePosVel(params)
         orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
         orbit_pos=orbit_pos_all[:,:,orbit_time_index]
         orbit_time=orbit_time_all[orbit_time_index]
-        orbit_vel=orbit_time_all[orbit_time_index] # ml: needs revision
+        orbit_vel=orbit_vel_all[orbit_time_index] # ml: needs revision
     end
 
     return orbit_time, orbit_pos, orbit_vel
@@ -254,7 +254,8 @@ Arguments
     - `baselines::Array{3,Np}`, TCN baselines for Np platforms
     - `tvec::Array{3x1}`, time vector
    # Output
-    - `cuts::AntCuts`, in addition to peg coordinates also contains other parameters necessary for peg calculations
+    - `platf_pos`
+    - `platf_vel`
 """
 function make_orbit(pos, hdg, baselines, tvec)
     @assert ndims(pos)==1 "POS needs to be 3 x 1 Vector"
