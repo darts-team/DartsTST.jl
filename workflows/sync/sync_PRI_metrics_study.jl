@@ -70,7 +70,7 @@ params = UserParameters.inputParameters(s_loc_1 = -60:2:60,PSF_image_point=1,PSF
 paramsIsValid = UserParameters.validateInputParams(params)
 
 # generate tomo using parameters and updated oscillator coefficients
-image_3D = TomoWorkflow.generate_tomo(params)
+ideal_image_3D = TomoWorkflow.generate_tomo(params)
 
 # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
 scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
