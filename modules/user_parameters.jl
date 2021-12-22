@@ -14,10 +14,10 @@ export c
 end
 
 # Input parameters structure with default values
-# To run simulations with different values of input parameters, 
-# create a predefined struct in predefined-input-parameters.jl or 
-# or add parameter=value pairs directly in the workflow when creating the inputParameter object. 
-@with_kw struct inputParameters 
+# To run simulations with different values of input parameters,
+# create a predefined struct in predefined-input-parameters.jl or
+# or add parameter=value pairs directly in the workflow when creating the inputParameter object.
+@with_kw struct inputParameters
 
     mode::Int  = 2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     tx_el::Int = 1 # which element transmits for SIMO (max value N)
@@ -31,18 +31,16 @@ end
     SAR_start_time::Float64 = 0 # SAR imaging start time (s)
 
     # platform locations in xyz (including slow-time locations)
-    user_defined_orbit::Int = 1 # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
+    user_defined_orbit::Int = 2 # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
     orbit_filename::String = "orbit_output_062021.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
 
     # User defined orbits, set either SCH or TCN, see user_defined_orbit
     p_t0_LLH::Array{Float64,1} = [0;0;750e3] # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
-    Vtan::Float64      = 7500 # tangential (along-track) velocity (m/s), radial velocity is assumed 0 (circular orbit)
-    Torbit::Float64    = 10*60 # orbital duration (s) (should be larger than SAR_start_time+SAR_duration)
+    Torbit::Float64    = 10*60 # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
     dt_orbits::Float64 = 0.5 # orbit time resolution (s)
     p_heading::Float64 = 0 # heading (deg), all platforms assumed to have the same heading, 0 deg is north
-    display_custom_orbit::Bool = false #whether to show orbit on Earth sphere (for a duration of Torbit)
     pos_n   = [-7.5 -5 -2 0 3.7 5.5 6.5]*1e3 # SCH option: relative position of each platform along n (m), 0 is the reference location
-    pos_TCN = [0 0 0;0 5e3 0;1e3 -3e3 1e3]   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
+    pos_TCN = [0 -6 0; 0 -5 0; 0 -2 0; 0 0 0; 0 3.5 0; 0 5 0]*1e3   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
 
     # target locations and reflectvities
     target_pos_mode::String="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("layered-grid" or "shaped-grid") or a 3xN array ("CR" for corner reflectors)
@@ -52,12 +50,12 @@ end
     t_loc_1 = [0.] # deg latitude if LLH, along-track if SCH, X if XYZ
     t_loc_2 = [0.] # deg longitude if LLH, cross-track if SCH, Y if XYZ
     t_loc_3 = [0.] # m heights if LLH or SCH, Z if XYZ
-    t_ref   = [1.] # reflectivities: a list of CRs in CR mode; an arbitrary vertical profile that will be interpolated on t_loc_3 axis in *grid modes 
+    t_ref   = [1.] # reflectivities: a list of CRs in CR mode; an arbitrary vertical profile that will be interpolated on t_loc_3 axis in *grid modes
 
     # image/scene pixel coordinates
     s_loc_1 = 0 # deg latitude if LLH, along-track if SCH, X if XYZ
-    s_loc_2 = -60:2:60 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    s_loc_3 = -60:2:60 # m  heights if LLH or SCH, Z if XYZ
+    s_loc_2 = -40:1:40 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    s_loc_3 = -40:1:40 # m  heights if LLH or SCH, Z if XYZ
 
     # range spread function (RSF) parameters
     pulse_length::Float64 = 10e-6 # s pulse length
@@ -76,7 +74,7 @@ end
     res_dB::Float64 = 4 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
     PSF_image_point::Int = 3 # 1: peak location, 2: target location, 3: center of 3D scene
     PSF_cuts::Int = 2 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
-    PSF_direction = [0 1 tand(inc_angle)] # # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored; default cut is along n. For cut along r, use [0 1 -1/tand(inc_angle)] 
+    PSF_direction = [0 1 tand(inc_angle)] # # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored; default cut is along n. For cut along r, use [0 1 -1/tand(inc_angle)]
 
     # antenna settings
     antennaFile::String = "inputs/darts_ant_03192021.nc"
@@ -100,14 +98,14 @@ end
 
     # simulation options
     enable_thermal_noise::Bool    = false # whether to enable or disable random additive noise (e.g. thermal noise)
-    enable_fast_time::Bool        = true # whether to enable or disable fast-time axis, 0:disable, 1: enable
     display_geometry::Bool        = false # whether to display geometry plots
+    display_custom_orbit::Bool    = false # whether to show custom orbit on Earth sphere (for a duration of Torbit)
     display_RSF_rawdata::Bool     = false # whether to display RSF and rawdata plots
     display_tomograms::Int        = 1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
-    include_antenna::Bool         = true # whether to include projected antenna pattern
+    include_antenna::Bool         = false # whether to include projected antenna pattern
     display_input_scene::Bool     = false # display input scene (targets) and delta between input/output scenes (3 slices at the center of scene) with same scene size as output tomogram scene
     no_sync_flag::Bool            = false # if flag == true, no sync is used. flag == false results in normal sync process estimation
-    enable_sync_phase_error::Bool = true # if flag == true, oscillator phase errors considered. If false, ideal oscillators used
+    enable_sync_phase_error::Bool = false # if flag == true, oscillator phase errors considered. If false, ideal oscillators used
 
     # logging level
 
@@ -118,7 +116,7 @@ end
 """
     validateInputParams(params)
 
-Check consistency of user parameters in inputParameters object `params`. 
+Check consistency of user parameters in inputParameters object `params`.
 Return `true` if `params` contains valid parameters.
 
     # Examples
@@ -128,7 +126,7 @@ true
 ```
 """
 function validateInputParams(params)
-    
+
     if params.target_pos_mode == "CR"
         @assert length(params.t_loc_1) == length(params.t_loc_2) == length(params.t_loc_3) "Size of target location arrays must be equal for target_pos_mode=CR"
     end
