@@ -57,7 +57,6 @@ elseif sync_osc_type == "Wenzel100MHz"
     sync_f_osc = 100e6 # local oscillator frequency
 elseif sync_osc_type == "MicroSemi"
     sync_a_coeff_dB = [-120 -114 -999 -134 -166 ] # [Microsemi GPS-3500 oscillator]
-    #TODO(correct center freq = 10MHz?)
 end
 
 Ntrials = 64 # number of trials per SRI in Monte Carlo simulations

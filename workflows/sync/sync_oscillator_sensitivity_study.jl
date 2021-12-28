@@ -37,7 +37,7 @@ a_coeff_dB = [-500 -500 -500 -500 -500] # near zero noise oscillator. Used for s
 Ntrials = 64 # number of trials per SRI in Monte Carlo simulations
 
 coeff_number = 1 # which coefficient to sweep over (1 through 5)
-osc_coeff_sweep = [ -100 -90 -80 -70 -60 -50 -40 -30 -20 -10  0 ]
+osc_coeff_sweep = [ -100 -90 -80 -70 -60 -50 -40 -30 ]
 numCoeffs = length(osc_coeff_sweep)
 
 # generate set of example parameters to get scene size
