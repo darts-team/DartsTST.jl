@@ -47,7 +47,7 @@ function construct_targets_str(params)
     t_ref_1xN = t_ref
   end
 
-  
+
 Nt = size(t_loc_3xN, 2) # number of targets
   #targets=Array{target_str}(undef,Nt)
   #for i=1:Nt;
@@ -87,7 +87,9 @@ end
 Convert target and scene coordinates to XYZ
 """
 # calculate avg heading from platform positions
-function convert_target_scene_coord_to_XYZ(ts_coord_sys,s_loc_3xN,targets_loc,orbit_pos,orbit_vel,look_angle,earth_radius,earth_eccentricity)
+function convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, orbit_vel, params)
+  @unpack ts_coord_sys, look_angle = params
+
   if ts_coord_sys=="LLH" # convert LLH to XYZ
       t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
       s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)

@@ -1,6 +1,8 @@
 module Orbits
 
-include("geometry.jl")
+#include("geometry.jl")
+
+using ..Geometry
 
 using SatelliteToolbox
 using NCDatasets
@@ -9,6 +11,8 @@ using LinearAlgebra
 using Dierckx
 using Parameters
 using Plots
+
+include("../modules/scene.jl")
 
 function interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
     @unpack SAR_start_time, SAR_duration, fp = params
@@ -29,7 +33,7 @@ end
 
 function computeTimePosVel(params)
     @unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n,
-    Torbit, p_t0_LLH, p_heading, Vtan, look_angle, display_custom_orbit, orbit_filename = params
+    Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename, pos_TCN = params
 
     ## PLATFORM LOCATIONS and HEADINGS
 
@@ -52,25 +56,31 @@ function computeTimePosVel(params)
         orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF
     elseif user_defined_orbit==1 # user defined, SCH option
         Np=length(pos_n)
-        orbit_time_all=0:dt_orbits:Torbit
+        orbit_time_all=-Torbit/2:dt_orbits:Torbit/2
         Nt=length(orbit_time_all)
-        peg_t0=Geometry.PegPoint(p_t0_LLH[1],p_t0_LLH[2],p_heading)
+        peg_t0=Geometry.PegPoint(p_t0_LLH[1],p_t0_LLH[2],p_heading) # corresponds to mid-aperture
+        pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
+        mu = 3.986004418e14; Vtan = sqrt(mu./norm(pos_XYZ)) #sqrt(GM/R)->https://en.wikipedia.org/wiki/Orbital_speed
         p_Ss_1p=Vtan*orbit_time_all';p_Ss=repeat(p_Ss_1p,Np,1);p_Ss=reshape(p_Ss,1,Np,Nt)
         p_Hs_t0=p_t0_LLH[3].+pos_n'*sind(look_angle);p_Hs=repeat(p_Hs_t0,1,Nt);p_Hs=reshape(p_Hs,1,Np,Nt)
         p_Cs_t0=pos_n'*cosd(look_angle);p_Cs=repeat(p_Cs_t0,1,Nt);p_Cs=reshape(p_Cs,1,Np,Nt)
         p_SCHs=cat(p_Ss,p_Cs,p_Hs,dims=1)
         orbit_pos_all=zeros(3,Np,Nt)
-        orbit_vel_all=zeros( size(orbit_pos_all) ) # ml: needs revision
-        @warn "Orbit Velocity not defined for SCH option"
+        orbit_vel_all=zeros(3,Np,Nt)
         for i=1:Np
-            orbit_pos_all[:,i,:]=Geometry.sch_to_xyz(p_SCHs[:,i,:],peg_t0) # ECEF TODO use mid-aperture peg
+            orbit_pos_all[:,i,:]=Geometry.sch_to_xyz(p_SCHs[:,i,:],peg_t0) # ECEF
+            # create velocity vector from heading
+            orbit_pos_geo = Geometry.xyz_to_geo(orbit_pos_all[:,i,:]) #position in geodetic coords
+            ehat,nhat,uhat = Geometry.enu_from_geo(orbit_pos_geo[1,:], orbit_pos_geo[2,:]) #ENU basis
+            orbit_vel_all[:,i,:] = cosd(p_heading)*nhat .+ sind(p_heading)*ehat
+            @warn "Orbit velocity for SCH option needs to be checked"
         end
     elseif user_defined_orbit==2 # user defined, TCN option
         pos_TCN=pos_TCN' # 3 x Np
         pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
-        orbit_time_all=0:dt_orbits:Torbit
+        orbit_time_all=-Torbit/2:dt_orbits:Torbit/2
         orbit_pos_all,orbit_vel_all=Orbits.make_orbit(pos_XYZ,p_heading,pos_TCN,orbit_time_all)
-        @warn "Orbit velocity needs revision for TCN"
+        @warn "Orbit velocity for TCN option is linear"
     end
     if (user_defined_orbit==1 || user_defined_orbit==2)
         if display_custom_orbit  #plot orbit on surface sphere
@@ -81,10 +91,12 @@ function computeTimePosVel(params)
                 display(scatter!(orbit_pos_all[1,i,:]/1e3,orbit_pos_all[2,i,:]/1e3,orbit_pos_all[3,i,:]/1e3,markersize=0.5))
             end
         end
-        orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
+        t0_index = findall(orbit_time_all .== 0)[1]
+        if isempty(t0_index);@warn "orbit time should include reference time of 0";end
+        orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+t0_index:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+t0_index) # index range for orbit times for time interval of interest
         orbit_pos=orbit_pos_all[:,:,orbit_time_index]
         orbit_time=orbit_time_all[orbit_time_index]
-        orbit_vel=orbit_time_all[orbit_time_index] # ml: needs revision
+        orbit_vel=orbit_vel_all[:,:,orbit_time_index]
     end
 
     return orbit_time, orbit_pos, orbit_vel
@@ -252,18 +264,16 @@ Arguments
     - `baselines::Array{3,Np}`, TCN baselines for Np platforms
     - `tvec::Array{3x1}`, time vector
    # Output
-    - `cuts::AntCuts`, in addition to peg coordinates also contains other parameters necessary for peg calculations
+    - `platf_pos`
+    - `platf_vel`
 """
-function make_orbit(pos, hdg, baselines, tvec)
+function make_orbit(pos, hdg, baselines, tvec, mu = 3.986004418e14)
     @assert ndims(pos)==1 "POS needs to be 3 x 1 Vector"
 
     # create velocity vector from heading
     pos_llh = Geometry.xyz_to_geo(pos); #position in geodetic coords
     ehat,nhat,uhat = Geometry.enu_from_geo(pos_llh[1], pos_llh[2]); #ENU basis
     vel = cosd(hdg)*nhat + sind(hdg)*ehat;
-
-    println(size(vel[:,1]))
-    println(size(pos))
 
     #compute TCN frame for that position
     tcnquat = Geometry.tcn_quat(pos,vel[:,1]);
@@ -272,13 +282,19 @@ function make_orbit(pos, hdg, baselines, tvec)
     platf_pos = zeros(3,size(baselines,2), length(tvec));
     platf_vel = repeat(vel, 1, size(baselines,2), length(tvec)); #repeat velocity vector for now. TODO: update if necessary
 
+    #spacecraf speed
+    sc_speed = sqrt(mu./norm(pos)); #sqrt(GM/R)->https://en.wikipedia.org/wiki/Orbital_speed
+
     #iterate over all baselines to create synthetic orbits
     for ii=1:size(baselines,2)
         # compute platform position for each platform by adding baseline (in XYZ)
         # to platform position and repeating for all slow time samples
         # Note: we use rotate_vec instead of rotate_frame because tcn_quat describes
         #       rotation from XYZ to TCN
-        platf_pos[:,ii,:] = pos .+ repeat(Geometry.rotate_vec(baselines[:,ii], tcnquat[1]),1,length(tvec));
+        #platf_pos[:,ii,:] = pos .+ repeat(Geometry.rotate_vec(baselines[:,ii], tcnquat[1]),1,length(tvec));
+        for jj=1:length(tvec)
+            platf_pos[:,ii,jj] = pos .+ Geometry.rotate_vec(baselines[:,ii], tcnquat[1]) + platf_vel[:,ii,jj]*tvec[jj]*sc_speed;
+        end
     end
 
     return platf_pos, platf_vel

@@ -16,6 +16,7 @@ using Parameters
 using Dates
 using StaticArrays
 using .UserParameters
+c = 299792458
 
 # Define user parameters
 include("../inputs/predefined-input-parameters.jl")
@@ -25,7 +26,7 @@ params = UserParameters.inputParameters()
 paramsIsValid = UserParameters.validateInputParams(params)
 
 # Compute orbits time, position, and velocity
-const orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
+orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
 
 # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
 const p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
@@ -34,6 +35,7 @@ const p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orb
 const targets_loc, targets_ref, Nt = Scene.construct_targets_str(params) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 const s_loc_3xN  = Scene.form3Dgrid_for(params.s_loc_1, params.s_loc_2, params.s_loc_3) # using 3 nested for loops
 t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, params) ## calculate avg heading from platform positions
+#t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, orbit_vel, params) ## calculate avg heading from platform positions/velocities
 
 # Read number of platforms (todo: move into a struct)
 const Np  = size(orbit_pos)[2] # number of platforms
@@ -99,7 +101,7 @@ if params.display_geometry || params.display_RSF_rawdata || params.display_input
     if params.display_RSF_rawdata; Plotting.plot_RSF_rawdata(ft, t_rx, MF, Srx, Np, Nst, rawdata, params); end
     if params.display_geometry
         # convert platform and target locations to desired coordinate system
-        const p_loc,t_loc,s_loc=Geometry.convert_platform_target_scene_coordinates(Np,Nst,Nt,p_xyz,t_xyz_3xN,targets_loc,s_xyz_3xN,s_loc_3xN,avg_peg, params)
+        p_loc,t_loc,s_loc=Geometry.convert_platform_target_scene_coordinates(Np,Nst,Nt,p_xyz,t_xyz_3xN,targets_loc,s_xyz_3xN,s_loc_3xN,avg_peg, params)
         Plotting.plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,display_geometry_coord_txt)
     end
     if params.display_input_scene; Plotting.plot_input_scene(inputscene_3D, ts_coord_txt, params);end
