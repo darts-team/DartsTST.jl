@@ -52,6 +52,7 @@ end
     t_loc_3 = [0.] # m heights if LLH or SCH, Z if XYZ
     t_ref   = [1.] # reflectivities: a list of CRs in CR mode; an arbitrary vertical profile that will be interpolated on t_loc_3 axis in *grid modes
 
+
     # image/scene pixel coordinates
     s_loc_1 = 0 # deg latitude if LLH, along-track if SCH, X if XYZ
     s_loc_2 = -40:1:40 # deg longitude if LLH, cross-track if SCH, Y if XYZ
@@ -99,6 +100,7 @@ end
     # simulation options
     enable_thermal_noise::Bool    = false # whether to enable or disable random additive noise (e.g. thermal noise)
     display_geometry::Bool        = false # whether to display geometry plots
+    display_1D_cuts::Bool         = false # whether to 1D cuts from Scene module
     display_custom_orbit::Bool    = false # whether to show custom orbit on Earth sphere (for a duration of Torbit)
     display_RSF_rawdata::Bool     = false # whether to display RSF and rawdata plots
     display_tomograms::Int        = 1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
