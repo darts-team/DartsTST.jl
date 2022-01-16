@@ -16,10 +16,10 @@ using Parameters
 using Dates
 using StaticArrays
 using .UserParameters
-c = 299792458
+c = 299792458 #TODO does not work without redefining c here
 
 # Define user parameters
-include("../inputs/predefined-input-parameters.jl")
+#include("../inputs/predefined-input-parameters.jl") TODO gives errors
 params = UserParameters.inputParameters()
 
 # Check consistency of input parameters
@@ -32,7 +32,7 @@ orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
 const p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
 
 # Create target/scene location
-const targets_loc, targets_ref, Nt = Scene.construct_targets_str(params) # Nt: number of targets, targets: structure array containing target locations and reflectivities
+targets_loc, targets_ref, Nt = Scene.construct_targets_str(params) # Nt: number of targets, targets: structure array containing target locations and reflectivities
 const s_loc_3xN  = Scene.form3Dgrid_for(params.s_loc_1, params.s_loc_2, params.s_loc_3) # using 3 nested for loops
 t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, params) ## calculate avg heading from platform positions
 #t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, orbit_vel, params) ## calculate avg heading from platform positions/velocities

@@ -73,8 +73,8 @@ function computeTimePosVel(params)
             orbit_pos_geo = Geometry.xyz_to_geo(orbit_pos_all[:,i,:]) #position in geodetic coords
             ehat,nhat,uhat = Geometry.enu_from_geo(orbit_pos_geo[1,:], orbit_pos_geo[2,:]) #ENU basis
             orbit_vel_all[:,i,:] = cosd(p_heading)*nhat .+ sind(p_heading)*ehat
-            @warn "Orbit velocity for SCH option needs to be checked"
         end
+        @warn "Orbit velocity for SCH option needs to be checked"
     elseif user_defined_orbit==2 # user defined, TCN option
         pos_TCN=pos_TCN' # 3 x Np
         pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
