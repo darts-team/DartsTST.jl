@@ -87,6 +87,7 @@ function computeTimePosVel(params)
             lats=-90:1:90;lons=-180:1:180;hgts=0; # background spherical grid on surface
             spherical_grid=Geometry.geo_to_xyz(Scene.form3Dgrid_for(lats,lons,hgts)); #create grid in LLH and convert to XYZ
             plotly();scatter(spherical_grid[1,:]/1e3,spherical_grid[2,:]/1e3,spherical_grid[3,:]/1e3,xlabel = "X-ECEF", ylabel="Y-ECEF", zlabel="Z-ECEF",size=(1600,900),leg=false,markersize=0.1)#display background grid in 3D
+            Np=length(pos_n)
             for i=1:Np
                 display(scatter!(orbit_pos_all[1,i,:]/1e3,orbit_pos_all[2,i,:]/1e3,orbit_pos_all[3,i,:]/1e3,markersize=0.5))
             end
