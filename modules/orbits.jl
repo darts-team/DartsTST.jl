@@ -89,7 +89,11 @@ function computeTimePosVel(params)
             plotly();scatter(spherical_grid[1,:]/1e3,spherical_grid[2,:]/1e3,spherical_grid[3,:]/1e3,xlabel = "X-ECEF", ylabel="Y-ECEF", zlabel="Z-ECEF",size=(1600,900),leg=false,markersize=0.1)#display background grid in 3D
             Np=length(pos_n)
             for i=1:Np
-                display(scatter!(orbit_pos_all[1,i,:]/1e3,orbit_pos_all[2,i,:]/1e3,orbit_pos_all[3,i,:]/1e3,markersize=0.5))
+                if i==Np
+                    display(scatter!(orbit_pos_all[1,i,:]/1e3,orbit_pos_all[2,i,:]/1e3,orbit_pos_all[3,i,:]/1e3,markersize=0.5))
+                else
+                    scatter!(orbit_pos_all[1,i,:]/1e3,orbit_pos_all[2,i,:]/1e3,orbit_pos_all[3,i,:]/1e3,markersize=0.5)
+                end
             end
         end
         t0_index = findall(orbit_time_all .== 0)[1]
