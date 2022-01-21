@@ -65,7 +65,7 @@ end
 
     # derived parameters (some are needed further below)
     λ = c/fc # wavelength (m)
-    h = p_t0_LLH[3] # default altitude
+    h = p_t0_LLH[3] # default altitude TODO p_t0_LLH not defined if user_defined_orbit=0, need to calculate h from orbit avg altitude OR should set PSF cut direction manually
     inc_angle = asind((earth_radius+h)./earth_radius.*sind(look_angle))
     Ns_1 = length(s_loc_1)
     Ns_2 = length(s_loc_2)
