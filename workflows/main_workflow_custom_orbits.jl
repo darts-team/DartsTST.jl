@@ -22,9 +22,9 @@ c = 299792458 #TODO does not work without redefining c here
 #include("../inputs/predefined-input-parameters.jl") TODO gives errors
 #params = UserParameters.inputParameters()
 
-for i=2:2
+for i=1:3
     params = UserParameters.inputParameters(
-    mode = 3, #1: SAR (ping-pong), 2:SIMO, 3:MIMO
+    mode = 2, #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     look_angle = 0, # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
     user_defined_orbit = 2, # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
     p_t0_LLH = [0;0;750e3], # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
@@ -37,9 +37,10 @@ for i=2:2
     s_loc_1 = 0, # deg latitude if LLH, along-track if SCH, X if XYZ
     s_loc_2 = -10:0.2:10, # deg longitude if LLH, cross-track if SCH, Y if XYZ
     s_loc_3 = -10:0.2:10, # m  heights if LLH or SCH, Z if XYZ
-    #pos_n   = [-3 -2 -1 0 1 2 3]*i*1e3, # relative position of each platform along n (m), 0 is the reference location, equal spacing
-    pos_TCN = [0 -3 0; 0 -2 0; 0 -1 0; 0 0 0; 0 1 0; 0 2 0;0 3 0]*i*1e3,   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
-    res_dB = 3.849 # dB two-sided resolution relative power level (value for 7 platforms and baseline = max distance + 1 spacing)
+    pos_n   = [-3 -2 -1 0 1 2 3]*i*2e3, # SCH option, relative position of each platform along n (m), 0 is the reference location, equal spacing
+    pos_TCN = [0 -3 0; 0 -2 0; 0 -1 0; 0 0 0; 0 1 0; 0 2 0;0 3 0]*i*2e3,   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
+    res_dB = 3.85 # dB two-sided resolution relative power level (value for 7 platforms and baseline = max distance + 1 spacing)
+    # Np:res_dB [2:3.01 3:3.52 4:3.70 5:3.78 6:3.82 7:3.85 8:3.87 9:3.88 10:3.89] for baseline = max distance + 1 spacing
     )
 
     # theoretical resolution
@@ -51,9 +52,14 @@ for i=2:2
         p_mode=1.38
     end
 
-    max_baseline=6e3*2+2e3;
+    if params.user_defined_orbit==1
+        pos_n=params.pos_n
+    elseif params.user_defined_orbit==2
+        pos_n=params.pos_TCN[:,2]
+    end
+    max_baseline=(maximum(pos_n)-minimum(pos_n))+(pos_n[2]-pos_n[1])
     res_theory=(c/params.fc)*params.p_t0_LLH[3]/p_mode/max_baseline
-    println("theoretical resolution:",res_theory)
+    println("theoretical resolution: ",round(res_theory,digits=2))
 
     # Check consistency of input parameters
     paramsIsValid = UserParameters.validateInputParams(params)
@@ -111,8 +117,8 @@ for i=2:2
     # Calculate point target performance metrics
     if size(t_xyz_3xN,2) == 1 # PSF related performance metrics are calculated when there is only one point target
         resolutions, PSLRs, ISLRs, loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
-        println("Resolutions: ",round.(resolutions,digits=8)," in scene axes units")
-        println("Location Errors: ",round.(loc_errors,digits=8)," in scene axes units")
+        println("Resolutions: ",round.(resolutions,digits=2)," in scene axes units")
+        println("Location Errors: ",round.(loc_errors,digits=2)," in scene axes units")
         println("PSLRs: ",round.(PSLRs,digits=2)," dB")
         println("ISLRs: ",round.(ISLRs,digits=2)," dB")
         println("PSF Peak Amplitude: ",round(maximum(20*log10.(image_3D)),digits=2)," dB")
