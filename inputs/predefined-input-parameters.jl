@@ -3,7 +3,7 @@
 #using .UserParameters
 
 customParams_LookAngle = UserParameters.inputParameters(
-    look_angle = 40, # change only look angle
+    look_angle = 40 # change only look angle
 )
 
 customParams_resdB = UserParameters.inputParameters(
@@ -26,7 +26,7 @@ customParams_AntennaPatternTest = UserParameters.inputParameters(
     include_antenna=true
 )
 
-customParams_TreeCH = UserParameters.inputParameters(
+#=customParams_TreeCH = UserParameters.inputParameters(
     target_pos_mode="grid", #  targets are defined as three 1D arrays forming either a volumetric grid ("grid") or a 3xN array ("CR" for corner reflectors)
     ts_coord_sys="SCH", # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene,  # if SCH, target and scene locations are defined relative to the point where look angle vector intersects the surface
     t_loc_1=0, # deg latitude if LLH, along-track if SCH, X if XYZ
@@ -104,7 +104,7 @@ customParams_Scattered9TargetsSH = UserParameters.inputParameters(
     distance_ratio=1,
     t_loc_1=t_loc_1/distance_ratio,
     t_loc_3=t_loc_3/distance_ratio
-)
+)=#
 
 customParams_OrbitFromFile = UserParameters.inputParameters(
     user_defined_orbit==0, # from file
@@ -121,7 +121,7 @@ customParams_CustomOrbit_AlongnSCH = UserParameters.inputParameters(
     p_heading::Float64 = 0, # heading (deg), all platforms assumed to have the same heading, 0 deg is north
     pos_n   = [-9 -6 -3 0 3 6 9]*1e3, # relative position of each platform along n (m), 0 is the reference location, equal spacing
     #pos_n=[-7.5 -5 -2 0 3.7 5.5 6.5]*1e3, # relative position of each platform along n (m), 0 is the reference location, unequal spacing
-    display_custom_orbit=true, #whether to show orbit on Earth sphere (for a duration of Torbit)
+    display_custom_orbit=true #whether to show orbit on Earth sphere (for a duration of Torbit)
 )
 
 customParams_CustomOrbit_AlongTCN = UserParameters.inputParameters(
@@ -131,7 +131,7 @@ customParams_CustomOrbit_AlongTCN = UserParameters.inputParameters(
     dt_orbits::Float64 = 0.5, # orbit time resolution (s)
     p_heading::Float64 = 0, # heading (deg), all platforms assumed to have the same heading, 0 deg is north
     pos_TCN = [0 -6 0; 0 -5 0; 0 -2 0; 0 0 0; 0 3.5 0; 0 5 0]*1e3,   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
-    display_custom_orbit=true, #whether to show orbit on Earth sphere (for a duration of Torbit)
+    display_custom_orbit=true #whether to show orbit on Earth sphere (for a duration of Torbit)
 )
 
 customParams_profileTest = UserParameters.inputParameters(
