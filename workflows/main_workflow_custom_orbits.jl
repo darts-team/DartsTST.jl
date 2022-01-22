@@ -161,4 +161,4 @@ end
 using Plots
 xax=(init_spc.+((1:Ntr).-1).*spc_inc)./1e3
 plot(xax,res_theory_array,xaxis=("spacing (km)"),yaxis=("resolution (m)"))
-plot!(xax,res_measured_array,labels=["theory","simulation"]
+plot!(xax,res_measured_array,labels=["theory","simulation"])
