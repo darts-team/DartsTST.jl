@@ -22,22 +22,38 @@ c = 299792458 #TODO does not work without redefining c here
 #include("../inputs/predefined-input-parameters.jl") TODO gives errors
 #params = UserParameters.inputParameters()
 
-for i=1:3
+for i=2:2
     params = UserParameters.inputParameters(
+    mode = 3, #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     look_angle = 0, # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
-    user_defined_orbit = 1, # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
+    user_defined_orbit = 2, # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
     p_t0_LLH = [0;0;750e3], # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
     Torbit    = 30, # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
     dt_orbits = 0.5, # orbit time resolution (s)
     p_heading = 0, # heading (deg), all platforms assumed to have the same heading, 0 deg is north
     display_custom_orbit = false, #whether to show orbit on Earth sphere (for a duration of Torbit)
     display_1D_cuts = 1, # whether to 1D cuts from Scene module
+    display_tomograms = 0, # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
     s_loc_1 = 0, # deg latitude if LLH, along-track if SCH, X if XYZ
-    s_loc_2 = -20:1:20, # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    s_loc_3 = -20:1:20, # m  heights if LLH or SCH, Z if XYZ
-    pos_n   = [-3 -2 -1 0 1 2 3]*i*1e3 # relative position of each platform along n (m), 0 is the reference location, equal spacing
-    #pos_TCN = [0 -6 0; 0 -5 0; 0 -2 0; 0 0 0; 0 3.5 0; 0 5 0]*1e3,   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
+    s_loc_2 = -10:0.2:10, # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    s_loc_3 = -10:0.2:10, # m  heights if LLH or SCH, Z if XYZ
+    #pos_n   = [-3 -2 -1 0 1 2 3]*i*1e3, # relative position of each platform along n (m), 0 is the reference location, equal spacing
+    pos_TCN = [0 -3 0; 0 -2 0; 0 -1 0; 0 0 0; 0 1 0; 0 2 0;0 3 0]*i*1e3,   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
+    res_dB = 3.849 # dB two-sided resolution relative power level (value for 7 platforms and baseline = max distance + 1 spacing)
     )
+
+    # theoretical resolution
+    if params.mode==1 # SAR
+        p_mode=2
+    elseif params.mode==2 # SIMO
+        p_mode=1
+    elseif params.mode==3 # MIMO
+        p_mode=1.38
+    end
+
+    max_baseline=6e3*2+2e3;
+    res_theory=(c/params.fc)*params.p_t0_LLH[3]/p_mode/max_baseline
+    println("theoretical resolution:",res_theory)
 
     # Check consistency of input parameters
     paramsIsValid = UserParameters.validateInputParams(params)

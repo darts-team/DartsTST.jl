@@ -101,7 +101,7 @@ end
 
 function main_SAR_tomo_3D(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, params) # with fast-time, slow-time, and tomographic processing; pixels in 3D
     @unpack Ns_1, Ns_2, Ns_3, mode, tx_el, fc = params
-    
+
     Nft=length(t_rx) # number of fast-time samples
     Nst=size(p_xyz_3D)[3] # number of slow-time samples
     s_xyz_3D=reshape(s_xyz_grid,3,Ns_3,Ns_2,Ns_1) # convert scene to 3D
@@ -163,7 +163,7 @@ function main_SAR_tomo_3D(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, params) #
                                 range_tx=distance(pixel_j,@view(p_xyz_3D[:,k,s]))
                                 rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
                                 rel_delay_ind=round(Int,rel_delay/Δt)
-                                processed_image[k,j1,j2,j3]=pixel_sum+rawdata[s,i,k,round(Int,Nft/2)+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
+                                pixel_sum += rawdata[s,i,k,round(Int,Nft/2)+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
                             end
                         end
                     end
@@ -176,7 +176,7 @@ function main_SAR_tomo_3D(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, params) #
 end
 function SAR_processing(rawdata, s_xyz_grid, p_xyz_3D, t_rx, ref_range, params) # slow-time processing of rawdata with fast-time
     @unpack Ns_1, Ns_2, Ns_3, mode, tx_el, fc = params
-    
+
     Nft=length(t_rx) # number of fast-time samples
     Nst=size(p_xyz_3D)[3] # number of slow-time samples
     s_xyz_3D=reshape(s_xyz_grid,3,Ns_3,Ns_2,Ns_1) # convert scene to 3D
