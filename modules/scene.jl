@@ -387,7 +387,7 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
       scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
       scene_axis=(0:scene_res:(length(image_1D_1)-1)*scene_res).-(length(image_1D_1)-1)*scene_res/2
       if display_1D_cuts
-        plotly();display(plot(scene_axis,20*log10.(abs.(image_1D_1)/maximum(abs.(image_1D_1))),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false)) # plot the tilted cut
+        plotly();display(plot(scene_axis,20*log10.(abs.(image_1D_1)/maximum(abs.(image_1D_1))),xaxis=("scene axis along specified direction"),ylim=(-50,0),ylabel=("amplitude (dB)"),size=(900,900),leg=false)) # plot the tilted cut
       end
     end
 

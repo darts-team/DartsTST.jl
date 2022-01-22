@@ -22,7 +22,13 @@ c = 299792458 #TODO does not work without redefining c here
 #include("../inputs/predefined-input-parameters.jl") TODO gives errors
 #params = UserParameters.inputParameters()
 
-for i=1:3
+Ntr = 12 # number of trials
+init_spc = 2e3 # initial spacing
+spc_inc = 0.5e3 # spacing increment
+res_theory_array=zeros(Ntr)
+res_measured_array=zeros(Ntr)
+
+for i=1:Ntr
     params = UserParameters.inputParameters(
     mode = 2, #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     look_angle = 0, # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
@@ -37,8 +43,8 @@ for i=1:3
     s_loc_1 = 0, # deg latitude if LLH, along-track if SCH, X if XYZ
     s_loc_2 = -10:0.2:10, # deg longitude if LLH, cross-track if SCH, Y if XYZ
     s_loc_3 = -10:0.2:10, # m  heights if LLH or SCH, Z if XYZ
-    pos_n   = [-3 -2 -1 0 1 2 3]*i*2e3, # SCH option, relative position of each platform along n (m), 0 is the reference location, equal spacing
-    pos_TCN = [0 -3 0; 0 -2 0; 0 -1 0; 0 0 0; 0 1 0; 0 2 0;0 3 0]*i*2e3,   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
+    #pos_n   = [-3 -2 -1 0 1 2 3]*i*2e3, # SCH option, relative position of each platform along n (m), 0 is the reference location, equal spacing
+    pos_TCN = [0 -3 0; 0 -2 0; 0 -1 0; 0 0 0; 0 1 0; 0 2 0;0 3 0]*(init_spc+(i-1)*spc_inc),   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
     res_dB = 3.85 # dB two-sided resolution relative power level (value for 7 platforms and baseline = max distance + 1 spacing)
     # Np:res_dB [2:3.01 3:3.52 4:3.70 5:3.78 6:3.82 7:3.85 8:3.87 9:3.88 10:3.89] for baseline = max distance + 1 spacing
     )
@@ -60,6 +66,7 @@ for i=1:3
     max_baseline=(maximum(pos_n)-minimum(pos_n))+(pos_n[2]-pos_n[1])
     res_theory=(c/params.fc)*params.p_t0_LLH[3]/p_mode/max_baseline
     println("theoretical resolution: ",round(res_theory,digits=2))
+    res_theory_array[i]=res_theory
 
     # Check consistency of input parameters
     paramsIsValid = UserParameters.validateInputParams(params)
@@ -117,6 +124,7 @@ for i=1:3
     # Calculate point target performance metrics
     if size(t_xyz_3xN,2) == 1 # PSF related performance metrics are calculated when there is only one point target
         resolutions, PSLRs, ISLRs, loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
+        res_measured_array[i]=resolutions[1]
         println("Resolutions: ",round.(resolutions,digits=2)," in scene axes units")
         println("Location Errors: ",round.(loc_errors,digits=2)," in scene axes units")
         println("PSLRs: ",round.(PSLRs,digits=2)," dB")
@@ -149,3 +157,8 @@ for i=1:3
     end
 
 end
+
+using Plots
+xax=(init_spc.+((1:Ntr).-1).*spc_inc)./1e3
+plot(xax,res_theory_array,xaxis=("spacing (km)"),yaxis=("resolution (m)"))
+plot!(xax,res_measured_array,labels=["theory","simulation"]
