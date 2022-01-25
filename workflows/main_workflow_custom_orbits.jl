@@ -16,26 +16,29 @@ using Parameters
 using Dates
 using StaticArrays
 using .UserParameters
+using Plots
+gr()
+
 c = 299792458 #TODO does not work without redefining c here
 
-# Define user parameters
-#include("../inputs/predefined-input-parameters.jl") TODO gives errors
-#params = UserParameters.inputParameters()
-
-Ntr = 12 # number of trials
-init_spc = 2e3 # initial spacing
+# Define study parameters
+Ntr = 10 # number of trials
+init_spc = 4e3 # initial spacing
 spc_inc = 0.5e3 # spacing increment
 res_theory_array=zeros(Ntr)
 res_measured_array=zeros(Ntr)
 
-for i=1:Ntr
+anim = Plots.Animation()
+
+for i = 1:Ntr
+    # Define user parameters
     params = UserParameters.inputParameters(
     mode = 2, #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     look_angle = 0, # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
     user_defined_orbit = 2, # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
     p_t0_LLH = [0;0;750e3], # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
     Torbit    = 30, # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
-    dt_orbits = 0.5, # orbit time resolution (s)
+    dt_orbits = 1, # orbit time resolution (s)
     p_heading = 0, # heading (deg), all platforms assumed to have the same heading, 0 deg is north
     display_custom_orbit = false, #whether to show orbit on Earth sphere (for a duration of Torbit)
     display_1D_cuts = 1, # whether to 1D cuts from Scene module
@@ -120,7 +123,7 @@ for i=1:Ntr
 
     # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
     scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
-
+    Plots.frame(anim)
     # Calculate point target performance metrics
     if size(t_xyz_3xN,2) == 1 # PSF related performance metrics are calculated when there is only one point target
         resolutions, PSLRs, ISLRs, loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
@@ -158,7 +161,9 @@ for i=1:Ntr
 
 end
 
-using Plots
+gif(anim, "anim_1Dcuts.gif", fps = 2)
+
+
 xax=(init_spc.+((1:Ntr).-1).*spc_inc)./1e3
-plot(xax,res_theory_array,xaxis=("spacing (km)"),yaxis=("resolution (m)"))
-plot!(xax,res_measured_array,labels=["theory","simulation"])
+plot(xax,[res_theory_array res_measured_array] ,xaxis=("spacing (km)"),yaxis=("resolution (m)"),labels=permutedims(["theory","simulation"]))
+savefig("resolution_vs_spacing.png")

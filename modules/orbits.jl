@@ -80,7 +80,6 @@ function computeTimePosVel(params)
         pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
         orbit_time_all=-Torbit/2:dt_orbits:Torbit/2
         orbit_pos_all,orbit_vel_all=Orbits.make_orbit(pos_XYZ,p_heading,pos_TCN,orbit_time_all)
-        @warn "Orbit velocity for TCN option is linear"
     end
     if (user_defined_orbit==1 || user_defined_orbit==2)
         if display_custom_orbit  #plot orbit on surface sphere
