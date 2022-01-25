@@ -46,7 +46,7 @@ for i = 1:Ntr
     s_loc_1 = 0, # deg latitude if LLH, along-track if SCH, X if XYZ
     s_loc_2 = -10:0.2:10, # deg longitude if LLH, cross-track if SCH, Y if XYZ
     s_loc_3 = -10:0.2:10, # m  heights if LLH or SCH, Z if XYZ
-    #pos_n   = [-3 -2 -1 0 1 2 3]*i*2e3, # SCH option, relative position of each platform along n (m), 0 is the reference location, equal spacing
+    pos_n   = [-3 -2 -1 0 1 2 3]*(init_spc+(i-1)*spc_inc), # SCH option, relative position of each platform along n (m), 0 is the reference location, equal spacing
     pos_TCN = [0 -3 0; 0 -2 0; 0 -1 0; 0 0 0; 0 1 0; 0 2 0;0 3 0]*(init_spc+(i-1)*spc_inc),   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
     res_dB = 3.85 # dB two-sided resolution relative power level (value for 7 platforms and baseline = max distance + 1 spacing)
     # Np:res_dB [2:3.01 3:3.52 4:3.70 5:3.78 6:3.82 7:3.85 8:3.87 9:3.88 10:3.89] for baseline = max distance + 1 spacing
