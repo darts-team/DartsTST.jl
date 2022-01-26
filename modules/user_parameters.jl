@@ -27,7 +27,7 @@ end
     fc::Float64  = 1.25e9 # center frequency (Hz) L-band; fc=3.2e9 # center frequency (Hz) S-band; fc=6e9 # center frequency (Hz) C-band
     fp::Float64  = 10 # pulse repetition frequency (Hz)
     SNR::Float64 = 50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
-    SAR_duration::Float64   = 3 # synthetic aperture duration (s)
+    SAR_duration::Float64   = 5 # synthetic aperture duration (s)
     SAR_start_time::Float64 = 0 # SAR imaging start time (s)
 
     # platform locations in xyz (including slow-time locations)
@@ -39,8 +39,7 @@ end
     Torbit::Float64    = 10*60 # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
     dt_orbits::Float64 = 0.5 # orbit time resolution (s)
     p_heading::Float64 = 0 # heading (deg), all platforms assumed to have the same heading, 0 deg is north
-    pos_n   = [-7.5 -5 -2 0 3.7 5.5 6.5]*1e3 # SCH option: relative position of each platform along n (m), 0 is the reference location
-    pos_TCN = [0 -6 0; 0 -5 0; 0 -2 0; 0 0 0; 0 3.5 0; 0 5 0]*1e3   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
+    pos_n   = [-7.5 -5 -2 0 3.7 5.5 6.5]*1e3 # relative position of each platform along n (m), 0 is the reference location
 
     # target locations and reflectvities
     target_pos_mode::String="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("layered-grid" or "shaped-grid") or a 3xN array ("CR" for corner reflectors)

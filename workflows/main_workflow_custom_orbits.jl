@@ -22,9 +22,9 @@ gr()
 c = 299792458 #TODO does not work without redefining c here
 
 # Define study parameters
-Ntr = 10 # number of trials
-init_spc = 4e3 # initial spacing
-spc_inc = 0.5e3 # spacing increment
+Ntr = 20 # number of trials
+init_spc = 2e3 # initial spacing
+spc_inc = 1e3 # spacing increment
 res_theory_array=zeros(Ntr)
 res_measured_array=zeros(Ntr)
 
@@ -33,8 +33,8 @@ anim = Plots.Animation()
 for i = 1:Ntr
     # Define user parameters
     params = UserParameters.inputParameters(
-    mode = 2, #1: SAR (ping-pong), 2:SIMO, 3:MIMO
-    look_angle = 0, # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
+    mode = 1, #1: SAR (ping-pong), 2:SIMO, 3:MIMO
+    look_angle = 30, # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
     user_defined_orbit = 2, # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
     p_t0_LLH = [0;0;750e3], # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
     Torbit    = 30, # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
@@ -42,40 +42,42 @@ for i = 1:Ntr
     p_heading = 0, # heading (deg), all platforms assumed to have the same heading, 0 deg is north
     display_custom_orbit = false, #whether to show orbit on Earth sphere (for a duration of Torbit)
     display_1D_cuts = 1, # whether to 1D cuts from Scene module
-    display_tomograms = 0, # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
+    display_tomograms = 1, # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
     s_loc_1 = 0, # deg latitude if LLH, along-track if SCH, X if XYZ
-    s_loc_2 = -10:0.2:10, # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    s_loc_3 = -10:0.2:10, # m  heights if LLH or SCH, Z if XYZ
+    s_loc_2 = -15:0.2:15, # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    s_loc_3 = -15:0.2:15, # m  heights if LLH or SCH, Z if XYZ
     pos_n   = [-3 -2 -1 0 1 2 3]*(init_spc+(i-1)*spc_inc), # SCH option, relative position of each platform along n (m), 0 is the reference location, equal spacing
-    pos_TCN = [0 -3 0; 0 -2 0; 0 -1 0; 0 0 0; 0 1 0; 0 2 0;0 3 0]*(init_spc+(i-1)*spc_inc),   # TCN option: Np x 3 matrix; each row is the TCN coordinate of each platform relative to reference
     res_dB = 3.85 # dB two-sided resolution relative power level (value for 7 platforms and baseline = max distance + 1 spacing)
     # Np:res_dB [2:3.01 3:3.52 4:3.70 5:3.78 6:3.82 7:3.85 8:3.87 9:3.88 10:3.89] for baseline = max distance + 1 spacing
     )
 
-    # theoretical resolution
-    if params.mode==1 # SAR
-        p_mode=2
-    elseif params.mode==2 # SIMO
-        p_mode=1
-    elseif params.mode==3 # MIMO
-        p_mode=1.38
+    if params.user_defined_orbit == 2
+        pos_T = zeros(1,length(params.pos_n)) # no along-track spacings
+        pos_C = params.pos_n * cosd(params.look_angle)
+        pos_N = -1 * params.pos_n * sind(params.look_angle)
+        pos_TCN = [pos_T;pos_C;pos_N]
     end
 
-    if params.user_defined_orbit==1
-        pos_n=params.pos_n
-    elseif params.user_defined_orbit==2
-        pos_n=params.pos_TCN[:,2]
+    # theoretical resolution
+    if params.mode == 1 # SAR
+        p_mode = 2
+    elseif params.mode == 2 # SIMO
+        p_mode = 1
+    elseif params.mode == 3 # MIMO
+        p_mode = 1.38
     end
-    max_baseline=(maximum(pos_n)-minimum(pos_n))+(pos_n[2]-pos_n[1])
-    res_theory=(c/params.fc)*params.p_t0_LLH[3]/p_mode/max_baseline
+
+    max_baseline_n = (maximum(params.pos_n)-minimum(params.pos_n))+(params.pos_n[2]-params.pos_n[1])
+    range_s, range_g = Scene.lookangle_to_range(params.look_angle, params.p_t0_LLH[3], 0, earth_radius)
+    res_theory = (c/params.fc)*range_s/p_mode/max_baseline_n
     println("theoretical resolution: ",round(res_theory,digits=2))
-    res_theory_array[i]=res_theory
+    res_theory_array[i] = res_theory
 
     # Check consistency of input parameters
     paramsIsValid = UserParameters.validateInputParams(params)
 
     # Compute orbits time, position, and velocity
-    orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
+    orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params,pos_TCN)
 
     # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
     p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
@@ -161,7 +163,7 @@ for i = 1:Ntr
 
 end
 
-gif(anim, "anim_1Dcuts.gif", fps = 2)
+gif(anim, "anim_1Dcuts.gif", fps = 5)
 
 
 xax=(init_spc.+((1:Ntr).-1).*spc_inc)./1e3
