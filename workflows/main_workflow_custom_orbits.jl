@@ -20,11 +20,12 @@ using Plots
 gr()
 
 c = 299792458 #TODO does not work without redefining c here
+earth_radius = 6378.137e3 # Earth semi-major axis at equator
 
 # Define study parameters
-Ntr = 20 # number of trials
-init_spc = 2e3 # initial spacing
-spc_inc = 1e3 # spacing increment
+Ntr = 1# number of trials
+init_spc = 6e3 # initial spacing
+spc_inc = 10e3 # spacing increment
 res_theory_array=zeros(Ntr)
 res_measured_array=zeros(Ntr)
 
@@ -37,6 +38,7 @@ for i = 1:Ntr
     look_angle = 30, # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
     user_defined_orbit = 2, # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
     p_t0_LLH = [0;0;750e3], # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
+    PSF_cuts = 2, # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
     Torbit    = 30, # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
     dt_orbits = 1, # orbit time resolution (s)
     p_heading = 0, # heading (deg), all platforms assumed to have the same heading, 0 deg is north
@@ -67,17 +69,37 @@ for i = 1:Ntr
         p_mode = 1.38
     end
 
-    max_baseline_n = (maximum(params.pos_n)-minimum(params.pos_n))+(params.pos_n[2]-params.pos_n[1])
+    # input max baseline along-n (Bn = Np x dn)
+    #spacing = (init_spc+(i-1)*spc_inc)
+    spacing = params.pos_n[2]-params.pos_n[1]
+    max_baseline_n = (maximum(params.pos_n)-minimum(params.pos_n)) + spacing
+    println();println("input max baseline along-n: ",max_baseline_n)
+
+    # theoretical resolution along-n
     range_s, range_g = Scene.lookangle_to_range(params.look_angle, params.p_t0_LLH[3], 0, earth_radius)
-    res_theory = (c/params.fc)*range_s/p_mode/max_baseline_n
-    println("theoretical resolution: ",round(res_theory,digits=2))
-    res_theory_array[i] = res_theory
+    res_theory_n = (c/params.fc)*range_s/p_mode/max_baseline_n
+    println("theoretical resolution along-n: ",round(res_theory_n,digits=2))
+    res_theory_array[i] = res_theory_n
+
+    # theoretical resolution along-track
+    mu = 3.986004418e14
+    sc_speed = sqrt(mu./(params.p_t0_LLH[3]+earth_radius)); #sqrt(GM/R)->https://en.wikipedia.org/wiki/Orbital_speed
+    Lsa = sc_speed*params.SAR_duration + sc_speed/params.fp
+    res_theory_s = (c/params.fc)*range_s/2/Lsa
+    println("theoretical resolution along track: ",round(res_theory_s,digits=2))
 
     # Check consistency of input parameters
     paramsIsValid = UserParameters.validateInputParams(params)
 
     # Compute orbits time, position, and velocity
     orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params,pos_TCN)
+
+    # measured baselines
+    refind = findall(params.pos_n.==0)[1][2]
+    bperp, b_at, bnorm = Orbits.get_perp_baselines(orbit_pos, orbit_vel, params.look_angle, refind)
+    avg_bperp = mean(bperp, dims=3)
+    max_bperp = maximum(avg_bperp)
+    println("measured max baseline along-n: ",round(max_bperp+spacing,digits=0))
 
     # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
     p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
@@ -135,6 +157,8 @@ for i = 1:Ntr
         println("PSLRs: ",round.(PSLRs,digits=2)," dB")
         println("ISLRs: ",round.(ISLRs,digits=2)," dB")
         println("PSF Peak Amplitude: ",round(maximum(20*log10.(image_3D)),digits=2)," dB")
+        println("ratio of theoretical/measured resolution along-n: ",res_theory_n/resolutions)
+        println("cos(2 x look-angle):", cosd(2*params.look_angle))
     else
         @warn "PSF related performance metrics cannot be calculated for more than 1 target."
     end
