@@ -108,6 +108,7 @@ end
     display_input_scene::Bool     = false # display input scene (targets) and delta between input/output scenes (3 slices at the center of scene) with same scene size as output tomogram scene
     no_sync_flag::Bool            = false # if flag == true, no sync is used. flag == false results in normal sync process estimation
     enable_sync_phase_error::Bool = false # if flag == true, oscillator phase errors considered. If false, ideal oscillators used
+    phase_offset_flag::Bool       = true  # if flag == true, then we assume that the oscillators are in phase at the beginning of the aperture:: Note, should be TRUE if the sync is used
 
     # logging level
 

@@ -51,6 +51,7 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     mode                    = parameters.mode
     no_sync_flag            = parameters.no_sync_flag
     fc                      = parameters.fc
+    phase_offset_flag       = parameters.phase_offset_flag
     
     
     # find total elapsed time over the course of the orbits
@@ -168,7 +169,7 @@ end
             
             if no_sync_flag # no sync case
                 Sphi_uc = up_convert_psd .* Sphi
-                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs, no_sync_flag)
+                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs, phase_offset_flag)
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi
             else
@@ -186,7 +187,7 @@ end
                 Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs, dt, f_osc)
                 # generate time series of phase error
                 Sphi_sync_uc = up_convert_psd .* Sphi
-                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,no_sync_flag)
+                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag)
             
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi_sync    
@@ -298,6 +299,7 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     mode                    = parameters.mode
     no_sync_flag            = parameters.no_sync_flag
     fc                      = parameters.fc
+    phase_offset_flag       = parameters.phase_offset_flag
     # sigma_freq_offsets      = parameters.sigma_freq_offsets
     
     
@@ -407,7 +409,7 @@ end
             Sphi_sync = sync_PSDs[i,j,:] # load precalculated PSD
             # generate time series of phase error
             Sphi_sync_uc = up_convert_psd .* Sphi
-            (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,no_sync_flag)
+            (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag)
             
             # t and r are longer than PRI, cut to PRI
             idx_pri = findfirst(t -> t >= dt,t)
@@ -567,7 +569,7 @@ generates realizations of phase error given a two-sided oscillator PSD
 - `no_sync_flag:: Bool`: Flag if sync is not used: Phase error resets to 0 at sync event if flag = 0
 
 """
-function osc_timeseries_from_psd_twosided(Sphi::Array{Float64,1},fs::Float64,no_sync_flag::Bool)
+function osc_timeseries_from_psd_twosided(Sphi::Array{Float64,1},fs::Float64,phase_offset_flag::Bool)
 #   Generate time series from two sided PSD of clock phase error.
 #   Will first calculate the one sided PSD which = 0 for f<0
 #INPUTS
@@ -596,7 +598,8 @@ z2 = ifftshift(z)
 
 # random time sequence realization
 r = real(fftshift(ifft(z2))) # take real component of time series
-if !no_sync_flag
+
+if phase_offset_flag
     r = r.-r[1] # this zeros out the error at t=0. Sync "resets" the clock drift to 0. Will be added in sequence to keep phase errors continuous
 end
 
@@ -904,6 +907,8 @@ calculates the effects of downsampling on the phase error PSD
 """
 function downsampled_spectrum(Sphi::Array{Float64,1},sync_clk_fs::Float64,sync_prf::Float64)
     # M: downsampling factor
+    
+    #TODO: set maximum M value in order to reduce computational time? High SRI values get very excessive...
     M = round(sync_clk_fs/(2.0*sync_prf))    
     
     N = length(Sphi)

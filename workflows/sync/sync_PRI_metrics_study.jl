@@ -46,17 +46,17 @@ display_tomograms = 0 # do not display
 # We'll leave this if-else structure here because it's convenient for switching the sync_osc_type. However we will pass the variables into the params struct
 #defines oscillator quality. Either leave as single row to use across all platforms, or define values for each platform as a new row
 if sync_osc_type == "USO"
-    sync_a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
+    coeffs = [-95 -90 -200 -130 -155] # [USO: Krieger]
 elseif sync_osc_type == "USRP"
-    sync_a_coeff_dB = [-66 -62 -80 -110 -153] # [USRP E312]
+    coeffs = [-66 -62 -80 -110 -153] # [USRP E312]
 elseif sync_osc_type == "Wenzel5MHz"
-    sync_a_coeff_dB = [-1000 -128 -1000 -150 -178] # [Wenzel 5MHz oscillator] - NOTE: fractional dB values were rounded up for Wenzel oscillators (to keep as Int64 values)
+    coeffs = [-1000 -128 -1000 -150 -178] # [Wenzel 5MHz oscillator] - NOTE: fractional dB values were rounded up for Wenzel oscillators (to keep as Int64 values)
     sync_f_osc = 5e6 # local oscillator frequency
 elseif sync_osc_type == "Wenzel100MHz"
-    sync_a_coeff_dB = [-1000 -73 -1000 -104 -181] # [Wenzel 100MHz oscillator]
+    coeffs = [-1000 -73 -1000 -104 -181] # [Wenzel 100MHz oscillator]
     sync_f_osc = 100e6 # local oscillator frequency
 elseif sync_osc_type == "MicroSemi"
-    sync_a_coeff_dB = [-120 -114 -999 -134 -166 ] # [Microsemi GPS-3500 oscillator]
+    coeffs = [-120 -114 -999 -134 -166 ] # [Microsemi GPS-3500 oscillator]
 end
 
 Ntrials = 64 # number of trials per SRI in Monte Carlo simulations
@@ -64,7 +64,7 @@ sync_PRIs = [.1 1 2 3 4 5]
 numSRI = length(sync_PRIs)
 
 ## find Ideal case results first
-params = UserParameters.inputParameters(s_loc_1 = -60:2:60,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=0,enable_sync_phase_error=false,include_antenna=false)
+params = UserParameters.inputParameters(s_loc_1 = -60:2:60,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=0,enable_sync_phase_error=false,include_antenna=false,SAR_duration=5.0)
 # Check consistency of input parameters
 paramsIsValid = UserParameters.validateInputParams(params)
 
@@ -80,20 +80,23 @@ ideal_peak  = peak
 ideal_res, ideal_PSLR, ideal_ISLR, loc_error  = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
 
 ## Initialize result vectors
-peaks       = SharedArray{Float64}(numSRI,Ntrials)
-resolutions = SharedArray{Float64}(3,numSRI,Ntrials)
-PSLRs       = SharedArray{Float64}(3,numSRI,Ntrials)
-ISLRs       = SharedArray{Float64}(3,numSRI,Ntrials)
-loc_errors  = SharedArray{Float64}(3,numSRI,Ntrials)
-tomo_data   = SharedArray{Float64}(params.Ns_1,params.Ns_2,params.Ns_3,numSRI,Ntrials)
+peaks       = SharedArray{Float64}(numSRI+1,Ntrials)
+resolutions = SharedArray{Float64}(3,numSRI+1,Ntrials)
+PSLRs       = SharedArray{Float64}(3,numSRI+1,Ntrials)
+ISLRs       = SharedArray{Float64}(3,numSRI+1,Ntrials)
+loc_errors  = SharedArray{Float64}(3,numSRI+1,Ntrials)
+tomo_data   = SharedArray{Float64}(params.Ns_1,params.Ns_2,params.Ns_3,numSRI+1,Ntrials)
 
 ## run trials
 @sync @distributed for ntrial = 1 : Ntrials
-     for k = 1 : numSRI
-        SRI = sync_PRIs[k]
-        println("Starting SRI value: ", SRI)
-
-        params = UserParameters.inputParameters(s_loc_1 = -60:2:60,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=0, sync_pri = SRI,include_antenna=false)
+     for k = 1 : numSRI + 1
+        if k > numSRI
+            params = UserParameters.inputParameters(s_loc_1 = -60:2:60,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=0, sync_pri = SRI,include_antenna=false,SAR_duration=5.0,sync_a_coeff_dB = coeffs,enable_sync_phase_error=true)
+        else # include no sync case after SRI sweep
+            SRI = sync_PRIs[k]
+            println("Starting SRI value: ", SRI)
+            params = UserParameters.inputParameters(s_loc_1 = -60:2:60,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=0, sync_pri = SRI,include_antenna=false,SAR_duration=5.0,sync_a_coeff_dB = coeffs,no_sync_flag=true,enable_sync_phase_error=true)
+        end
 
         image_3D = TomoWorkflow.generate_tomo(params)
         #store 3D image data into shared array
