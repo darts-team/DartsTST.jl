@@ -22,7 +22,7 @@ dtime = 120 # sec, time resolution between apertures -- Looking for total time d
 
 
 # Define user parameters
-params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=0,include_antenna=false)
+params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=0,include_antenna=false,mode=1)
 
 # Check consistency of input parameters
 paramsIsValid = UserParameters.validateInputParams(params)
@@ -59,13 +59,14 @@ orbit_res_analytical    = Array{Float64}(undef,1,numApertures)
 orbit_perp_baseline     = Array{Float64}(undef,1,numApertures)
 orbit_ranges            = Array{Float64}(undef,1,numApertures)
 orbit_peaks             = Array{Float64}(undef,1,numApertures)
+resolution_ratio        = Array{Float64}(undef,1,numApertures)
 
 for naperture = 1 : numApertures
     
     ## find the orbit positions at the current aperture
     start_time = aperture_time_vec[naperture]
     
-    global params = UserParameters.inputParameters(PSF_image_point=1,display_tomograms=0,user_defined_orbit=0,include_antenna=false,SAR_start_time = start_time,look_angle=30,res_dB = 4.93)
+    global params = UserParameters.inputParameters(PSF_image_point=1,display_tomograms=0,user_defined_orbit=0,include_antenna=false,SAR_start_time = start_time,look_angle=45,res_dB = 4.93,mode=1)
     # Compute orbits time, position, and velocity
     orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
     
@@ -147,6 +148,8 @@ for naperture = 1 : numApertures
     orbit_perp_baseline[naperture]  = maxbaseline
     orbit_ranges[naperture]         = r_0
     orbit_peaks[naperture]          = maximum(image_3D)
+    
+    resolution_ratio[naperture]     = resolutions_ndB / orbit_res_analytical[naperture]
 
     println("$naperture out of  $numApertures")
 end#numApertures
