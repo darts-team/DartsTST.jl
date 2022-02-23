@@ -363,19 +363,19 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
       if length(image_1D_1)>1
         scene_res1=s_loc_1[2]-s_loc_1[1] # scene resolution along the 1st axis
         if display_1D_cuts
-          plotly();display(plot(s_loc_1,20*log10.(image_1D_1/maximum(image_1D_1)),xaxis=("scene axis 1 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the cut along axis 1
+          display(plot(s_loc_1,20*log10.(image_1D_1/maximum(image_1D_1)),xaxis=("scene axis 1 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the cut along axis 1
         end
       else;scene_res1=NaN;end
       if length(image_1D_2)>1
         scene_res2=s_loc_2[2]-s_loc_2[1] # scene resolution along the 2nd axis
         if display_1D_cuts
-           plotly();display(plot(s_loc_2,20*log10.(image_1D_2/maximum(image_1D_2)),xaxis=("scene axis 2 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the cut along axis 2
+           display(plot(s_loc_2,20*log10.(image_1D_2/maximum(image_1D_2)),xaxis=("scene axis 2 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the cut along axis 2
         end
       else;scene_res2=NaN;end
       if length(image_1D_3)>1
         scene_res3=s_loc_3[2]-s_loc_3[1] # scene resolution along the 3rd axis
         if display_1D_cuts
-          plotly();display(plot(s_loc_3,20*log10.(image_1D_3/maximum(image_1D_3)),xaxis=("scene axis 3 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the cut along axis 3
+          display(plot(s_loc_3,20*log10.(image_1D_3/maximum(image_1D_3)),xaxis=("scene axis 3 in scene units"),ylabel=("amplitude (dB)"),size=(1600,900),leg=false)) # plot the cut along axis 3
         end
       else;scene_res3=NaN;end
       scene_res=[scene_res1 scene_res2 scene_res3]
@@ -387,7 +387,7 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
       scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
       scene_axis=(0:scene_res:(length(image_1D_1)-1)*scene_res).-(length(image_1D_1)-1)*scene_res/2
       if display_1D_cuts
-        plotly();display(plot(scene_axis,20*log10.(abs.(image_1D_1)/maximum(abs.(image_1D_1))),xaxis=("scene axis along specified direction"),ylabel=("amplitude (dB)"),size=(900,900),leg=false)) # plot the tilted cut
+        display(plot(scene_axis,20*log10.(abs.(image_1D_1)/maximum(abs.(image_1D_1))),xaxis=("scene axis along specified direction"),ylim=(-50,0),ylabel=("amplitude (dB)"),size=(900,900),leg=false)) # plot the tilted cut
       end
     end
 
