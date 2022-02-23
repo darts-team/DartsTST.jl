@@ -31,7 +31,7 @@ function interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
     return p_xyz, Nst, slow_time
 end
 
-function computeTimePosVel(params,pos_TCN)
+function computeTimePosVel(params)
     @unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n,
     Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename = params
 
@@ -76,6 +76,10 @@ function computeTimePosVel(params,pos_TCN)
         end
         @warn "Orbit velocity for SCH option needs to be checked"
     elseif user_defined_orbit==2 # user defined, TCN option
+        pos_T = zeros(1,length(pos_n)) # no along-track spacings
+        pos_C = pos_n * cosd(look_angle)
+        pos_N = -1 * pos_n * sind(look_angle)
+        pos_TCN = [pos_T;pos_C;pos_N]
         pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
         orbit_time_all=-Torbit/2:dt_orbits:Torbit/2
         orbit_pos_all,orbit_vel_all=Orbits.make_orbit(pos_XYZ,p_heading,pos_TCN,orbit_time_all)

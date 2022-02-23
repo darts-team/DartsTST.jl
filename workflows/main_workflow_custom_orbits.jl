@@ -53,13 +53,6 @@ for i = 1:Ntr
     # Np:res_dB [2:3.01 3:3.52 4:3.70 5:3.78 6:3.82 7:3.85 8:3.87 9:3.88 10:3.89] for baseline = max distance + 1 spacing
     )
 
-    if params.user_defined_orbit == 2
-        pos_T = zeros(1,length(params.pos_n)) # no along-track spacings
-        pos_C = params.pos_n * cosd(params.look_angle)
-        pos_N = -1 * params.pos_n * sind(params.look_angle)
-        pos_TCN = [pos_T;pos_C;pos_N]
-    end
-
     # theoretical resolution
     if params.mode == 1 # SAR
         p_mode = 2
@@ -92,7 +85,7 @@ for i = 1:Ntr
     paramsIsValid = UserParameters.validateInputParams(params)
 
     # Compute orbits time, position, and velocity
-    orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params,pos_TCN)
+    orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
 
     # measured baselines
     refind = findall(params.pos_n.==0)[1][2]
