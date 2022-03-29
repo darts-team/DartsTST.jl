@@ -73,6 +73,8 @@ elseif params.processing_steps === :bp2d3d # 2-step processing, first SAR (along
 end
 
 # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
+if params.left_right_look == "left";PSFcutdir=-1;elseif params.left_right_look == "right";PSFcutdir=1;end
+params.PSF_direction[3]=PSFcutdir*params.PSF_direction[3]
 scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
 
 # Calculate point target performance metrics

@@ -88,8 +88,7 @@ Convert target and scene coordinates to XYZ
 """
 # calculate avg heading from platform positions
 function convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, orbit_vel, params)
-  @unpack ts_coord_sys, look_angle = params
-
+  @unpack ts_coord_sys, look_angle, left_right_look = params
   if ts_coord_sys=="LLH" # convert LLH to XYZ
       t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
       s_xyz_3xN=Geometry.geo_to_xyz(s_loc_3xN,earth_radius,earth_eccentricity)
@@ -98,10 +97,11 @@ function convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, or
       avg_peg,p_h_avg=Geometry.avg_peg_h(orbit_pos,orbit_vel)
       slant_range,ground_range=Scene.lookangle_to_range(look_angle,p_h_avg,0,avg_peg.Ra) # slant_range (equal to ref_range?)
       targets_loc_sch=targets_loc
-      targets_loc_sch[2,:]=targets_loc_sch[2,:].+ground_range
+      if left_right_look == "left";C_dir=-1;elseif left_right_look == "right";C_dir=1;end
+      targets_loc_sch[2,:]=targets_loc_sch[2,:].+C_dirground_range # note: this also changes targets_loc!
       t_xyz_3xN=Geometry.sch_to_xyz(targets_loc_sch,avg_peg)
       scene_loc_sch=s_loc_3xN
-      scene_loc_sch[2,:]=scene_loc_sch[2,:].+ground_range
+      scene_loc_sch[2,:]=scene_loc_sch[2,:].+C_dir*ground_range # note: this also changes s_loc_3xN
       s_xyz_3xN=Geometry.sch_to_xyz(scene_loc_sch,avg_peg)
   elseif ts_coord_sys=="XYZ" # no conversion needed
       t_xyz_3xN=targets_loc
@@ -113,7 +113,7 @@ end
 
 # calculate avg heading from platform velocities
 function convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, params)
-  @unpack ts_coord_sys, look_angle = params
+  @unpack ts_coord_sys, look_angle, left_right_look = params
 
   if ts_coord_sys=="LLH" # convert LLH to XYZ
       t_xyz_3xN=Geometry.geo_to_xyz(targets_loc,earth_radius,earth_eccentricity)
@@ -123,10 +123,11 @@ function convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, pa
       avg_peg,p_h_avg=Geometry.avg_peg_h(orbit_pos)
       slant_range,ground_range=Scene.lookangle_to_range(look_angle,p_h_avg,0,avg_peg.Ra) # slant_range (equal to ref_range?)
       targets_loc_sch=targets_loc
-      targets_loc_sch[2,:]=targets_loc_sch[2,:].+ground_range
+      if left_right_look == "left";C_dir=-1;elseif left_right_look == "right";C_dir=1;end
+      targets_loc_sch[2,:]=targets_loc_sch[2,:].+C_dir*ground_range # note: this also changes targets_loc!
       t_xyz_3xN=Geometry.sch_to_xyz(targets_loc_sch,avg_peg)
       scene_loc_sch=s_loc_3xN
-      scene_loc_sch[2,:]=scene_loc_sch[2,:].+ground_range
+      scene_loc_sch[2,:]=scene_loc_sch[2,:].+C_dir*ground_range # note: this also changes s_loc_3xN 
       s_xyz_3xN=Geometry.sch_to_xyz(scene_loc_sch,avg_peg)
   elseif ts_coord_sys=="XYZ" # no conversion needed
       t_xyz_3xN=targets_loc

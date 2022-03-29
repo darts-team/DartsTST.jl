@@ -32,6 +32,7 @@ end
 
     # platform locations in xyz (including slow-time locations)
     user_defined_orbit::Int = 2 # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
+    left_right_look::String = "right" # left or right looking geometry
     orbit_filename::String = "orbit_output_062021.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
 
     # User defined orbits, set either SCH or TCN, see user_defined_orbit
@@ -74,7 +75,7 @@ end
     res_dB::Float64 = 4 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
     PSF_image_point::Int = 3 # 1: peak location, 2: target location, 3: center of 3D scene
     PSF_cuts::Int = 2 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
-    PSF_direction = [0 1 tand(inc_angle)] # # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored; default cut is along n. For cut along r, use [0 1 -1/tand(inc_angle)]
+    PSF_direction = [0 1 tand(inc_angle)] # # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored; default cut is along n. For cut along r, use [0 1 -PSF_dir_sign/tand(inc_angle)]
 
     # antenna settings
     antennaFile::String = "inputs/darts_ant_03192021.nc"
@@ -99,7 +100,7 @@ end
     # simulation options
     enable_thermal_noise::Bool    = false # whether to enable or disable random additive noise (e.g. thermal noise)
     display_geometry::Bool        = false # whether to display geometry plots
-    display_1D_cuts::Bool         = false # whether to 1D cuts from Scene module
+    display_1D_cuts::Bool         = true # whether to 1D cuts from Scene module
     display_custom_orbit::Bool    = false # whether to show custom orbit on Earth sphere (for a duration of Torbit)
     display_RSF_rawdata::Bool     = false # whether to display RSF and rawdata plots
     display_tomograms::Int        = 1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
