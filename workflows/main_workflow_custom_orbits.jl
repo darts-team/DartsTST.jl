@@ -24,32 +24,36 @@ earth_radius = 6378.137e3 # Earth semi-major axis at equator
 
 # Define study parameters
 Ntr = 1# number of trials
-init_spc = 6e3 # initial spacing
-spc_inc = 10e3 # spacing increment
+init_spc = 2e3 # initial spacing
+spc_inc = 1e3 # spacing increment
 res_theory_array=zeros(Ntr)
 res_measured_array=zeros(Ntr)
 
-anim = Plots.Animation()
+#anim = Plots.Animation()
 
-for i = 1:Ntr
+#for i = 1:Ntr
+i=1
     # Define user parameters
     params = UserParameters.inputParameters(
     mode = 1, #1: SAR (ping-pong), 2:SIMO, 3:MIMO
-    look_angle = 30, # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
+    look_angle = 45, # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
     user_defined_orbit = 2, # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
     p_t0_LLH = [0;0;750e3], # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
     PSF_cuts = 2, # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
     Torbit    = 30, # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
     dt_orbits = 1, # orbit time resolution (s)
     p_heading = 0, # heading (deg), all platforms assumed to have the same heading, 0 deg is north
+    left_right_look = "right", # left or right looking geometry
     display_custom_orbit = false, #whether to show orbit on Earth sphere (for a duration of Torbit)
-    display_1D_cuts = 1, # whether to 1D cuts from Scene module
-    display_tomograms = 1, # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
+    display_1D_cuts = true, # whether to 1D cuts from Scene module
+    display_tomograms = true, # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
+    display_geometry = false, # whether to display geometry plots
     s_loc_1 = 0, # deg latitude if LLH, along-track if SCH, X if XYZ
     s_loc_2 = -15:0.2:15, # deg longitude if LLH, cross-track if SCH, Y if XYZ
     s_loc_3 = -15:0.2:15, # m  heights if LLH or SCH, Z if XYZ
-    pos_n   = [-3 -2 -1 0 1 2 3]*(init_spc+(i-1)*spc_inc), # SCH option, relative position of each platform along n (m), 0 is the reference location, equal spacing
-    res_dB = 3.85 # dB two-sided resolution relative power level (value for 7 platforms and baseline = max distance + 1 spacing)
+    pos_n   = [-10 -8 -6 -4 -2 0 2 4 6 8 10]*(init_spc+(i-1)*spc_inc), # SCH option, relative position of each platform along n (m), 0 is the reference location, equal spacing
+    #pos_n   = [-10 -8 -7.5 -5 -3.3 0 1.2 2.7 5.3 6.6 10]*1e3,
+    res_dB = 3.9 # dB two-sided resolution relative power level (value for 7 platforms and baseline = max distance + 1 spacing)
     # Np:res_dB [2:3.01 3:3.52 4:3.70 5:3.78 6:3.82 7:3.85 8:3.87 9:3.88 10:3.89] for baseline = max distance + 1 spacing
     )
 
@@ -139,8 +143,10 @@ for i = 1:Ntr
     end
 
     # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
+    if params.left_right_look == "left";PSFcutdir=-1;elseif params.left_right_look == "right";PSFcutdir=1;end
+    params.PSF_direction[3]=PSFcutdir*params.PSF_direction[3]
     scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
-    Plots.frame(anim)
+    #Plots.frame(anim)
     # Calculate point target performance metrics
     if size(t_xyz_3xN,2) == 1 # PSF related performance metrics are calculated when there is only one point target
         resolutions, PSLRs, ISLRs, loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
@@ -178,11 +184,11 @@ for i = 1:Ntr
         if params.display_input_scene; Plotting.plot_input_scene(diff_image3D, ts_coord_txt, params);end
     end
 
-end
+#end
 
-gif(anim, "anim_1Dcuts.gif", fps = 5)
+#gif(anim, "anim_1Dcuts.gif", fps = 5)
 
 
-xax=(init_spc.+((1:Ntr).-1).*spc_inc)./1e3
-plot(xax,[res_theory_array res_measured_array] ,xaxis=("spacing (km)"),yaxis=("resolution (m)"),labels=permutedims(["theory","simulation"]))
-savefig("resolution_vs_spacing.png")
+#xax=(init_spc.+((1:Ntr).-1).*spc_inc)./1e3
+#plot(xax,[res_theory_array res_measured_array] ,xaxis=("spacing (km)"),yaxis=("resolution (m)"),labels=permutedims(["theory","simulation"]))
+#savefig("resolution_vs_spacing.png")

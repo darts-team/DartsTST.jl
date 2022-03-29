@@ -33,10 +33,10 @@ end
 
 function computeTimePosVel(params)
     @unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n,
-    Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename = params
+    Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename, left_right_look = params
 
     ## PLATFORM LOCATIONS and HEADINGS
-
+    if left_right_look == "left";C_dir=-1;elseif left_right_look == "right";C_dir=1;end
     if user_defined_orbit==0 # orbits from file
         orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
         t12_orbits=orbit_dataset["time"][1:2] # first two time samples
@@ -63,7 +63,7 @@ function computeTimePosVel(params)
         mu = 3.986004418e14; Vtan = sqrt(mu./norm(pos_XYZ)) #sqrt(GM/R)->https://en.wikipedia.org/wiki/Orbital_speed
         p_Ss_1p=Vtan*orbit_time_all';p_Ss=repeat(p_Ss_1p,Np,1);p_Ss=reshape(p_Ss,1,Np,Nt)
         p_Hs_t0=p_t0_LLH[3].+pos_n'*sind(look_angle);p_Hs=repeat(p_Hs_t0,1,Nt);p_Hs=reshape(p_Hs,1,Np,Nt)
-        p_Cs_t0=pos_n'*cosd(look_angle);p_Cs=repeat(p_Cs_t0,1,Nt);p_Cs=reshape(p_Cs,1,Np,Nt)
+        p_Cs_t0=C_dir*pos_n'*cosd(look_angle);p_Cs=repeat(p_Cs_t0,1,Nt);p_Cs=reshape(p_Cs,1,Np,Nt)
         p_SCHs=cat(p_Ss,p_Cs,p_Hs,dims=1)
         orbit_pos_all=zeros(3,Np,Nt)
         orbit_vel_all=zeros(3,Np,Nt)
@@ -77,7 +77,7 @@ function computeTimePosVel(params)
         @warn "Orbit velocity for SCH option needs to be checked"
     elseif user_defined_orbit==2 # user defined, TCN option
         pos_T = zeros(1,length(pos_n)) # no along-track spacings
-        pos_C = pos_n * cosd(look_angle)
+        pos_C = -1 * C_dir * pos_n * cosd(look_angle)
         pos_N = -1 * pos_n * sind(look_angle)
         pos_TCN = [pos_T;pos_C;pos_N]
         pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
