@@ -20,7 +20,8 @@ c = 299792458 #TODO does not work without redefining c here
 
 # Define user parameters
 #include("../inputs/predefined-input-parameters.jl") TODO gives errors
-params = UserParameters.inputParameters()
+# params = UserParameters.inputParameters()
+params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=1,display_tomograms=1,user_defined_orbit=1,enable_sync_phase_error=true,use_measured_psd_flag=true)
 
 # Check consistency of input parameters
 paramsIsValid = UserParameters.validateInputParams(params)

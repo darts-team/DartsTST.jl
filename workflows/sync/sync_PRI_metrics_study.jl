@@ -9,7 +9,7 @@ using Parameters
 using StaticArrays
 # using UserParameters
 
-maxprocs = 65 # maximum number of cores to use
+maxprocs = 12 # maximum number of cores to use
 curr_procs = nprocs()
 if curr_procs < maxprocs
     addprocs(maxprocs - curr_procs)
@@ -37,12 +37,11 @@ println("Current procs: " * "$curr_procs")
 end#begin
 
 #----- Setting parameter values to overwrite defaults-----
-SAR_duration=5 #  set synthetic aperture duration (s)
-s_loc_1 = -60:1:60 #(m)
-PSF_image_point = 1 #peak location
 sync_osc_type = "MicroSemi"
-display_tomograms = 0 # do not display
-
+radar_mode=3
+sar_len = 3.0
+at_dim = -60:2:60
+usr_orbit = 1
 # We'll leave this if-else structure here because it's convenient for switching the sync_osc_type. However we will pass the variables into the params struct
 #defines oscillator quality. Either leave as single row to use across all platforms, or define values for each platform as a new row
 if sync_osc_type == "USO"
@@ -57,14 +56,16 @@ elseif sync_osc_type == "Wenzel100MHz"
     sync_f_osc = 100e6 # local oscillator frequency
 elseif sync_osc_type == "MicroSemi"
     coeffs = [-120 -114 -999 -134 -166 ] # [Microsemi GPS-3500 oscillator]
+elseif sync_osc_type == "RFSoc"
+    coeffs = [-120 -114 -999 -134 -166 ] # [Very rough estimate of measured RFSoC oscillators]
 end
 
 Ntrials = 64 # number of trials per SRI in Monte Carlo simulations
-sync_PRIs = [.1 1 2 3 4 5]
+sync_PRIs = [.1 .25 .5 1 3]
 numSRI = length(sync_PRIs)
 
 ## find Ideal case results first
-params = UserParameters.inputParameters(s_loc_1 = -60:2:60,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=0,enable_sync_phase_error=false,include_antenna=false,SAR_duration=5.0)
+params = UserParameters.inputParameters(s_loc_1=at_dim,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=usr_orbit,SAR_duration=sar_len,mode=radar_mode)
 # Check consistency of input parameters
 paramsIsValid = UserParameters.validateInputParams(params)
 
@@ -72,9 +73,9 @@ paramsIsValid = UserParameters.validateInputParams(params)
 ideal_image_3D = TomoWorkflow.generate_tomo(params)
 
 # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
-scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
+scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(ideal_image_3D, params)
 
-(peak, idx) = findmax(image_3D)
+(peak, idx) = findmax(ideal_image_3D)
 ideal_peak  = peak
 # Calculate point target performance metrics
 ideal_res, ideal_PSLR, ideal_ISLR, loc_error  = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
@@ -90,12 +91,12 @@ tomo_data   = SharedArray{Float64}(params.Ns_1,params.Ns_2,params.Ns_3,numSRI+1,
 ## run trials
 @sync @distributed for ntrial = 1 : Ntrials
      for k = 1 : numSRI + 1
-        if k > numSRI
-            params = UserParameters.inputParameters(s_loc_1 = -60:2:60,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=0, sync_pri = SRI,include_antenna=false,SAR_duration=5.0,sync_a_coeff_dB = coeffs,enable_sync_phase_error=true)
-        else # include no sync case after SRI sweep
+        if k > numSRI # include no sync case after SRI sweep
+            params = UserParameters.inputParameters(s_loc_1 = at_dim,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=usr_orbit, SAR_duration=sar_len,sync_a_coeff_dB = coeffs, enable_sync_phase_error=true, no_sync_flag=true, mode=radar_mode)
+        else 
             SRI = sync_PRIs[k]
             println("Starting SRI value: ", SRI)
-            params = UserParameters.inputParameters(s_loc_1 = -60:2:60,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=0, sync_pri = SRI,include_antenna=false,SAR_duration=5.0,sync_a_coeff_dB = coeffs,no_sync_flag=true,enable_sync_phase_error=true)
+            params = UserParameters.inputParameters(s_loc_1 = at_dim,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=usr_orbit, sync_pri = SRI, SAR_duration=sar_len, sync_a_coeff_dB = coeffs, enable_sync_phase_error=true, mode=radar_mode)
         end
 
         image_3D = TomoWorkflow.generate_tomo(params)
@@ -111,8 +112,10 @@ tomo_data   = SharedArray{Float64}(params.Ns_1,params.Ns_2,params.Ns_3,numSRI+1,
         loc_error=[NaN,NaN,NaN]
         scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
         # Calculate point target performance metrics
+        try
         resolution, PSLR, ISLR, loc_error  = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
-        # catch
+        catch
+        end
         #
         #     show("PSF related performance metrics cannot be calculated -- error in metric calculation.")
         # end#try

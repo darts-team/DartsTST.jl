@@ -5,7 +5,9 @@ using LinearAlgebra
 using FFTW
 using Plots
 using Distributed
-
+using StaticArrays
+using XLSX
+# using DataInterpolations
 #-start-function--------------------------------------------------------------------------------------------
 
 """
@@ -52,7 +54,14 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     no_sync_flag            = parameters.no_sync_flag
     fc                      = parameters.fc
     phase_offset_flag       = parameters.phase_offset_flag
+    use_measured_psd_flag   = parameters.use_measured_psd_flag
     
+    if use_measured_psd_flag
+        osc_psd_meas_filename = parameters.osc_psd_meas_filename
+        f_psd_meas, osc_psd_meas = read_PSD_excel_data(osc_psd_meas_filename)
+        # f_psd_meas = parameters.f_psd_meas
+        # osc_psd_meas = parameters.osc_psd_meas
+    end
     
     # find total elapsed time over the course of the orbits
     t_elapse = time_vector[end] - time_vector[1]
@@ -109,7 +118,7 @@ elseif mode == 2 # SIMO
     phase_state = Array{Float64}(undef, nplat, ntimes) # Nplatforms x Ntimes
 
 elseif mode == 3 # MIMO, # code for this mode could get more complex if we decide to have only N transmitters out of M platforms
-    slot_len    = dt/nplat # split the PRI evenly between each tx //TODO: replace with Ilgin's schedule
+    slot_len    = dt/nplat # split the PRI evenly between each tx
     tdma_radar  = collect(time_vector[1]:slot_len:time_vector[end]+dt) # creates schedule with radar time slots
     tx_map      = round.(mod.(tdma_radar./slot_len,nplat)).+1 # map of which platform is transmitting at each time
     phase_state = Array{Float64}(undef, nplat, length(tdma_radar)) # Nplatforms x N TDMA times (collects phase error at each platform at each TDMA slot)
@@ -151,7 +160,11 @@ end
         push!(crlbs,crlbs[end])
         itp_crlb = LinearInterpolation(time_vec, crlbs, extrapolation_bc = Line()) # create interpolant with CRLB values sampled at orbit sample times. Repeats last value to avoid extrapolation errors
 
-        (Sphi, f_psd) = osc_psd_twosided(sync_clk_fs, clk_args_N, a_coeff_db, sync_fmin)    # this gives the basic PSD of the oscillator (no sync involved)
+        if !use_measured_psd_flag
+            (Sphi, f_psd) = osc_psd_twosided(sync_clk_fs, clk_args_N, a_coeff_db, sync_fmin)    # this gives the basic PSD of the oscillator (no sync involved)
+        else #use measured PSD values
+            (Sphi, f_psd) = osc_psd_measured(sync_clk_fs,clk_args_N,f_psd_meas, osc_psd_meas)
+        end
         
         phase_err_internal = zeros(0)       # initialize an empty array to collect the phase error values at internal time base
         internal_time_vec = zeros(0)        # initialize an empty array to keep track of internal time base
@@ -518,7 +531,7 @@ function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1}, syn
     temp = 0.1 .* a_coeff_db
     a_coeff = [ 10^temp[1], 10^temp[2], 10^temp[3], 10^temp[4], 10^temp[5] ]
 
-    fmin = .1 # minimum PSD frequency. Reduces PSD below this value
+    fmin = sync_fmin # minimum PSD frequency. Reduces PSD below this value
 
 
     Sphi_2S = a_coeff' * [f.^(-4), f.^(-3), f.^(-2), f.^(-1), f.^0]
@@ -550,6 +563,40 @@ function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1}, syn
         idx = idx0[1]:idx_fmin
         Sphi_2S[idx] .= 10 .^(range(0,stop=temp,length=length(idx)))
     end
+
+    # take magnitude to remove any negative PSD values.
+    Sphi_2S = abs.(Sphi_2S)
+    return Sphi_2S, f
+
+end #function
+#--end--function-------------------------------------------------------------------------------------------
+"""
+Use measured one-sided PSD of the clock phase error and convert to a 2-sided PSD for later use in sync module. Interpolates to required frequency vector
+
+# Arguments
+- `fs::Integer`: max PSD frequency [sample rate of clock phase error process]
+- `N::Integer`: number of PSD sample points
+- `f_psd_meas::1 x N_psd Array`: frequency vector of measured PSD
+- `osc_psd_meas::1 x N_psd Array`: measured PSD amplitudes (1-sided)
+
+"""
+#-start-function--------------------------------------------------------------------------------------------
+# function osc_psd_measured(fs::Float64,N::Float64,f_psd::Array{Float64,1}, osc_psd::Array{Float64,1})
+function osc_psd_measured(fs::Float64, N::Float64, f_psd_meas::Vector{Float64}, osc_psd_meas::Vector{Float64})
+    #mirror osc_psd to make two-sided
+    osc_psd = collect(hcat(-reverse(osc_psd_meas)', osc_psd_meas')./2) #halve magnitude to go from 1-sided to 2-sided
+    f_psd = collect(hcat(-reverse(f_psd_meas)', f_psd_meas'))
+    
+    # create frequency vector to interpolate to
+    f = collect( ( (-N/2):1:(N/2-1) ) ).*fs./N
+
+    freq_itp = LinearInterpolation(f_psd[1,:], osc_psd[1,:], extrapolation_bc=Line());
+
+    Sphi_2S = 10 .^ (freq_itp.(f)./10)
+    
+    # find zero frequency value, set power to 0
+    idx0 = findall(f -> f == 0,f)
+    Sphi_2S[idx0] .= 0
 
     # take magnitude to remove any negative PSD values.
     Sphi_2S = abs.(Sphi_2S)
@@ -963,4 +1010,17 @@ function shift(x,n)
 end#function
 #--end--function-------------------------------------------------------------------------------------------
 
+"""
+This function reads measured PSD data in from an excel file, returns frequency vector and PSD amplitude
+
+# Arguments
+- `filename::String`: filename of PSD data
+"""
+function read_PSD_excel_data(filename::String)
+    columns, labels = XLSX.readtable(filename, "Sheet1")
+    f_psd_meas   = convert(Array{Float64}, columns[1]) 
+    osc_psd_meas = convert(Array{Float64}, columns[2]) 
+    
+    return f_psd_meas, osc_psd_meas
+end #function
 end #module

@@ -93,6 +93,8 @@ end
     sync_osc_type::String = "USO"
     sync_a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
     sync_f_osc::Float64 = 10e6 # local oscillator frequency --> depends on oscillator type
+    use_measured_psd_flag::Bool = false
+    osc_psd_meas_filename::String = "inputs/osc_psd_test.xlsx" # Note: amplitude values in dB scale units
 
     # positioning parameters
 
