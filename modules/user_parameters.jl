@@ -31,11 +31,11 @@ end
     SAR_start_time::Float64 = 0 # SAR imaging start time (s)
 
     # platform locations in xyz (including slow-time locations)
-    user_defined_orbit::Int = 2 # 0: use orbits file; 1: user defined orbits in SCH; 2: user defined orbits in TCN
+    user_defined_orbit::Int = 2 # 1: use orbits file; 2: user defined orbits in TCN
     left_right_look::String = "right" # left or right looking geometry
     orbit_filename::String = "orbit_output_062021.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
 
-    # User defined orbits, set either SCH or TCN, see user_defined_orbit
+    # User defined orbits in TCN, used only if user_defined_orbit=2
     p_t0_LLH::Array{Float64,1} = [0;0;750e3] # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
     Torbit::Float64    = 10*60 # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
     dt_orbits::Float64 = 0.5 # orbit time resolution (s)
@@ -65,7 +65,7 @@ end
 
     # derived parameters (some are needed further below)
     λ = c/fc # wavelength (m)
-    h = p_t0_LLH[3] # default altitude TODO p_t0_LLH not defined if user_defined_orbit=0, need to calculate h from orbit avg altitude OR should set PSF cut direction manually
+    h = p_t0_LLH[3] # default altitude TODO p_t0_LLH may be different than actual average height if user_defined_orbit=1, need to calculate h from orbit avg altitude OR should set PSF cut direction manually
     inc_angle = asind((earth_radius+h)./earth_radius.*sind(look_angle))
     Ns_1 = length(s_loc_1)
     Ns_2 = length(s_loc_2)
