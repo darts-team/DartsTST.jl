@@ -107,21 +107,10 @@ customParams_Scattered9TargetsSH = UserParameters.inputParameters(
 )
 
 customParams_OrbitFromFile = UserParameters.inputParameters(
-    user_defined_orbit==0, # from file
+    user_defined_orbit==1, # from file
     p_t0_LLH::Array{Float64,1} = [0;0;750e3], # initial lat/lon (deg) and altitude (m) of reference platform TODO altitude is used in incidence angle calculation which is needed for tilted PSF cut direction, use avg altitude from orbit section used
     #orbit_filename="orbitOutput_082020.nc" # position in km, time in sec
     orbit_filename="orbit_output_062021.nc" # position in km, time in sec
-)
-
-customParams_CustomOrbit_AlongnSCH = UserParameters.inputParameters(
-    user_defined_orbit==1, # along-n using SCH option
-    p_t0_LLH::Array{Float64,1} = [0;0;750e3], # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
-    Torbit::Float64    = 10*60, # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
-    dt_orbits::Float64 = 0.5, # orbit time resolution (s)
-    p_heading::Float64 = 0, # heading (deg), all platforms assumed to have the same heading, 0 deg is north
-    pos_n   = [-9 -6 -3 0 3 6 9]*1e3, # relative position of each platform along n (m), 0 is the reference location, equal spacing
-    #pos_n=[-7.5 -5 -2 0 3.7 5.5 6.5]*1e3, # relative position of each platform along n (m), 0 is the reference location, unequal spacing
-    display_custom_orbit=true, #whether to show orbit on Earth sphere (for a duration of Torbit)
 )
 
 customParams_CustomOrbit_AlongTCN = UserParameters.inputParameters(
