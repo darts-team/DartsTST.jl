@@ -94,8 +94,10 @@ end
     sync_a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
     sync_f_osc::Float64 = 10e6 # local oscillator frequency --> depends on oscillator type
     use_measured_psd_flag::Bool = false
-    osc_psd_meas_filename::String = "inputs/osc_psd_test.xlsx" # Note: amplitude values in dB scale units
-
+    osc_psd_meas_filename::String = "inputs/PN MAC 1251 10M Low Noise 7min 220321.xlsx" # Note: amplitude values must be in dB scale units
+    phase_offset_flag::Bool       = true  # if flag == true, then we assume that the oscillators are in phase at the beginning of the aperture
+    delay_since_sync::Float64     = 0 # a time delay since last synchronization for evaluating synthetic apertures which begin at arbitrary time after most recent sync event. If !=0, phase_offset_flag is ignored, as it assumes the phases are aligned at t=0 before delay
+    
     # positioning parameters
 
     # simulation options
@@ -109,7 +111,7 @@ end
     display_input_scene::Bool     = false # display input scene (targets) and delta between input/output scenes (3 slices at the center of scene) with same scene size as output tomogram scene
     no_sync_flag::Bool            = false # if flag == true, no sync is used. flag == false results in normal sync process estimation
     enable_sync_phase_error::Bool = false # if flag == true, oscillator phase errors considered. If false, ideal oscillators used
-    phase_offset_flag::Bool       = true  # if flag == true, then we assume that the oscillators are in phase at the beginning of the aperture:: Note, should be TRUE if the sync is used
+    
 
     # logging level
 
