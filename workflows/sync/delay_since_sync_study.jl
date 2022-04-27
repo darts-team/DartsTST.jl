@@ -38,12 +38,12 @@ end#begin
 
 #----- Setting parameter values to overwrite defaults-----
 sync_osc_type = "Measured"
-radar_mode=2
+radar_mode=1
 sar_len = 3.0
 at_dim = -20:2:20
 usr_orbit = 1
 use_meas_flag = false # to be overwritten if need be
-center_freq = 3e9
+center_freq = 1e9
 
 # We'll leave this if-else structure here because it's convenient for switching the sync_osc_type. However we will pass the variables into the params struct
 #defines oscillator quality. Either leave as single row to use across all platforms, or define values for each platform as a new row
@@ -66,7 +66,7 @@ elseif sync_osc_type == "Measured"
 end
 
 Ntrials = 64 # number of trials per delay in Monte Carlo simulations
-delays = [0 10 25 50 75 100 250 500]
+delays = [0 .1 .2 .5 1 2 3 4 5 6 7 8 9 10 50 100 ]
 numDelays = length(delays)
 
 ## find Ideal case results first
@@ -141,7 +141,7 @@ end#Ntrials
 @unpack mode, s_loc_1, s_loc_2, s_loc_3 = params
 outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$sync_osc_type"*"_sync_DSS_sweep.jld2" # this is the output filename that the data is saved to using JLD2
 # this saves the data into a JLD2 file. Data includes the estimates
-@save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors delays s_loc_1 s_loc_2 s_loc_3 fc
+@save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors delays s_loc_1 s_loc_2 s_loc_3 center_freq
 
 outputfilename_data = "syncModule_MonteCarlo_mode_$mode"*"_$sync_osc_type"*"_sync_DSS_sweep_imageData.jld2" # output filename for image data. doesn't save metrics
 @save outputfilename_data ideal_image_3D tomo_data delays s_loc_1 s_loc_2 s_loc_3

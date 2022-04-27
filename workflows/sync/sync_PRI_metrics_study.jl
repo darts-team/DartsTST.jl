@@ -37,11 +37,14 @@ println("Current procs: " * "$curr_procs")
 end#begin
 
 #----- Setting parameter values to overwrite defaults-----
-sync_osc_type = "MicroSemi"
-radar_mode=3
-sar_len = 3.0
-at_dim = -60:2:60
+sync_osc_type = "Measured"
+radar_mode=1
+sar_len = 5.0
+at_dim = -20:2:20
 usr_orbit = 1
+use_meas_flag = false # to be overwritten if need be
+center_freq = 1e9
+
 # We'll leave this if-else structure here because it's convenient for switching the sync_osc_type. However we will pass the variables into the params struct
 #defines oscillator quality. Either leave as single row to use across all platforms, or define values for each platform as a new row
 if sync_osc_type == "USO"
@@ -58,10 +61,13 @@ elseif sync_osc_type == "MicroSemi"
     coeffs = [-120 -114 -999 -134 -166 ] # [Microsemi GPS-3500 oscillator]
 elseif sync_osc_type == "RFSoc"
     coeffs = [-120 -114 -999 -134 -166 ] # [Very rough estimate of measured RFSoC oscillators]
+elseif sync_osc_type == "Measured"
+    use_meas_flag = true
+    coeffs = [ 0 0 0 0 0] # value doesn't matter, easier to use placeholder
 end
 
-Ntrials = 64 # number of trials per SRI in Monte Carlo simulations
-sync_PRIs = [.1 .25 .5 1 3]
+Ntrials = 64 # number of trials per delay in Monte Carlo simulations
+sync_PRIs = [.1 .25 .5 1 3 5]
 numSRI = length(sync_PRIs)
 
 ## find Ideal case results first
@@ -92,11 +98,13 @@ tomo_data   = SharedArray{Float64}(params.Ns_1,params.Ns_2,params.Ns_3,numSRI+1,
 @sync @distributed for ntrial = 1 : Ntrials
      for k = 1 : numSRI + 1
         if k > numSRI # include no sync case after SRI sweep
-            params = UserParameters.inputParameters(s_loc_1 = at_dim,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=usr_orbit, SAR_duration=sar_len,sync_a_coeff_dB = coeffs, enable_sync_phase_error=true, no_sync_flag=true, mode=radar_mode)
+            params = UserParameters.inputParameters(PSF_image_point=1, PSF_cuts=1, display_tomograms=0, user_defined_orbit=usr_orbit, s_loc_1 = at_dim, use_measured_psd_flag=use_meas_flag, mode=radar_mode,sync_a_coeff_dB = coeffs,
+            enable_sync_phase_error=true, no_sync_flag=true, SAR_duration=sar_len, fc = center_freq)
         else 
             SRI = sync_PRIs[k]
             println("Starting SRI value: ", SRI)
-            params = UserParameters.inputParameters(s_loc_1 = at_dim,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,user_defined_orbit=usr_orbit, sync_pri = SRI, SAR_duration=sar_len, sync_a_coeff_dB = coeffs, enable_sync_phase_error=true, mode=radar_mode)
+            params = UserParameters.inputParameters(PSF_image_point=1, PSF_cuts=1, display_tomograms=0, user_defined_orbit=usr_orbit, s_loc_1 = at_dim, use_measured_psd_flag=use_meas_flag, mode=radar_mode,sync_a_coeff_dB = coeffs,
+            enable_sync_phase_error=true, sync_pri = SRI, SAR_duration=sar_len, fc = center_freq)
         end
 
         image_3D = TomoWorkflow.generate_tomo(params)
