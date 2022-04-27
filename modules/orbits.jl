@@ -33,11 +33,11 @@ end
 
 function computeTimePosVel(params)
     @unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n,
-    Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename = params
+    Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename, left_right_look = params
 
     ## PLATFORM LOCATIONS and HEADINGS
-
-    if user_defined_orbit==0 # orbits from file
+    if left_right_look == "left";C_dir=-1;elseif left_right_look == "right";C_dir=1;end
+    if user_defined_orbit==1 # orbits from file
         orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
         t12_orbits=orbit_dataset["time"][1:2] # first two time samples
         dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
@@ -54,37 +54,16 @@ function computeTimePosVel(params)
         end
         #orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
         orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF
-    elseif user_defined_orbit==1 # user defined, SCH option
-        Np=length(pos_n)
-        orbit_time_all=-Torbit/2:dt_orbits:Torbit/2
-        Nt=length(orbit_time_all)
-        peg_t0=Geometry.PegPoint(p_t0_LLH[1],p_t0_LLH[2],p_heading) # corresponds to mid-aperture
-        pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
-        mu = 3.986004418e14; Vtan = sqrt(mu./norm(pos_XYZ)) #sqrt(GM/R)->https://en.wikipedia.org/wiki/Orbital_speed
-        p_Ss_1p=Vtan*orbit_time_all';p_Ss=repeat(p_Ss_1p,Np,1);p_Ss=reshape(p_Ss,1,Np,Nt)
-        p_Hs_t0=p_t0_LLH[3].+pos_n'*sind(look_angle);p_Hs=repeat(p_Hs_t0,1,Nt);p_Hs=reshape(p_Hs,1,Np,Nt)
-        p_Cs_t0=pos_n'*cosd(look_angle);p_Cs=repeat(p_Cs_t0,1,Nt);p_Cs=reshape(p_Cs,1,Np,Nt)
-        p_SCHs=cat(p_Ss,p_Cs,p_Hs,dims=1)
-        orbit_pos_all=zeros(3,Np,Nt)
-        orbit_vel_all=zeros(3,Np,Nt)
-        for i=1:Np
-            orbit_pos_all[:,i,:]=Geometry.sch_to_xyz(p_SCHs[:,i,:],peg_t0) # ECEF
-            # create velocity vector from heading
-            orbit_pos_geo = Geometry.xyz_to_geo(orbit_pos_all[:,i,:]) #position in geodetic coords
-            ehat,nhat,uhat = Geometry.enu_from_geo(orbit_pos_geo[1,:], orbit_pos_geo[2,:]) #ENU basis
-            orbit_vel_all[:,i,:] = cosd(p_heading)*nhat .+ sind(p_heading)*ehat
-        end
-        @warn "Orbit velocity for SCH option needs to be checked"
     elseif user_defined_orbit==2 # user defined, TCN option
         pos_T = zeros(1,length(pos_n)) # no along-track spacings
-        pos_C = pos_n * cosd(look_angle)
+        pos_C = -1 * C_dir * pos_n * cosd(look_angle)
         pos_N = -1 * pos_n * sind(look_angle)
         pos_TCN = [pos_T;pos_C;pos_N]
         pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
         orbit_time_all=-Torbit/2:dt_orbits:Torbit/2
         orbit_pos_all,orbit_vel_all=Orbits.make_orbit(pos_XYZ,p_heading,pos_TCN,orbit_time_all)
     end
-    if (user_defined_orbit==1 || user_defined_orbit==2)
+    if user_defined_orbit==2
         if display_custom_orbit  #plot orbit on surface sphere
             lats=-90:1:90;lons=-180:1:180;hgts=0; # background spherical grid on surface
             spherical_grid=Geometry.geo_to_xyz(Scene.form3Dgrid_for(lats,lons,hgts)); #create grid in LLH and convert to XYZ

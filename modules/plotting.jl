@@ -46,7 +46,12 @@ function plot_geometry(orbit_time,orbit_pos,p_loc,t_loc,s_loc,coords) #TODO smar
     display(scatter(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],leg=false,camera=(20,40),markersize=3,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Platform Positions at Each Pulse",size=(1600,900))) #display  position of each platform at each pulse in 3D
     display(scatter(t_loc[1,:],t_loc[2,:],t_loc[3,:],leg=false,camera=(20,40),markersize=2,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Target Locations",size=(1600,900))) #display grid in 3D
     #DISPLAY PLATFORM AND TARGET LOCATIONS ON THE SAME PLOT
-    scatter(t_loc[1,:],t_loc[2,:],t_loc[3,:],leg=false,camera=(20,40),markersize=1,size=(1600,900)) #display grid in 3D
+    #include("geometry.jl")
+    #include("scene.jl")
+    #lats=-90:1:90;lons=-180:1:180;hgts=0; # background spherical grid on surface
+    #spherical_grid=Geometry.geo_to_xyz(Scene.form3Dgrid_for(lats,lons,hgts)); #create grid in LLH and convert to XYZ
+    #scatter(spherical_grid[1,:],spherical_grid[2,:],spherical_grid[3,:],size=(2000,1200),markersize=0.1)#display background grid in 3D
+    scatter(t_loc[1,:],t_loc[2,:],t_loc[3,:],size=(2000,1200),markersize=1) #display grid in 3D
     #scatter!([avg_peg.pegLat],[avg_peg.pegLon],[0],markersize=3)
     display(scatter!(orbit_pos_all[1,:],orbit_pos_all[2,:],orbit_pos_all[3,:],leg=false,camera=(20,40),markersize=1,xlabel=coords[1],ylabel=coords[2],zlabel=coords[3],title="Platforms and Targets")) #display grid in 3D
     # DISPLAY SCENE
