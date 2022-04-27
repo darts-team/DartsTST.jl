@@ -3,3 +3,4 @@
 *.ipynb
 *.jld2
 *.nc
+*.mat
