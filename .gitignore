@@ -1,6 +1,9 @@
 
 *.png
 *.ipynb
-*.jld2
 *.nc
 *.mat
+*.jld2
+image_responses/Coefficient study/.DS_Store
+image_responses/.DS_Store
+workflows/.DS_Store

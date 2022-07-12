@@ -95,8 +95,9 @@ end
     sync_a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
     sync_f_osc::Float64 = 10e6 # local oscillator frequency --> depends on oscillator type
     use_measured_psd_flag::Bool = false
-    osc_psd_meas_filename::String = "inputs/PN MAC 1251 10M Low Noise 7min 220321.xlsx" # Note: amplitude values must be in dB scale units
-    phase_offset_flag::Bool       = true  # if flag == true, then we assume that the oscillators are in phase at the beginning of the aperture
+    osc_psd_meas_filename::String = "inputs/PN 12_8MHz with GPS 17min 220323_1310.xlsx" # Note: S(f) amplitude values must be in dB scale units
+    # osc_psd_meas_filename::String = "inputs/roseL_osc_specs.xlsx" # Note: S(f) amplitude values must be in dB scale units
+    phase_offset_flag::Bool       = true  # if flag == true, then we assume that the oscillators are in phase at the beginning of the aperture, ignored if "delay_since_sync" > 0
     delay_since_sync::Float64     = 0 # a time delay since last synchronization for evaluating synthetic apertures which begin at arbitrary time after most recent sync event. If !=0, phase_offset_flag is ignored, as it assumes the phases are aligned at t=0 before delay
     
     # positioning parameters

@@ -73,7 +73,9 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     else
         sync_prf = 1/sync_pri
         clk_args_N = ceil(4 * sync_clk_fs * sync_pri) # Number of sample points in the PSD. Needs to have the frequency resolution for the PSDs to caputure SRI
-
+    end #if
+    if delay_since_sync > 0 #enforces that minimum frequency of PSD covers the total time period of the aperture+delay_since_sync
+        clk_args_N = ceil(sync_clk_fs * (t_elapse + delay_since_sync) )
     end #if
     if clk_args_N < 40e3 # enfore a minimum number of points. Needed for PSD accuracy
         clk_args_N = 40e3
@@ -332,8 +334,12 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
         clk_args_N = ceil(4 * sync_clk_fs * sync_pri) # Number of sample points in the PSD. Needs to have the frequency resolution for the PSDs to caputure SRI
 
     end #if
-    if clk_args_N < 40e3 # enfore a minimum number of points. Needed for PSD accuracy
-        clk_args_N = 40e3
+    if delay_since_sync > 0 #enforces that minimum frequency of PSD covers the total time period of the aperture+delay_since_sync
+        clk_args_N = ceil(sync_clk_fs * (t_elapse + delay_since_sync) )
+    end #if
+        
+    if clk_args_N < 80e3 # enfore a minimum number of points. Needed for PSD accuracy
+        clk_args_N = 80e3
     end#if
     up_convert =  fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF)
 
@@ -584,7 +590,6 @@ Use measured one-sided PSD of the clock phase error and convert to a 2-sided PSD
 
 """
 #-start-function--------------------------------------------------------------------------------------------
-# function osc_psd_measured(fs::Float64,N::Float64,f_psd::Array{Float64,1}, osc_psd::Array{Float64,1})
 function osc_psd_measured(fs::Float64, N::Float64, f_psd_meas::Vector{Float64}, osc_psd_meas::Vector{Float64})
     #mirror osc_psd to make two-sided
     osc_psd = collect(hcat(-reverse(osc_psd_meas)', osc_psd_meas')./2) #halve magnitude to go from 1-sided to 2-sided

@@ -65,7 +65,7 @@ end
 function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis33, params)
     @unpack mode, PSF_cuts, t_loc_1,t_loc_2,t_loc_3, s_loc_1,s_loc_2,s_loc_3, PSF_image_point,display_tomograms = params
 
-    image_3D=image_3D/maximum(image_3D)
+    # image_3D=image_3D/maximum(image_3D)
     brightest=maximum(image_3D)
     faintest=minimum(image_3D)
     Ns_1=length(s_loc_1)
@@ -89,7 +89,7 @@ function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis3
             k3=max_ind[1][3]
         end
         col=[:black,:yellow,:red]
-        psize=(900,900)
+        psize=(1200,1200)
         if Ns_2>1 && Ns_3>1
             display(heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
             c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-1="*string(s_loc_1[k1])
