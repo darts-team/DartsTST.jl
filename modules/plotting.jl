@@ -92,7 +92,7 @@ function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis3
         psize=(1200,1200)
         if Ns_2>1 && Ns_3>1
             display(heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
-            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-1="*string(s_loc_1[k1])
+            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));#savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-1="*string(s_loc_1[k1])
             heatmap(s_loc_2,s_loc_3,image_3D[k1,:,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
             c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize)
             if PSF_cuts==1
@@ -102,7 +102,7 @@ function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis3
         end
         if Ns_1>1 && Ns_3>1
             display(heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[1]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
-            c=:thermal,xticks=s_loc_1[1]:10:s_loc_1[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-2="*string(s_loc_2[k2])
+            c=:thermal,xticks=s_loc_1[1]:10:s_loc_1[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize));#savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-2="*string(s_loc_2[k2])
             heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[1]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
             c=:thermal,xticks=s_loc_1[1]:10:s_loc_1[end],yticks=s_loc_3[1]:10:s_loc_3[end],clims=(faintest,brightest),size=psize)
             if PSF_cuts==1
@@ -112,7 +112,7 @@ function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis3
         end
         if Ns_1>1 && Ns_2>1
             display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[1]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
-            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_1[1]:10:s_loc_1[end],clims=(faintest,brightest),size=psize));savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-3="*string(s_loc_3[k3])
+            c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_1[1]:10:s_loc_1[end],clims=(faintest,brightest),size=psize));#savefig("tomograms/tomogram_"*mode_txt*".png") #title="2D Image at Loc-3="*string(s_loc_3[k3])
             heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[1]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
             c=:thermal,xticks=s_loc_2[1]:10:s_loc_2[end],yticks=s_loc_1[1]:10:s_loc_1[end],clims=(faintest,brightest),size=psize)
             if PSF_cuts==1
