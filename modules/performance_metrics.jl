@@ -61,6 +61,7 @@ function PSF_metrics(image_1D_1, image_1D_2, image_1D_3, target_location, scene_
     return resolutions,PSLRs,ISLRs,loc_errors
 end
 
+#TODO change upsampling to FFT, zero pad
 function upsample_PSFcut(image_1D,scene_res,k_up)
     itp=interpolate(image_1D,BSpline(Cubic(Free(OnGrid())))) #TODO can make grating lobes higher than mainlobe if grating lobes are at the edge of the scene which messes up resolution finding
     scene_res_itp=scene_res/k_up

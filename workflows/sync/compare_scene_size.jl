@@ -12,7 +12,7 @@ using StaticArrays
 using StatsPlots, PyCall, CurveFit, MAT
 
 
-# Compare output files from Monte Carlo sim using RFSOC + GPSDO 
+# Compare output files from Monte Carlo sim using RFSOC + GPSDO
 
 # filename3 =  "sync data/Lband/RFSOC+GPSDO Measured/syncModule_MonteCarlo_mode_3_Measured_sync_pri_sweep_along_n_expandedScene.jld2"
 #   @load filename3 peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs s_loc_1 s_loc_2 s_loc_3
@@ -23,7 +23,7 @@ filename_exp = "sync data/Lband/RFSOC+GPSDO Measured/syncModule_MonteCarlo_mode_
 
 @load filename_exp ideal_image_3D tomo_data sync_PRIs s_loc_1 s_loc_2 s_loc_3
 
-ideal_image_3D_exp = ideal_image_3D; tomo_data_exp = tomo_data; 
+ideal_image_3D_exp = ideal_image_3D; tomo_data_exp = tomo_data;
 s_loc_1_exp = s_loc_1; s_loc_2_exp = s_loc_2; s_loc_3_exp = s_loc_3
 
 @load filename_reg ideal_image_3D tomo_data sync_PRIs s_loc_1 s_loc_2 s_loc_3
