@@ -157,7 +157,7 @@ resVals_rfsoc = resolutions .- ideal_res
 PSLRvals_rfsoc = PSLRs .- ideal_PSLR
 ISLRvals_rfsoc = ISLRs .- ideal_ISLR
 
-filename3 =  "sync data/Lband/syncModule_MonteCarlo_mode_2_RoseL_sync_pri_sweep_along_n.jld2"
+filename3 =  "sync data/Lband/syncModule_MonteCarlo_mode_2_RoseL_sync_pri_sweep_along_n_new2.jld2"
 @load filename3 peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs s_loc_1 s_loc_2 s_loc_3
 ideal_peak_dB = 20 .* log10.(ideal_peak)
 peakvals_rosel = ideal_peak_dB .- (20 .* log10.(peaks))
