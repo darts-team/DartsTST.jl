@@ -565,12 +565,19 @@ function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1}, syn
     # end#if
 
     # code added 7/15/21, This creates a "high-pass filter" with fmin as the cutoff frequency
-    # create a roll-off from 0 to fmin frequency
+    # create a roll-off from fmin to 0 frequency
     temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)] # this is the PSD value at fmin
     idx_fmin = findlast(f -> abs(f) < fmin,f)
     if !isnothing(idx_fmin)
         idx = idx0[1]:idx_fmin
-        Sphi_2S[idx] .= range(0,stop=temp,length=length(idx))
+        # Sphi_2S[idx] .= range(0,stop=temp,length=length(idx)) # linear function from 0 freq to fmin
+        
+        # linear roll-off filter changed to logistic function #10/18/22
+        # logistic function: f(x) = L/ [1 + e^-k(x-x0)]. L = final amplitude, k = growth rate, x0 = 0.5L crossing
+        k = 10 # selected to have a less steep slope, but not linear (k=1 shows linear curve)
+        # f[idx] are the x values, need to shift by fmin/2
+        temp_logistic = temp .* logistic.( k.*(f[idx].-(fmin/2) ) )
+        Sphi_2S[idx] = temp_logistic
     end
 
     # take magnitude to remove any negative PSD values.
