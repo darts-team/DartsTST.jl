@@ -7,6 +7,7 @@ using Plots
 using Distributed
 using StaticArrays
 using XLSX
+using StatsFuns
 # using DataInterpolations
 #-start-function--------------------------------------------------------------------------------------------
 
@@ -1077,7 +1078,33 @@ function read_PSD_excel_data(filename::String)
     columns, labels = XLSX.readtable(filename, "Sheet1")
     f_psd_meas   = convert(Array{Float64}, columns[1])
     osc_psd_meas = convert(Array{Float64}, columns[2])
+    
+    xf           = XLSX.readxlsx(filename)
+    sh           = xf["Sheet1"]
+    
+    rn=0; # this loop finds number of rows in sheet
+    for r in XLSX.eachrow(sh)
+        rn = XLSX.row_number(r)
+    end
+    
+    f_psd_meas = Array{Float64,1}(undef,rn)
+    osc_psd_meas = Array{Float64,1}(undef,rn)
+    
+    for r in XLSX.eachrow(sh)
+        rn = XLSX.row_number(r)
+        f_psd_meas[rn] = r[1]
+        osc_psd_meas[rn] = r[2]
+    end
+    
+    f_psd_meas   = convert(Array{Float64},f_psd_meas)
+    osc_psd_meas = convert(Array{Float64},osc_psd_meas)
 
     return f_psd_meas, osc_psd_meas
 end #function
 end #module
+
+
+for r in XLSX.eachrow(sh)
+    rn = XLSX.row_number(r)
+    println(rn)
+end
