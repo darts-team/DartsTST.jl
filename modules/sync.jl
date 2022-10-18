@@ -1075,10 +1075,6 @@ This function reads measured PSD data in from an excel file, returns frequency v
 - `filename::String`: filename of PSD data
 """
 function read_PSD_excel_data(filename::String)
-    columns, labels = XLSX.readtable(filename, "Sheet1")
-    f_psd_meas   = convert(Array{Float64}, columns[1])
-    osc_psd_meas = convert(Array{Float64}, columns[2])
-    
     xf           = XLSX.readxlsx(filename)
     sh           = xf["Sheet1"]
     
@@ -1095,7 +1091,7 @@ function read_PSD_excel_data(filename::String)
         f_psd_meas[rn] = r[1]
         osc_psd_meas[rn] = r[2]
     end
-    
+
     f_psd_meas   = convert(Array{Float64},f_psd_meas)
     osc_psd_meas = convert(Array{Float64},osc_psd_meas)
 
