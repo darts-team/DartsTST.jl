@@ -158,8 +158,9 @@ begin
 
   # filename = "sync data/syncModule_MonteCarlo_mode_2_MicroSemi_sync_pri_sweep.jld2"
   # filename = "sync data/syncModule_MonteCarlo_mode_2_MicroSemi_sync_pri_sweep.jld2"
- filename = "sync data/Lband/RFSOC+GPSDO Measured/syncModule_MonteCarlo_mode_3_Measured_sync_pri_sweep_along_n.jld2"
+ # filename = "sync data/Lband/RFSOC+GPSDO Measured/syncModule_MonteCarlo_mode_3_Measured_sync_pri_sweep_along_n.jld2"
   # filename = "sync data/Lband/syncModule_MonteCarlo_mode_2_ROSEL_sync_pri_sweep_along_n.jld2"
+  filename = "sync data/Lband/GPSDO Measured/syncModule_MonteCarlo_mode_2_MeasuredGPSDO_sync_pri_sweep_along_n.jld2"
 
 
   @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs

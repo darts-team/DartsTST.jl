@@ -1,7 +1,7 @@
 module Error_Sources
 using ..Sync
 using Parameters
-
+using JLD2
 
 
 function random_noise(rawdata, params)
@@ -66,6 +66,10 @@ function synchronization_errors!(rawdata,slow_time,orbit_pos_interp, osc_coeffs,
     (phase_err, sync_PSDs) = Sync.get_sync_phase(slow_time,orbit_pos_interp, osc_coeffs, params) 
     # note: phase_err is (Nplat x N slow-time) for modes 1 & 2, but (Nplat x Nplat x N slow-time) for MIMO
     # for MIMO, first axis is the transmitting platform number, 2nd is receive platform, 3rd is slow-time number
+
+	# test_outputfilename = "testing_phase_PSD_output.jld2"
+	# @save test_outputfilename phase_err sync_PSDs
+
     ## combine with raw data
 
         
@@ -115,7 +119,7 @@ function synchronization_errors(rawdata,slow_time,orbit_pos_interp,enable_fast_t
     ## combine with raw data
     if enable_fast_time
         
-        Nft=size(rawdata)[end] # number of fast-time sampless
+        Nft=size(rawdata)[end] # number of fast-time samples
         if mode == 1 #ping-pong
             for s = 1 : Nst # slow-time (pulses)
                 for i = 1 : Np_RX

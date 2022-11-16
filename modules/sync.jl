@@ -8,6 +8,7 @@ using Distributed
 using StaticArrays
 using XLSX
 using StatsFuns
+using JLD2
 # using DataInterpolations
 #-start-function--------------------------------------------------------------------------------------------
 
@@ -338,7 +339,7 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     if delay_since_sync > 0 #enforces that minimum frequency of PSD covers the total time period of the aperture+delay_since_sync
         clk_args_N = ceil(sync_clk_fs * (t_elapse + delay_since_sync) )
     end #if
-        
+
     if clk_args_N < 80e3 # enfore a minimum number of points. Needed for PSD accuracy
         clk_args_N = 80e3
     end#if
@@ -507,7 +508,10 @@ end
         end#for nplat
     end#if
 
-    return phase_err, sync_PSDs
+    test_outputfilename = "testing_phase_PSD_output.jld2"
+    @save test_outputfilename phase_err sync_PSDs
+
+    return phase_err, sync_PSDs, tdma_radar
 
 end #get_sync_phase
 # --------end of phase error function---------------------------------------------------------------------------------------
@@ -526,7 +530,7 @@ calculate the two-sided PSD of the clock phase error
 #-start-function--------------------------------------------------------------------------------------------
 function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1}, sync_fmin::Float64)
 #   Generate PSD of clock phase error
-#INPUTS
+# INPUTS
 #     fs = 2000; # max PSD frequency [sample rate of clock phase error process]
 #     N = 600000; # number of PSD sample points
 #     a_coeff_db = [-28 -40 -200 -130 -155]; # coefficients of the noise characteristic asymptotes.
@@ -551,35 +555,35 @@ function osc_psd_twosided(fs::Float64,N::Float64,a_coeff_db::Array{Int64,1}, syn
     Sphi_2S[idx0] .= 0
 
     # Previous code 7/15/21 This code set frequency values below fmin to the PSD amplitude at fmin.
-    # idx = findall(f -> f > 0,f)
-    # fmin1 = f[idx[1]] # takes first index of frequency vector that is greater than 0, grabs frequency value
-    #
-    # if fmin1<fmin
-    #     idx = findall(f -> abs(f) < fmin,f)
-    #       #Sphi_2S[idx] .=  a_coeff[1].*fmin^(-4).+a_coeff[2]*fmin^(-3).+a_coeff[3]*fmin^(-2).+a_coeff[4]*fmin^(-1).+a_coeff[5]*fmin^0
-    #     temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)]
-    #     Sphi_2S[idx] .= temp
-    # else
-    #     # conserve power around dc
-    #     idx = findall(f -> abs(f) < fmin,f)
-    #     Sphi_2S[idx] .= sum([a_coeff[1]*fmin.^(-4) a_coeff[2]*fmin.^(-3) a_coeff[3]*fmin.^(-2) a_coeff[4]*fmin.^(-1) a_coeff[5]*fmin.^0 ]).*(fmin/fmin1)
-    # end#if
+    idx = findall(f -> f > 0,f)
+    fmin1 = f[idx[1]] # takes first index of frequency vector that is greater than 0, grabs frequency value
 
-    # code added 7/15/21, This creates a "high-pass filter" with fmin as the cutoff frequency
-    # create a roll-off from fmin to 0 frequency
-    temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)] # this is the PSD value at fmin
-    idx_fmin = findlast(f -> abs(f) < fmin,f)
-    if !isnothing(idx_fmin)
-        idx = idx0[1]:idx_fmin
-        # Sphi_2S[idx] .= range(0,stop=temp,length=length(idx)) # linear function from 0 freq to fmin
-        
-        # linear roll-off filter changed to logistic function #10/18/22
-        # logistic function: f(x) = L/ [1 + e^-k(x-x0)]. L = final amplitude, k = growth rate, x0 = 0.5L crossing
-        k = 10 # selected to have a less steep slope, but not linear (k=1 shows linear curve)
-        # f[idx] are the x values, need to shift by fmin/2
-        temp_logistic = temp .* logistic.( k.*(f[idx].-(fmin/2) ) )
-        Sphi_2S[idx] = temp_logistic
-    end
+    if fmin1<fmin
+        idx = findall(f -> abs(f) < fmin,f)
+          #Sphi_2S[idx] .=  a_coeff[1].*fmin^(-4).+a_coeff[2]*fmin^(-3).+a_coeff[3]*fmin^(-2).+a_coeff[4]*fmin^(-1).+a_coeff[5]*fmin^0
+        temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)]
+        Sphi_2S[idx] .= temp
+    else
+        # conserve power around dc
+        idx = findall(f -> abs(f) < fmin,f)
+        Sphi_2S[idx] .= sum([a_coeff[1]*fmin.^(-4) a_coeff[2]*fmin.^(-3) a_coeff[3]*fmin.^(-2) a_coeff[4]*fmin.^(-1) a_coeff[5]*fmin.^0 ]).*(fmin/fmin1)
+    end#if
+
+    # # code added 7/15/21, This creates a "high-pass filter" with fmin as the cutoff frequency
+    # # create a roll-off from fmin to 0 frequency
+    # temp = a_coeff' * [fmin.^(-4), fmin.^(-3), fmin.^(-2), fmin.^(-1), fmin.^(0)] # this is the PSD value at fmin
+    # idx_fmin = findlast(f -> abs(f) < fmin,f)
+    # if !isnothing(idx_fmin)
+    #     idx = idx0[1]:idx_fmin
+    #     # Sphi_2S[idx] .= range(0,stop=temp,length=length(idx)) # linear function from 0 freq to fmin
+    #
+    #     # linear roll-off filter changed to logistic function #10/18/22
+    #     # logistic function: f(x) = L/ [1 + e^-k(x-x0)]. L = final amplitude, k = growth rate, x0 = 0.5L crossing
+    #     k = 10 # selected to have a less steep slope, but not linear (k=1 shows linear curve)
+    #     # f[idx] are the x values, need to shift by fmin/2
+    #     temp_logistic = temp .* logistic.( k.*(f[idx].-(fmin/2) ) )
+    #     Sphi_2S[idx] = temp_logistic
+    # end#if
 
     # take magnitude to remove any negative PSD values.
     Sphi_2S = abs.(Sphi_2S)
@@ -1010,7 +1014,7 @@ function downsampled_spectrum(Sphi::Array{Float64,1},sync_clk_fs::Float64,sync_p
 
     #TODO: set maximum M value in order to reduce computational time? High SRI values get very excessive..
     M = round(sync_clk_fs/(2.0*sync_prf))
-    
+
     #testing: set maximum vaue for M at 1000. The extra spectral folding doesn't change much in the end result but makes it way slower
     if M > 1000
         M = 1000
@@ -1069,38 +1073,39 @@ end#function
 #--end--function-------------------------------------------------------------------------------------------
 
 """
-This function reads measured PSD data in from an excel file, returns frequency vector and PSD amplitude
+This function reads measured PSD data in from an excel or jld2 file, returns frequency vector and PSD amplitude
 
 # Arguments
 - `filename::String`: filename of PSD data
 """
 function read_PSD_excel_data(filename::String)
-    xf           = XLSX.readxlsx(filename)
-    sh           = xf["Sheet1"]
-    
-    rn=0; # this loop finds number of rows in sheet
-    for r in XLSX.eachrow(sh)
-        rn = XLSX.row_number(r)
-    end
-    
-    f_psd_meas = Array{Float64,1}(undef,rn)
-    osc_psd_meas = Array{Float64,1}(undef,rn)
-    
-    for r in XLSX.eachrow(sh)
-        rn = XLSX.row_number(r)
-        f_psd_meas[rn] = r[1]
-        osc_psd_meas[rn] = r[2]
-    end
+# adding a switch for JLD2 files
+    if filename[end-4:end] == ".xlsx"
+        xf           = XLSX.readxlsx(filename)
+        sh           = xf["Sheet1"]
 
-    f_psd_meas   = convert(Array{Float64},f_psd_meas)
-    osc_psd_meas = convert(Array{Float64},osc_psd_meas)
+        rn=0; # this loop finds number of rows in sheet
+        for r in XLSX.eachrow(sh)
+            rn = XLSX.row_number(r)
+        end
+
+        f_psd_meas = Array{Float64,1}(undef,rn)
+        osc_psd_meas = Array{Float64,1}(undef,rn)
+        xf           = XLSX.readxlsx(filename)
+        sh           = xf["Sheet1"]
+        for r in XLSX.eachrow(sh)
+            rn = XLSX.row_number(r)
+            f_psd_meas[rn] = r[1]
+            osc_psd_meas[rn] = r[2]
+        end
+
+        f_psd_meas   = convert(Array{Float64},f_psd_meas)
+        osc_psd_meas = convert(Array{Float64},osc_psd_meas)
+    elseif filename[end-4:end] == ".jld2"
+        @load filename f_psd_meas osc_psd_meas
+
+    end#if
 
     return f_psd_meas, osc_psd_meas
 end #function
 end #module
-
-
-for r in XLSX.eachrow(sh)
-    rn = XLSX.row_number(r)
-    println(rn)
-end

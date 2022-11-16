@@ -118,18 +118,27 @@ function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis3
             if PSF_cuts==1
                 plot!(s_loc_2[k2]*ones(Ns_1),s_loc_1,lc=[:white],leg=false)
                 display(plot!(s_loc_2,s_loc_1[k1]*ones(Ns_2),lc=[:white],leg=false))
-            elseif PSF_cuts==2;display(plot!(scene_axis22,scene_axis11,lc=[:white],leg=false));end
+            elseif PSF_cuts==2;display(plot!(scene_axis22,scene_axis11,lc=[:white],leg=false,size=psize));end
         end
     elseif display_tomograms==2
         gr()
+        # for k=1:Ns_3 # height slices from the scene
+        #     display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k],ylabel=coords[1],xlabel=coords[2],title="2D Image at Loc-3="*string(s_loc_3[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
+        # end
+        # for k=1:Ns_1 # latitude slices from the scene
+        #     display(heatmap(s_loc_3,s_loc_2,image_3D[k,:,:],ylabel=coords[2],xlabel=coords[3],title="2D Image at Loc-1="*string(s_loc_1[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
+        # end
+        # for k=1:Ns_2 # longitude slices from the scene
+        #     display(heatmap(s_loc_3,s_loc_1,image_3D[:,k,:],ylabel=coords[1],xlabel=coords[3],title="2D Image at Loc-2="*string(s_loc_2[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
+        # end
         for k=1:Ns_3 # height slices from the scene
-            display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k],ylabel=coords[1],xlabel=coords[2],title="2D Image at Loc-3="*string(s_loc_3[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
+            display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k],ylabel=coords[1],xlabel=coords[2],title="2D Image at Loc-3="*string(s_loc_3[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(2200,2200))) #aspect_ratio=:equal
         end
         for k=1:Ns_1 # latitude slices from the scene
-            display(heatmap(s_loc_3,s_loc_2,image_3D[k,:,:],ylabel=coords[2],xlabel=coords[3],title="2D Image at Loc-1="*string(s_loc_1[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
+            display(heatmap(s_loc_3,s_loc_2,image_3D[k,:,:],ylabel=coords[2],xlabel=coords[3],title="2D Image at Loc-1="*string(s_loc_1[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(2200,2200))) #aspect_ratio=:equal
         end
         for k=1:Ns_2 # longitude slices from the scene
-            display(heatmap(s_loc_3,s_loc_1,image_3D[:,k,:],ylabel=coords[1],xlabel=coords[3],title="2D Image at Loc-2="*string(s_loc_2[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(1600,1200))) #aspect_ratio=:equal
+            display(heatmap(s_loc_3,s_loc_1,image_3D[:,k,:],ylabel=coords[1],xlabel=coords[3],title="2D Image at Loc-2="*string(s_loc_2[k]),c=cgrad([:black,:white]),clims=(faintest,brightest),size=(2200,2200))) #aspect_ratio=:equal
         end
     elseif display_tomograms==3
         gr()
