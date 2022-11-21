@@ -26,14 +26,14 @@ c = 299792458 #TODO does not work without redefining c here
 # sync_pri=.1,phase_offset_flag=true,SAR_duration=5,sync_a_coeff_dB=[-120 -114 -999 -134 -166 ],user_defined_orbit=1,osc_psd_meas_filename="inputs/12_8MHz no ref 7M 220321_1531.xlsx")
 # a_coeff_dB = [-500 -500 -500 -500 -500]
 # a_coeff_dB[1] = -500
-# params = UserParameters.inputParameters(sync_a_coeff_dB = a_coeff_dB,PSF_image_point=1,PSF_cuts=1,display_tomograms=0,mode=2,s_loc_1=-40:2:40,
-# no_sync_flag = false,enable_sync_phase_error=true,fc = 1e9)
+params = UserParameters.inputParameters(sync_a_coeff_dB = [-66 -62 -80 -110 -153],PSF_image_point=1,PSF_cuts=2,display_tomograms=1,mode=2,
+no_sync_flag = true,SAR_duration=3,enable_sync_phase_error=true,sync_pri=1,phase_offset_flag=false)
 
-params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=2,display_tomograms=1,enable_sync_phase_error=true,use_measured_psd_flag=true,
-no_sync_flag=true,mode=2, osc_psd_meas_filename = "inputs/PN_GPSDO_measured_wGPS72hr.jld2",sync_a_coeff_dB = [-66 -62 -80 -110 -153],
-sync_pri=1.0,phase_offset_flag=true,SAR_duration=5,user_defined_orbit=1,s_loc_1=-20:1:20)
+# params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=2,display_tomograms=1,enable_sync_phase_error=true,use_measured_psd_flag=true,
+# no_sync_flag=true,mode=2, osc_psd_meas_filename = "inputs/PN_GPSDO_measured_wGPS72hr.jld2",sync_a_coeff_dB = [-66 -62 -80 -110 -153],
+# sync_pri=1.0,phase_offset_flag=true,SAR_duration=5,user_defined_orbit=1,s_loc_1=-20:1:20)
 
-# params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=2,display_tomograms=1,SAR_duration=3,user_defined_orbit=1)
+# params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=2,display_tomograms=1,SAR_duration=3,user_defined_orbit=1,mode=2)
 
 # Check consistency of input parameters
 paramsIsValid = UserParameters.validateInputParams(params)

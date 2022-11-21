@@ -41,7 +41,7 @@ sync_osc_type = "Measured"
 radar_mode=2
 sar_len = 5.0
 at_dim = -20:1:20
-usr_orbit = 1
+usr_orbit = 2
 use_meas_flag = false # to be overwritten if need be
 center_freq = 1.25e9
 f_osc = 10e6
@@ -66,7 +66,9 @@ elseif sync_osc_type == "RFSoc"
 elseif sync_osc_type == "Measured"
     use_meas_flag = true
     coeffs = [ 0 0 0 0 0] # value doesn't matter, easier to use placeholder
-    filename_osc = "inputs/PN 12_8MHz with GPS 17min 220323_1310.xlsx"
+    #filename_osc = "inputs/PN 12_8MHz with GPS 17min 220323_1310.xlsx"
+    filename_osc = "inputs/RFSoC with GPSDO meas.jld2"
+
     f_osc = 12.8e6
 elseif sync_osc_type == "MeasuredGPSDO"
     coeffs = [ 0 0 0 0 0] # value doesn't matter, easier to use placeholder
