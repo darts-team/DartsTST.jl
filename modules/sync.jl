@@ -79,8 +79,8 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     if delay_since_sync > 0 #enforces that minimum frequency of PSD covers the total time period of the aperture+delay_since_sync
         clk_args_N = ceil(sync_clk_fs * (t_elapse + delay_since_sync) )
     end #if
-    if clk_args_N < 40e3 # enfore a minimum number of points. Needed for PSD accuracy
-        clk_args_N = 40e3
+    if clk_args_N < 3e6%40e3 # enfore a minimum number of points. Needed for PSD accuracy
+        clk_args_N = 3e6#40e3
     end#if
     up_convert =  sqrt(2) * fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF)
     up_convert_psd = 1 #2*(fc / f_osc)^2 # frequency up-conversion factor (scale factor from LO to RF) for use on PSD #TODO reverted back to upscaling in phase domain instead of PSD because PSD domain doesn't account for frequency offset error upscaling
@@ -187,7 +187,11 @@ end
 
             if no_sync_flag # no sync case
                 Sphi_uc = up_convert_psd .* Sphi
-                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs, phase_offset_flag,delay_since_sync)
+                if use_measured_psd_flag
+                        (r, t)    = osc_timeseries_from_psd_onesided(Sphi_uc, sync_clk_fs, phase_offset_flag,delay_since_sync)
+                else
+                        (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs, phase_offset_flag,delay_since_sync)
+                end
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi
             else
@@ -206,7 +210,12 @@ end
                 Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs, dt, f_osc)
                 # generate time series of phase error
                 Sphi_sync_uc = up_convert_psd .* Sphi
-                (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag, delay_since_sync)
+                if use_measured_psd_flag
+                        (r, t)    = osc_timeseries_from_psd_onesided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag, delay_since_sync)
+                else
+                        (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag, delay_since_sync)
+                end
+
 
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi_sync
@@ -343,7 +352,8 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     if clk_args_N < 80e3 # enfore a minimum number of points. Needed for PSD accuracy
         clk_args_N = 80e3
     end#if
-    up_convert =  fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF)
+
+    up_convert =  sqrt(2) * fc / f_osc  # frequency up-conversion factor (scale factor from LO to RF)
 
     # verify size of position input
     szp = size(pos)
@@ -433,7 +443,12 @@ end
             Sphi_sync = sync_PSDs[i,j,:] # load precalculated PSD
             # generate time series of phase error
             Sphi_sync_uc = up_convert_psd .* Sphi
-            (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag, delay_since_sync)
+
+            if use_measured_psd_flag
+                    (r, t)    = osc_timeseries_from_psd_onesided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag, delay_since_sync)
+            else
+                    (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag, delay_since_sync)
+            end
 
             # t and r are longer than PRI, cut to PRI
             idx_pri = findfirst(t -> t >= dt,t)
@@ -604,23 +619,24 @@ Use measured one-sided PSD of the clock phase error and convert to a 2-sided PSD
 #-start-function--------------------------------------------------------------------------------------------
 function osc_psd_measured(fs::Float64, N::Float64, f_psd_meas::Vector{Float64}, osc_psd_meas::Vector{Float64})
     #mirror osc_psd to make two-sided
-    osc_psd = collect(hcat(-reverse(osc_psd_meas)', osc_psd_meas')./2) #halve magnitude to go from 1-sided to 2-sided
-    f_psd = collect(hcat(-reverse(f_psd_meas)', f_psd_meas'))
+    # osc_psd = collect(hcat(-reverse(osc_psd_meas)', osc_psd_meas'))
+    # f_psd = collect(hcat(-reverse(f_psd_meas)', f_psd_meas'))
 
     # create frequency vector to interpolate to
     f = collect( ( (-N/2):1:(N/2-1) ) ).*fs./N
 
-    freq_itp = LinearInterpolation(f_psd[1,:], osc_psd[1,:], extrapolation_bc=Line());
+    # freq_itp = LinearInterpolation(f_psd[1,:], osc_psd[1,:], extrapolation_bc=Line());
+    freq_itp = LinearInterpolation(f_psd_meas, osc_psd_meas, extrapolation_bc=Line());
 
-    Sphi_2S = 10 .^ (freq_itp.(f)./10)
+    Sphi_1S = 10 .^ (freq_itp.(f)./10) # convert from dB to linear units
 
-    # find zero frequency value, set power to 0
-    idx0 = findall(f -> f == 0,f)
-    Sphi_2S[idx0] .= 0
+    # find zero and negative frequency values, set power to 0
+    idx0 = findall(f -> f <= 0,f)
+    Sphi_1S[idx0] .= 0
 
     # take magnitude to remove any negative PSD values.
-    Sphi_2S = abs.(Sphi_2S)
-    return Sphi_2S, f
+    Sphi_1S = abs.(Sphi_1S)
+    return Sphi_1S, f
 
 end #function
 #--end--function-------------------------------------------------------------------------------------------
@@ -686,6 +702,82 @@ if delay_since_sync > 0 # generate extended phase value for time before aperture
             r_int = r_int .+ phase_hist[floor(Int,(i-1)*N)]
         else
             r_int = r_int.-r_int[1]  # makes sync event at t=0 in this frame
+        end#if
+        phase_hist[ floor(Int,(i-1)*N+1) : floor(Int,N*i) ] = r_int
+
+    end#for
+
+    # plot(time_vec, phase_hist.*180 ./pi,xaxis=("time (sec)"),ylabel=("Oscillator Phase (deg) @10MHz"))
+    # savefig("phase_history_wDelay")
+    # now we will interpolate the phases to the pulse times of the aperture
+    t_int = t .+ delay_since_sync # shift the aperture time vector "t" to the time vector that now includes the delay_since_sync
+    itp_phase_hist = LinearInterpolation(time_vec, phase_hist) # create interpolant
+    r = itp_phase_hist(t_int);
+end#if delay_since_sync > 0
+
+
+
+if phase_offset_flag && delay_since_sync == 0 # only considered if delay_since_sync is "0" meaning it is not being used. If delay_since_sync < 0, then phase values will be set to 0 at that sync time
+    r = r.-r[1] # this zeros out the error at t=0. Sync "resets" the clock drift to 0. Will be added in sequence to keep phase errors continuous
+end
+
+
+
+return r,t
+end#function
+#--end--function-------------------------------------------------------------------------------------------
+
+
+#-start-function-------------------------------------------------------------------------------------------
+
+function osc_timeseries_from_psd_onesided(Sphi::Array{Float64,1},fs::Float64,phase_offset_flag::Bool,delay_since_sync::Float64)
+#   Generate time series from one sided PSD of clock phase error.
+#INPUTS
+#     Sphi: # 1 sided oscillator phase error PSD
+#     fs = 2000; # max PSD frequency [sample rate of clock phase error process]
+# OUTPUTS
+#     r:    # random time sequence realization
+#     t = (0:(N-1))*1/fs; # time vector
+
+N = length(Sphi)
+f = collect( ( (-N/2) : 1 : (N/2-1) ) ) .* fs ./N
+
+Sphi_1S = zeros(N)
+idx = findall(f -> f >= 0,f)
+Sphi_1S[idx] = Sphi[idx] # one sided with f=0 included, just grabbing the values >=0
+A_Sphi = sqrt.(abs.(Sphi_1S.*N))
+
+# random phase vector with amplitude of PSD
+phi_u = rand(N) .*2 .* pi
+amp_u = 1; # constant amplitude
+
+# sequence with random phase & random amplitude of PSD
+z = A_Sphi.*exp.(1im*phi_u).*amp_u
+
+z2 = ifftshift(z)
+
+# random time sequence realization
+r = real(fftshift(ifft(z2))) # take real component of time series
+
+# time vector
+t = collect(0:(N-1)) .* 1/fs
+
+#introducing the time delay since last synchronization
+if delay_since_sync > 0 # generate extended phase value for time before aperture start. This will be "t=0" to "t=delay_since_sync". Aperture starts at "delay_since_sync"
+    seq_len = N/fs # length of the random phase instance that is generated from PSD
+    numSeqNeeded = ceil(delay_since_sync / seq_len) + 1
+    time_vec = collect(0:(N*numSeqNeeded)) .* 1/fs
+    phase_hist = Array{Float64}(undef,length(time_vec))
+    for i = 1 : numSeqNeeded
+        phi_u = rand(N) .*2 .* pi
+        z = A_Sphi.*exp.(1im*phi_u).*amp_u
+        z2 = ifftshift(z)
+        r_int = real(fftshift(ifft(z2)))# phase values internal to loop
+
+        if i>1 # make phase continuous
+            r_int = r_int .+ phase_hist[floor(Int,(i-1)*N)]
+        else
+            r_int = r_int.-r_int[1]  # makes sync event at t=0 in this frame
         end
         phase_hist[ floor(Int,(i-1)*N+1) : floor(Int,N*i) ] = r_int
 
@@ -714,7 +806,6 @@ end
 return r,t
 end#function
 #--end--function-------------------------------------------------------------------------------------------
-
 
 #-start-function-------------------------------------------------------------------------------------------
 """
@@ -1076,7 +1167,7 @@ end#function
 This function reads measured PSD data in from an excel or jld2 file, returns frequency vector and PSD amplitude
 
 # Arguments
-- `filename::String`: filename of PSD data
+- `filename::String`: filename of PSD data, in dBc/Hz scale
 """
 function read_PSD_excel_data(filename::String)
 # adding a switch for JLD2 files

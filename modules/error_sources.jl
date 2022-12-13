@@ -1,7 +1,7 @@
 module Error_Sources
 using ..Sync
 using Parameters
-using JLD2
+using JLD2, Plots
 
 
 function random_noise(rawdata, params)
@@ -70,6 +70,7 @@ function synchronization_errors!(rawdata,slow_time,orbit_pos_interp, osc_coeffs,
 	# test_outputfilename = "testing_phase_PSD_output.jld2"
 	# @save test_outputfilename phase_err sync_PSDs
 
+
     ## combine with raw data
 
         
@@ -84,14 +85,14 @@ function synchronization_errors!(rawdata,slow_time,orbit_pos_interp, osc_coeffs,
             for s = 1 : Nst # slow-time (pulses)
                 tx_phase = phase_err[sync_master, s] # transmitter phase error state 
                 for i = 1 : Np_RX
-                    rawdata[s,i,:] = rawdata[s,i,:].*exp(im*(phase_err[i,s] + tx_phase) )
+                    rawdata[s,i,:] = rawdata[s,i,:].*exp(im*(phase_err[i,s] - tx_phase) )
                 end#N platforms
             end#slow time
         elseif mode == 3 #MIMO
             for s = 1 : Nst # slow-time (pulses)
                 for i = 1 : Np_TX # Tx platform for MIMO
                     for k = 1 : Np_RX # Rx platform for MIMO
-                        rawdata[s,k,i,:] = rawdata[s,k,i,:].*exp(im*(phase_err[i,i,s] + phase_err[i,k,s]) ) #tx phase + rx phase at tx time
+                        rawdata[s,k,i,:] = rawdata[s,k,i,:].*exp(im*(phase_err[i,i,s] - phase_err[i,k,s]) ) #tx phase + rx phase at tx time
                     end#N Rx platforms
                 end#N Tx platforms
             end#slow time

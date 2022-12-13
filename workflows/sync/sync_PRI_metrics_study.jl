@@ -37,13 +37,17 @@ println("Current procs: " * "$curr_procs")
 end#begin
 
 #----- Setting parameter values to overwrite defaults-----
-sync_osc_type = "Measured"
+sync_osc_type = "MicroSemi"
 radar_mode=2
 sar_len = 5.0
 at_dim = -20:1:20
 usr_orbit = 2
 use_meas_flag = false # to be overwritten if need be
-center_freq = 1.25e9
+
+#center_freq =1.25e9;band="Lband" # center frequency (Hz) L-band
+ center_freq =3e9;band="Sband" # center frequency (Hz) S-band
+# center_freq =6e9;band="Cband" # center frequency (Hz) C-band
+# center_freq =10e9;band="Xband" # center frequency (Hz) X-band
 f_osc = 10e6
 filename_osc=""
 
@@ -60,19 +64,24 @@ elseif sync_osc_type == "Wenzel100MHz"
     coeffs = [-1000 -73 -1000 -104 -181] # [Wenzel 100MHz oscillator]
     sync_f_osc = 100e6 # local oscillator frequency
 elseif sync_osc_type == "MicroSemi"
-    coeffs = [-120 -114 -999 -134 -166 ] # [Microsemi GPS-3500 oscillator]
+    #coeffs = [-120 -114 -124 -134 -166 ] # [Microsemi GPS-3500 oscillator]
+    coeffs = [-123 -109 -120 -130 -150 ] # [LS Fit Measured GPS-3500 oscillator- GPS Locked]
+    #coeffs = [-96 -100 -103 -112 -165 ] # [LS Fit Measured GPS-3500 oscillator- Free Running]
+
 elseif sync_osc_type == "RFSoc"
     coeffs = [-120 -114 -999 -134 -166 ] # [Very rough estimate of measured RFSoC oscillators]
 elseif sync_osc_type == "Measured"
     use_meas_flag = true
     coeffs = [ 0 0 0 0 0] # value doesn't matter, easier to use placeholder
     #filename_osc = "inputs/PN 12_8MHz with GPS 17min 220323_1310.xlsx"
-    filename_osc = "inputs/RFSoC with GPSDO meas.jld2"
-
+    #filename_osc = "inputs/RFSoC with GPSDO meas.jld2"
+    filename_osc = "inputs/RFSoC no GPSDO meas.jld2"
     f_osc = 12.8e6
 elseif sync_osc_type == "MeasuredGPSDO"
     coeffs = [ 0 0 0 0 0] # value doesn't matter, easier to use placeholder
-    filename_osc = "inputs/PN_GPSDO_measured_wGPS72hr.jld2" # GPSDO only
+    #filename_osc = "inputs/PN_GPSDO_measured_wGPS72hr.jld2" # GPSDO only - w/GPS lock
+    filename_osc = "inputs/GPS_3500_free_run_meas.jld2" # GPSDO no GPS lock
+
     use_meas_flag = true
 
 elseif sync_osc_type == "RoseL"
@@ -213,16 +222,16 @@ tomo_data   = SharedArray{Float64}(params.Ns_1,params.Ns_2,params.Ns_3,numSRI+1,
         peaks[k,ntrial]         = peak
         # loc_errors[k,ntrial]  = loc_error
         # resolutions[k,ntrial] = resolution
-        PSLRs[k,ntrial]       = PSLR
-        ISLRs[k,ntrial]       = ISLR
+        PSLRs[k,ntrial]       = PSLR[1]
+        ISLRs[k,ntrial]       = ISLR[1]
     end#N SRIs
 end#Ntrials
 @unpack mode, s_loc_1, s_loc_2, s_loc_3 = params
-outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$sync_osc_type"*"_sync_pri_sweep_along_n.jld2" # this is the output filename that the data is saved to using JLD2
+outputfilename = "syncModule_MonteCarlo_mode_$mode"*"_$sync_osc_type"*"_sync_pri_sweep_along_n"*"_$band"*".jld2" # this is the output filename that the data is saved to using JLD2
 # this saves the data into a JLD2 file. Data includes the estimates
-@save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs s_loc_1 s_loc_2 s_loc_3
+@save outputfilename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors sync_PRIs s_loc_1 s_loc_2 s_loc_3 center_freq
 
-outputfilename_data = "syncModule_MonteCarlo_mode_$mode"*"_$sync_osc_type"*"_sync_pri_sweep_imageData_along_n.jld2" # output filename for image data. doesn't save metrics
-@save outputfilename_data ideal_image_3D tomo_data sync_PRIs s_loc_1 s_loc_2 s_loc_3
+outputfilename_data = "syncModule_MonteCarlo_mode_$mode"*"_$sync_osc_type"*"_sync_pri_sweep_imageData_along_n"*"_$band"*".jld2" # output filename for image data. doesn't save metrics
+@save outputfilename_data ideal_image_3D tomo_data sync_PRIs s_loc_1 s_loc_2 s_loc_3 center_freq
 
 println("Run Complete, and file saved to " *outputfilename)
