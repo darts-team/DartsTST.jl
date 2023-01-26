@@ -74,7 +74,7 @@ end
     # performance metrics
     res_dB::Float64 = 4 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
     PSF_image_point::Int = 3 # 1: peak location, 2: target location, 3: center of 3D scene
-    PSF_cuts::Int = 2 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
+    PSF_cuts::Int = 1 # 1: principal axes (SCH, LLH, XYZ based on ts_coord_sys), 2: a single cut along PSF_direction_xyz in scene coordinates relative to center of scene
     PSF_direction = [0 1 tand(inc_angle)] # # direction (in ts_coord_sys) relative to scene center to take 1D PSF cut along a line which goes through center of scene (used only if PSF_cuts=2), direction along non-existing scene dimension is ignored; default cut is along n. For cut along r, use [0 1 -PSF_dir_sign/tand(inc_angle)]
 
     # antenna settings

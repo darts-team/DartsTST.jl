@@ -16,6 +16,7 @@ using Parameters
 using Dates
 using StaticArrays
 using .UserParameters
+using JLD
 using Plots
 gr()
 
@@ -23,11 +24,18 @@ c = 299792458 #TODO does not work without redefining c here
 earth_radius = 6378.137e3 # Earth semi-major axis at equator
 
 # Define study parameters
-Ntr = 10# number of trials
+Ntr = 5# number of trials
+n_platforms = 11 # number of platforms
+
+# for equal spacing
 init_spc = 1e3 # initial spacing
 spc_inc = 1e3 # spacing increment
+# for unequal spacing
+max_dist = 45e3 # max distance along-n among platforms
+
 res_theory_array=zeros(Ntr)
 res_measured_array=zeros(Ntr)
+pos_n_all=zeros(Ntr,n_platforms)
 
 anim = Plots.Animation()
 anim2 = Plots.Animation()
@@ -48,12 +56,13 @@ for i = 1:Ntr
     display_tomograms = true, # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot
     display_geometry = false, # whether to display geometry plots
     s_loc_1 = 0, # deg latitude if LLH, along-track if SCH, X if XYZ
-    s_loc_2 = -15:0.1:15, # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    s_loc_3 = -15:0.1:15, # m  heights if LLH or SCH, Z if XYZ
-    pos_n   = [-5 -4 -3 -2 -1 0 1 2 3 4 5]*(init_spc+(i-1)*spc_inc), # SCH option, relative position of each platform along n (m), 0 is the reference location, equal spacing
-    #pos_n   = [-10 -8 -7.5 -5 -3.3 0 1.2 2.7 5.3 6.6 10]*1e3,
-    res_dB = 3.893 # dB two-sided resolution relative power level (value for 7 platforms and baseline = max distance + 1 spacing)
-    # Np:res_dB [2:3.01 3:3.52 4:3.70 5:3.78 6:3.82 7:3.85 8:3.87 9:3.88 10:3.89] for baseline = max distance + 1 spacing
+    s_loc_2 = -15:0.5:15, # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    s_loc_3 = -15:0.5:15, # m  heights if LLH or SCH, Z if XYZ
+    #pos_n   = ((1:n_platforms).-(n_platforms+1)/2)*(init_spc+(i-1)*spc_inc), # relative position of each platform along n (m), 0 is the reference location, equal spacing
+    pos_n   = sort(round.([-max_dist/2 -max_dist/2*rand(1,Int((n_platforms-3)/2)) 0 max_dist/2*rand(1,Int((n_platforms-3)/2)) max_dist/2]),dims=2),
+    #pos_n   = sort(round.([-max_dist/2*rand(1,Int((n_platforms-1)/2)) 0 max_dist/2*rand(1,Int((n_platforms-1)/2))]),dims=2),
+    res_dB = 3.89 # dB two-sided resolution relative power level
+    # Np:res_dB [2:3.01 3:3.52 4:3.70 5:3.78 6:3.82 7:3.85 8:3.87 9:3.88 10:3.89] for baseline = max distance + 1 spacing (for analytical resolution formula)
     )
 
     # theoretical resolution
@@ -65,9 +74,13 @@ for i = 1:Ntr
         p_mode = 1.38
     end
 
+    # platform distributions along-n
+    println("pos_n: ",Integer.(params.pos_n))
+    pos_n_all[i,:]=params.pos_n
+
     # input max baseline along-n (Bn = Np x dn)
-    #spacing = (init_spc+(i-1)*spc_inc)
-    spacing = params.pos_n[2]-params.pos_n[1]
+    #spacing = params.pos_n[2]-params.pos_n[1] # spacing for equally spaced platforms
+    spacing = mean(diff(params.pos_n,dims=2)) # average spacing for unequally spaced platforms
     max_baseline_n = (maximum(params.pos_n)-minimum(params.pos_n)) + spacing
     println();println("input max baseline along-n: ",max_baseline_n)
 
@@ -156,7 +169,6 @@ for i = 1:Ntr
         println("ISLRs: ",round.(ISLRs,digits=2)," dB")
         println("PSF Peak Amplitude: ",round(maximum(20*log10.(image_3D)),digits=2)," dB")
         println("ratio of theoretical/measured resolution along-n: ",res_theory_n/resolutions)
-        println("cos(2 x look-angle):", cosd(2*params.look_angle))
     else
         @warn "PSF related performance metrics cannot be calculated for more than 1 target."
     end
@@ -186,9 +198,13 @@ for i = 1:Ntr
 
 end
 
-gif(anim, "anim_1Dcuts.gif", fps = 5)
-gif(anim2, "anim_2Dtomogram.gif", fps = 5)
+@save "platform_distributions.jld" pos_n_all
+display(scatter(pos_n_all./1e3,leg=false,xlabel="iteration",ylabel="platform distribution (km)",title="Platform Positions",size=(1200,800),markersize=6,titlefont=22,xguidefontsize=18,yguidefontsize=18,xtickfontsize=15,ytickfontsize=15,xticks=1:Ntr))
+savefig("platform_spacings.png")
+
+gif(anim, "anim_1Dcuts.gif", fps = 1)
+gif(anim2, "anim_2Dtomogram.gif", fps = 1)
 
 xax=(init_spc.+((1:Ntr).-1).*spc_inc)./1e3
-plot(xax,[res_theory_array res_measured_array] ,xaxis=("spacing (km)"),yaxis=("resolution (m)"),labels=permutedims(["theory","simulation"]))
+plot(xax,[res_theory_array res_measured_array] ,xaxis=("trials"),yaxis=("resolution (m)"),labels=permutedims(["theory","simulation"]))
 savefig("resolution_vs_spacing.png")
