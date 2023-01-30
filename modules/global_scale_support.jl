@@ -3,7 +3,6 @@ module Global_Scale_Support
 using ..Geometry
 using ..Orbits
 using ..Scene
-using ..Scattering
 
 using PlotlyJS 
 using DataFrames 
@@ -17,8 +16,7 @@ using CoordinateTransformations
 using LinearAlgebra
 
 
-"""
-Read the GEDI L3 data using the filepath specified,
+"""  
 construct the canopy heights for each pixel and get  
 the corresponding geo location.
 
@@ -229,7 +227,7 @@ function constrct_reflectivity_profile_exp(Canopy_height)
   end
   return ref_profile_height, ref_profile_value, NoPeaks 
 
-
+end
 
 
 end

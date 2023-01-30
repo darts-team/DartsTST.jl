@@ -41,17 +41,17 @@ function computeTimePosVel(params)
         orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
         t12_orbits=orbit_dataset["time"][1:2] # first two time samples
         dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
-        orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(round((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
+        orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(ceil((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
         orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
         orbit_pos_ECI=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
         orbit_vel_ECI=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
-        try #does file have dcm already?
-            global dcm=orbit_dataset["dcm"];
-        catch #if not generate from Orbits
+        #try #does file have dcm already?
+        #    global dcm=orbit_dataset["dcm"];
+        #catch #if not generate from Orbits
             dv = orbit_dataset.attrib["epoch"];
             local epoch = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
             global dcm = Orbits.eci_dcm(orbit_time, epoch);
-        end
+        #end
         #orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
         orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF
     elseif user_defined_orbit==2 # user defined, TCN option
@@ -86,6 +86,78 @@ function computeTimePosVel(params)
     end
 
     return orbit_time, orbit_pos, orbit_vel
+end
+
+function interpolateOrbitsToSlowTime(orbit_time, orbit_pos, SAR_start_time, params)
+    @unpack SAR_duration, fp = params
+
+    # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
+    slow_time = SAR_start_time : 1/fp : SAR_start_time+SAR_duration # create slow time axis
+
+    Nst = size(slow_time)[1] # number of slow-time samples (pulses processed)
+
+    if Nst == 1;
+        p_xyz = orbit_pos
+    else
+        p_xyz = Orbits.interp_orbit(orbit_time,orbit_pos,slow_time)
+    end # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
+
+    return p_xyz, Nst, slow_time
+end
+
+function computeTimePosVel_refpoint(params, ref_lat, ref_lon)
+    @unpack SAR_start_time, SAR_duration, p_t0_LLH, orbit_filename, master_p = params
+
+    orbit_dataset       = Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
+    t12_orbits 		    = orbit_dataset["time"][1:2] # first two time samples
+    dt_orbits 		    = t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
+    orbit_time_index    = Int(1):Int(dt_orbits):length(orbit_dataset["time"])
+     # index range for orbit times for time interval of interest
+    orbit_time 		    = orbit_dataset["time"][orbit_time_index] # read in time data
+    orbit_pos_ECI 	    = 1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
+    orbit_vel_ECI       = 1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
+    dv 				    = orbit_dataset.attrib["epoch"];
+    epoch 			    = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
+    global dcm 		    = Orbits.eci_dcm(orbit_time, epoch);
+    orbit_pos,orbit_vel = Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm)
+
+    orbit_pos_geo       = Geometry.xyz_to_geo(orbit_pos[:,master_p,:])
+    #close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,:].-(p_t0_LLH[2])) + abs.(orbit_pos_geo[1,:].-(p_t0_LLH[1])))
+    close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,:].-(ref_lon)) + abs.(orbit_pos_geo[1,:].-(ref_lat)))
+
+    mid_pt_geo          = orbit_pos_geo[:,close_val_lat_lon[2]]
+    mid_pt_geo2          = orbit_pos_geo[:,close_val_lat_lon[2]+1]
+
+    ref_lat             = mid_pt_geo[1]
+    ref_lon             = mid_pt_geo[2]
+    ref_ht              = mid_pt_geo[3]
+    SAR_start_time      = orbit_time[close_val_lat_lon[2]] .+ SAR_start_time
+
+    p_heading           = Geometry.compute_heading(ref_lat, ref_lon, orbit_vel[:,master_p,Int64(close_val_lat_lon[2])])
+
+
+    orbit_time_index2    = (Int(floor(SAR_start_time/dt_orbits))-1:1:Int(ceil((SAR_start_time+SAR_duration)/dt_orbits))+1)
+    orbit_time2          = orbit_dataset["time"][orbit_time_index2] # read in time data
+    #orbit_pos_ECI       = 1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
+    #orbit_vel_ECI       = 1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
+    #dv                  = orbit_dataset.attrib["epoch"];
+    #local epoch         = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
+    #global dcm          = Orbits.eci_dcm(orbit_time, epoch);
+
+    #orbit_pos,orbit_vel = Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm)
+
+    orbit_pos2=orbit_pos[:,:,orbit_time_index2]
+    orbit_vel2=orbit_vel[:,:,orbit_time_index2]
+
+
+    orbit_pos_geo       = Geometry.xyz_to_geo(orbit_pos2[:,master_p,:])
+
+    p_heading2          = Geometry.compute_heading([orbit_pos_geo[1,1],orbit_pos_geo[1,end]], [orbit_pos_geo[2,1],orbit_pos_geo[2,end]])
+    ref_peg             = Geometry.PegPoint(ref_lat, ref_lon, p_heading2[1])
+
+
+
+    return orbit_time2, orbit_pos2, orbit_vel2, SAR_start_time, p_heading, ref_peg, p_heading2
 end
 
 
@@ -271,6 +343,7 @@ function make_orbit(pos, hdg, baselines, tvec, mu = 3.986004418e14)
     #spacecraf speed
     sc_speed = sqrt(mu./norm(pos)); #sqrt(GM/R)->https://en.wikipedia.org/wiki/Orbital_speed
 
+    platf_vel = platf_vel .* sc_speed
     #iterate over all baselines to create synthetic orbits
     for ii=1:size(baselines,2)
         # compute platform position for each platform by adding baseline (in XYZ)
@@ -279,7 +352,7 @@ function make_orbit(pos, hdg, baselines, tvec, mu = 3.986004418e14)
         #       rotation from XYZ to TCN
         #platf_pos[:,ii,:] = pos .+ repeat(Geometry.rotate_vec(baselines[:,ii], tcnquat[1]),1,length(tvec));
         for jj=1:length(tvec)
-            platf_pos[:,ii,jj] = pos .+ Geometry.rotate_vec(baselines[:,ii], tcnquat[1]) + platf_vel[:,ii,jj]*tvec[jj]*sc_speed;
+            platf_pos[:,ii,jj] = pos .+ Geometry.rotate_vec(baselines[:,ii], tcnquat[1]) + platf_vel[:,ii,jj]*tvec[jj];
         end
     end
 
