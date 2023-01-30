@@ -85,22 +85,43 @@ for i1 = 1:size(lat_lon_idx,1)
         slrng_temp2 = Geometry.distance(orbit_pos_all[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2]]; 0]))
         global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = acosd(orbit_pos_geo_all[:,close_val_lat_lon[2]][3] / slrng_temp2) 
 
+        ref_profile_height, ref_profile_value, NoPeaks  = constrct_reflectivity_profile_exp(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
 
         # Define user parameters
         #include("../inputs/predefined-input-parameters.jl") TODO gives errors
         params = UserParameters.inputParameters(
-            t_loc_3 = 0.0:1.0:ceil(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]),
-            
+            t_loc_3 = ref_profile_height,
+            t_ref = ref_profile_value,
         )
 
-# Check consistency of input parameters
-paramsIsValid = UserParameters.validateInputParams(params)
+        # Check consistency of input parameters
+        paramsIsValid = UserParameters.validateInputParams(params)
 
-# Compute orbits time, position, and velocity
-orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
+        # Compute orbits time, position, and velocity
+        orbit_time = orbit_time_all[close_val_lat_lon[2]-5:close_val_lat_lon[2]+5]
+        orbit_pos = orbit_pos_all[:,:,close_val_lat_lon[2]-5:close_val_lat_lon[2]+5]
+        orbit_vel = orbit_vel_all[:,:,close_val_lat_lon[2]-5:close_val_lat_lon[2]+5]
 
-# interpolate orbit to slow time, 3 x Np x Nst, convert km to m
-const p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
+        SAR_start_time = orbit_time_all[close_val_lat_lon[2]] - (params_densesim.SAR_duration / 2)
+
+        ref_plat = 1 #incicate the reference platform
+        bperp, b_at, bnorm = Orbits.get_perp_baselines(orbit_pos, orbit_vel, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], ref_plat)
+
+        global Norm_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(bnorm) ./ 1e3
+        global Norm_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,bnorm)) ./ 1e3
+        global Norm_baseline_mean[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = mean(filter(!iszero,bnorm)) ./ 1e3
+        
+        global Perp_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(bperp) ./ 1e3
+        global Perp_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,bperp)) ./ 1e3
+        global Perp_baseline_mean[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = mean(filter(!iszero,bperp)) ./ 1e3
+        
+        global Par_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(b_at) ./ 1e3
+        global Par_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,b_at)) ./ 1e3
+        global Par_baseline_mean[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = mean(filter(!iszero,b_at)) ./ 1e3
+
+
+        # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
+        const p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
 
 # Create target/scene location
 targets_loc, targets_ref, Nt = Scene.construct_targets_str(params) # Nt: number of targets, targets: structure array containing target locations and reflectivities

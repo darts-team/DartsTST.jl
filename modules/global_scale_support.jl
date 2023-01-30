@@ -203,4 +203,33 @@ function maps1(lat_vals, lon_vals, p_var, c1, c2)
 end
 
 
+function constrct_reflectivity_profile_exp(Canopy_height)
+  if (Canopy_height == 0)
+      ref_profile_height          = 0
+      ref_profile_value           = 5
+      ref_profile_value           = 10 .^(ref_profile_value./10)
+      NoPeaks                     = 1
+  else
+      if Canopy_height < 4
+          NoPeaks                 = 1
+          ref_profile_height      = LinRange(0,ceil(Canopy_height),6)
+          ref_profile_value       = [5;1;-5;-10;-20;-20]
+          ref_profile_value       = 10 .^(ref_profile_value./10)
+      elseif Canopy_height < 15
+          NoPeaks                 = 2
+          ref_profile_height      = LinRange(0,ceil(Canopy_height),16)
+          ref_profile_value       = [5;1;-5;-10;-10;-10;-10;-8;-6;-4;-2;0;2;3;3;-20]
+          ref_profile_value       = 10 .^(ref_profile_value./10)
+      else
+          NoPeaks                 = 3
+          ref_profile_height      = LinRange(0,ceil(Canopy_height),16)
+          ref_profile_value       = [5;1;-5;-10;-5;0;1;-5;-10;-4;-2;0;2;3;3;-20]
+          ref_profile_value       = 10 .^(ref_profile_value./10)
+      end
+  end
+  return ref_profile_height, ref_profile_value, NoPeaks 
+
+
+
+
 end
