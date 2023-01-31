@@ -22,16 +22,16 @@ c = 299792458 #TODO does not work without redefining c here
 #include("../inputs/predefined-input-parameters.jl") TODO gives errors
 # params = UserParameters.inputParameters()
 
-# params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=1,display_tomograms=1,enable_sync_phase_error=true,use_measured_psd_flag=true,no_sync_flag=false,mode=2,f_osc=12.8e6
+# params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=1,display_tomograms=1,enable_sync_phase_error=true,use_measured_psd_flag=true,no_sync_flag=false,mode=2,sync_f_osc=12.8e6,
 # sync_pri=.1,phase_offset_flag=true,SAR_duration=5,sync_a_coeff_dB=[-120 -114 -999 -134 -166 ],user_defined_orbit=1,osc_psd_meas_filename="inputs/12_8MHz no ref 7M 220321_1531.xlsx")
-# a_coeff_dB = [-500 -500 -500 -500 -500]
-# a_coeff_dB[1] = -500
-params = UserParameters.inputParameters(sync_a_coeff_dB = [-66 -62 -80 -110 -153],PSF_image_point=1,PSF_cuts=2,display_tomograms=1,mode=2,
-no_sync_flag = true,SAR_duration=3,enable_sync_phase_error=true,sync_pri=1,phase_offset_flag=false)
 
-# params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=2,display_tomograms=1,enable_sync_phase_error=true,use_measured_psd_flag=true,
-# no_sync_flag=true,mode=2, osc_psd_meas_filename = "inputs/PN_GPSDO_measured_wGPS72hr.jld2",sync_a_coeff_dB = [-66 -62 -80 -110 -153],
-# sync_pri=1.0,phase_offset_flag=true,SAR_duration=5,user_defined_orbit=1,s_loc_1=-20:1:20)
+
+ # params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=2,display_tomograms=1,mode=2,
+ # no_sync_flag = true,SAR_duration=3,enable_sync_phase_error=true,sync_pri=1,phase_offset_flag=false)
+
+params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=2,display_tomograms=1,enable_sync_phase_error=true,use_measured_psd_flag=true,mode=3,
+no_sync_flag=true,osc_psd_meas_filename = "inputs/roseL_osc_specs.jld2",phase_offset_flag=false,sync_a_coeff_dB = [-95 -90 -200 -130 -155],
+user_defined_orbit=1)
 
 # params = UserParameters.inputParameters(PSF_image_point=1,PSF_cuts=2,display_tomograms=1,SAR_duration=3,user_defined_orbit=1,mode=2)
 
@@ -74,7 +74,7 @@ end
 # Add phase error
 const sync_osc_coeffs = repeat(params.sync_a_coeff_dB, Np)
 if params.enable_sync_phase_error
-    const rawdata = Error_Sources.synchronization_errors!(rawdata, slow_time, p_xyz, sync_osc_coeffs, params)
+    const rawdata = Error_Sources.synchronization_errors!(rawdata, slow_time, p_xyz, t_xyz_3xN, sync_osc_coeffs, params)
 end
 
 # Process raw data to generate image

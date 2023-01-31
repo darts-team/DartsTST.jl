@@ -9,6 +9,11 @@ using StaticArrays
 using XLSX
 using StatsFuns
 using JLD2
+
+#local packages
+include("geometry.jl")
+using .Geometry
+
 # using DataInterpolations
 #-start-function--------------------------------------------------------------------------------------------
 
@@ -18,12 +23,13 @@ takes the position vectors and slow time vector to produce a phase error matrix 
 # Arguments
 - `time_vector::N times x 1 Array`: slow time vector
 - `pos::3xN Array`: positions of platforms at slow time points (ECEF)
+- `t_xyz_3xN::3xN Array`: array of target locations
 - `parameters::Parameters`: structure of simulation configuration parameters
 - `sync_PSD::Nplatform x Npulses x sync_clk_fs Array`: OPTIONAL INPUT, precalculated synchronization PSDs
 
 """
 
-function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, pos::Array{Float64,3}, osc_coeffs::Matrix{Int64}, parameters)
+function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, pos::Array{Float64,3}, t_xyz_3xN, osc_coeffs::Matrix{Int64}, parameters)
     # - Inputs -
     # time_vector   : a vector of time values at which the orbit positions for each platform are sampled
     # pos           : a matrix (3 x [Np x Nt] or 3 x Nt) of the orbit positions for each platform
@@ -62,7 +68,7 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     if use_measured_psd_flag
         osc_psd_meas_filename = parameters.osc_psd_meas_filename
         f_psd_meas, osc_psd_meas = read_PSD_excel_data(osc_psd_meas_filename)
-    end
+    end#if use_measured_psd_flag
 
     # find total elapsed time over the course of the orbits
     t_elapse = time_vector[end] - time_vector[1]
@@ -79,11 +85,11 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     if delay_since_sync > 0 #enforces that minimum frequency of PSD covers the total time period of the aperture+delay_since_sync
         clk_args_N = ceil(sync_clk_fs * (t_elapse + delay_since_sync) )
     end #if
-    if clk_args_N < 3e6%40e3 # enfore a minimum number of points. Needed for PSD accuracy
-        clk_args_N = 3e6#40e3
+    if clk_args_N < 60e3 #40e3 # enfore a minimum number of points. Needed for PSD accuracy
+        clk_args_N = 60e3 #40e3
     end#if
     up_convert =  sqrt(2) * fc / f_osc        # frequency up-conversion factor (scale factor from LO to RF)
-    up_convert_psd = 1 #2*(fc / f_osc)^2 # frequency up-conversion factor (scale factor from LO to RF) for use on PSD #TODO reverted back to upscaling in phase domain instead of PSD because PSD domain doesn't account for frequency offset error upscaling
+
 
     # verify size of position input
     szp = size(pos)
@@ -94,7 +100,7 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     elseif ndims(pos) == 2
         nplat = 1
         ntimes = szp[2]
-    end
+    end#if
 
 ## Determine TDMA Schedule TODO: change to match Ilgin's algorithm
 # there's a sync TDMA schedule that we'll lump together into one event with length (sync_processing_time*nplat)
@@ -106,29 +112,30 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
 t_sync = collect(time_vector[1]:sync_pri:time_vector[end]+sync_pri) # create sync PRI time base (the schedule of syncs)
 
 # create the radar TDMA schedule
-if mode == 1 # SAR
+if mode == 1 # SAR-SISO
     slot_len    = dt/nplat # split the PRI evenly between each tx //TODO: replace with Ilgin's schedule
     tdma_radar  = collect(time_vector[1]:slot_len:time_vector[end]+dt) # creates schedule with radar time slots
     tx_map      = round.(mod.(tdma_radar./slot_len,nplat)).+1 # map of which platform is transmitting at each TDMA time point
     # phase_state keeps track of phase error for each individual platform at each transmit time
-    phase_state = Array{Float64}(undef, nplat, length(tdma_radar)) # Nplatforms x N TDMA times
+    phase_state = Array{Float64}(undef, nplat, length(tdma_radar), 2) # Nplatforms x N TDMA x 2 times (transmit and receive [after TOF] times)
 
-elseif mode == 2 # SIMO
+elseif mode == 2 #SIMO
     # only the one transmitter. So the schedule is given by the input time vector
     tdma_radar = time_vec[1:end-1]
     tx_map = master.*ones(size(tdma_radar)) #only single transmitter
     # phase_state keeps track of phase error for each individual platform at each transmit time
-    phase_state = Array{Float64}(undef, nplat, ntimes) # Nplatforms x Ntimes
+    phase_state = Array{Float64}(undef, nplat, ntimes, 2) # Nplatforms x Ntimes x 2 (transmit and receive [after TOF] times)
 
 elseif mode == 3 # MIMO, # code for this mode could get more complex if we decide to have only N transmitters out of M platforms
-    slot_len    = dt/nplat # split the PRI evenly between each tx
+    slot_len    = dt/nplat # split the PRI evenly between each tx //TODO: replace with Ilgin's schedule
     tdma_radar  = collect(time_vector[1]:slot_len:time_vector[end]+dt) # creates schedule with radar time slots
     tx_map      = round.(mod.(tdma_radar./slot_len,nplat)).+1 # map of which platform is transmitting at each time
-    phase_state = Array{Float64}(undef, nplat, length(tdma_radar)) # Nplatforms x N TDMA times (collects phase error at each platform at each TDMA slot)
+    phase_state = Array{Float64}(undef, nplat, length(tdma_radar), 2) # Nplatforms x N TDMA times (collects phase error at each platform at each TDMA slot) x 2 (transmit and receive [after TOF] times)
 
 else
     error("Undefined radar mode")
-end
+end#if mode
+
 
 ## find the phase error
 
@@ -140,9 +147,9 @@ end
 
     # create matrix of phase error values
     if mode == 1 || mode == 2
-         phase_err   = Array{Float64}(undef, szp[2], szp[3]) # Nplatforms x Ntimes
+         phase_err   = Array{Float64}(undef, szp[2], szp[3], 2) # Nplatforms x Ntimes x 2 (tx/rx times)
     elseif mode == 3
-         phase_err   = Array{Float64}(undef, szp[2], szp[2], szp[3]) # Nplatforms x Nplatforms x Ntimes
+         phase_err   = Array{Float64}(undef, szp[2], szp[2], szp[3], 2) # Nplatforms x Nplatforms x Ntimes x 2 (tx/rx times)
     end#if
 
      # save the PSD outputs so they can be reused. Saves time when multiple trials are used and is more important at longer SRI
@@ -154,14 +161,20 @@ end
      end#if
      platform_pulse_times = tdma_radar[pulse_idx]
      sync_PSDs   = Array{Float64}(undef, nplat, length(platform_pulse_times), convert(Int64,clk_args_N)) # Nplatforms x Ntimes x (length of PSD = sync_clk_fs)
+     
+     # Calulate time of flight for signal delay from transmitter to receiver
+     path_delays = calculate_time_of_flight_delays(pos, t_xyz_3xN, tdma_radar, tx_map, parameters)
 
+     test_outputfilename = "testing_TOFcalc.jld2" # for debugging
+ 	 @save test_outputfilename pos t_xyz_3xN tdma_radar path_delays
+     
     for i = 1:nplat #for each platform, generate oscillator phase errors at each time point
 
         a_coeff_db = osc_coeffs[i,:]   # grab the clock coefficients for each platform
         crlbs      = sig_crlb[i,:]      # grab the CRLB previously calculated
         #interpolate CRLB values to sync PRI times
         push!(crlbs,crlbs[end])
-        itp_crlb = LinearInterpolation(time_vec, crlbs, extrapolation_bc = Line()) # create interpolant with CRLB values sampled at orbit sample times. Repeats last value to avoid extrapolation errors
+        itp_crlb = linear_interpolation(time_vec, crlbs, extrapolation_bc = Line()) # create interpolant with CRLB values sampled at orbit sample times. Repeats last value to avoid extrapolation errors
 
 
         if use_measured_psd_flag #use measured PSD values
@@ -169,7 +182,7 @@ end
 
         else # use PSD from coefficient values
             (Sphi, f_psd) = osc_psd_twosided(sync_clk_fs, clk_args_N, a_coeff_db, sync_fmin)    # this gives the basic PSD of the oscillator (no sync involved)
-        end
+        end#if
 
         phase_err_internal = zeros(0)       # initialize an empty array to collect the phase error values at internal time base
         internal_time_vec = zeros(0)        # initialize an empty array to keep track of internal time base
@@ -186,12 +199,11 @@ end
         for j = 1 : length(platform_pulse_times) # loops over each pulse time
 
             if no_sync_flag # no sync case
-                Sphi_uc = up_convert_psd .* Sphi
                 if use_measured_psd_flag
-                        (r, t)    = osc_timeseries_from_psd_onesided(Sphi_uc, sync_clk_fs, phase_offset_flag,delay_since_sync)
+                        (r, t)    = osc_timeseries_from_psd_onesided(Sphi, sync_clk_fs, phase_offset_flag,delay_since_sync)
                 else
-                        (r, t)    = osc_timeseries_from_psd_twosided(Sphi_uc, sync_clk_fs, phase_offset_flag,delay_since_sync)
-                end
+                        (r, t)    = osc_timeseries_from_psd_twosided(Sphi, sync_clk_fs, phase_offset_flag,delay_since_sync)
+                end#if
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi
             else
@@ -203,25 +215,21 @@ end
 
                 if sync_radar_offset < (sync_processing_time*nplat) # enforce minimum sync processing time for offset
                     sync_radar_offset = (sync_processing_time*nplat)
-                end
+                end#if
 
                 # calculate post-sync PSD from crlb, sync_radar_offset
                 crlb = itp_crlb(sync_time) # this tells us what the crlb was at the sync
                 Sphi_sync = sync_effects_on_PSD(Sphi, f_psd, sync_radar_offset, crlb, sync_prf, sync_fs, sync_clk_fs, dt, f_osc)
                 # generate time series of phase error
-                Sphi_sync_uc = up_convert_psd .* Sphi
                 if use_measured_psd_flag
-                        (r, t)    = osc_timeseries_from_psd_onesided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag, delay_since_sync)
+                        (r, t)    = osc_timeseries_from_psd_onesided(Sphi_sync, sync_clk_fs,phase_offset_flag, delay_since_sync)
                 else
-                        (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag, delay_since_sync)
-                end
-
+                        (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync, sync_clk_fs,phase_offset_flag, delay_since_sync)
+                end#if
 
                 #store PSD
                 sync_PSDs[i,j,:] = Sphi_sync
             end # if no_sync_flag
-
-
 
             # t and r are longer than PRI, cut to PRI
             idx_pri = findfirst(t -> t >= dt,t)
@@ -273,22 +281,35 @@ end
         end# no sync_flag
 
         # Now, create interpolant and interpolate to the TDMA schedule
-        itp_tdma = LinearInterpolation(internal_time_vec, phase_err_internal,extrapolation_bc = Flat()) # create interpolant, hold same value at end if out of bounds
-        phase_state[i,:] = itp_tdma(tdma_radar);
-        # if i==1
-        #     # display(plot(tdma_radar,phase_state[i,:].*180/pi,xlabel="time (s)",ylabel="Oscillator phase (deg)",title="Phase Error at TDMA Sampling"))
-        #     display(plot(tdma_radar,phase_state[i,:].*180/pi.*up_convert,xlabel="time (s)",ylabel="RF phase (deg)",title="Phase Error at TDMA Sampling"))
-        # else
-        #     # display(plot!(tdma_radar,phase_state[i,:].*180/pi,xlabel="time (s)",ylabel="Oscillator phase (deg)",title="Phase Error at TDMA Sampling"))
-        #     display(plot!(tdma_radar,phase_state[i,:].*180/pi.*up_convert,xlabel="time (s)",ylabel="RF phase (deg)",title="Phase Error at TDMA Sampling"))
-        # end
+        itp_tdma = linear_interpolation(internal_time_vec, phase_err_internal,extrapolation_bc = Flat()) # create interpolant, hold same value at end if out of bounds
+        
+        # correct receiver TDMA time to include path delay and interpolate phase state to those times
+        # calculating the Rx times using the transmit time from transmitter (for each Tx in SAR/MIMO Mode, and the one Tx in SIMO mode)
+        if mode == 1 #SAR
+            phase_state[i,:,1] = itp_tdma(tdma_radar); #phase state of each oscillator at all pulse transmit times
+            for j = 1 : nplat
+                phase_state[i,:,2] = itp_tdma(tdma_radar .+ path_delays[j,i]); #phase state of each oscillator at all pulse transmit times
+            end
+        elseif mode == 2  #SIMO
+            phase_state[i,:,1] = itp_tdma(tdma_radar); #phase state of each oscillator at all pulse transmit times
+            for j = 1 : nplat
+                phase_state[i,:,2] = itp_tdma(tdma_radar .+ path_delays[j,i]) #phase state of each oscillator at all pulse receive times
+            end
+        elseif mode == 3 # MIMO    
+            phase_state[i,:,1] = itp_tdma(tdma_radar);
+            for j = 1 : nplat #rx index
+                times = tdma_radar .+ path_delays[j,i]
+                phase_state[i,:,2] = itp_tdma(times) #phase state of each oscillator at all pulse receive times
+            end
+        end
+         # display(plot(tdma_radar,phase_state[i,:,1].*180/pi,xlabel="time (s)",ylabel="phase (deg)",title="Phase Error at TDMA Sampling"))
 
     end # loop over platforms
 
-    if mode == 1 # ping-pong
+    if mode == 1 # SAR
             for m = 1 : nplat
                 pulse_idx = findall(tx_map->tx_map == m,tx_map) # gives all radar pulse times for given transmitter
-                phase_err[m,:] = up_convert.* phase_state[m,pulse_idx[1:ntimes]]
+                phase_err[m,:,:] = up_convert.* phase_state[m,pulse_idx[1:ntimes],:]                
             end#for nplat
 
     elseif mode == 2 #SIMO
@@ -298,7 +319,7 @@ end
         for m = 1 : nplat
             pulse_idx = findall(tx_map->tx_map == m,tx_map) # gives all radar pulse times for given transmitter
             for n = 1 : nplat
-                phase_err[m,n,:] = up_convert.* phase_state[n,pulse_idx[1:ntimes]] # gives phase error state for rx platformat tx times
+                phase_err[m,n,:,:] = up_convert.* phase_state[n,pulse_idx[1:ntimes],:] # gives phase error state for rx platformat tx times
             end#for nplat
         end#for nplat
     end#if
@@ -308,7 +329,7 @@ end
 end #get_sync_phase
 # ------------------------------------------------------------------------------------------------------
 # overload function with case where Sync PSDs are given
-function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, pos::Array{Float64,3}, parameters, sync_PSDs::Array{Float64,3})
+function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64}}, pos::Array{Float64,3}, t_xyz_3xN, parameters, sync_PSDs::Array{Float64,3})
 
 
     # unpack variables from input structure required in sync module
@@ -364,7 +385,7 @@ function get_sync_phase(time_vector::StepRangeLen{Float64,Base.TwicePrecision{Fl
     elseif ndims(pos) == 2
         nplat = 1
         ntimes = szp[2]
-    end
+    end#if
 
 ## Determine TDMA Schedule TODO: change to match Ilgin's algorithm
 # there's a sync TDMA schedule that we'll lump together into one event with length (sync_processing_time*nplat)
@@ -381,38 +402,31 @@ if mode == 1 # ping-pong
     tdma_radar  = collect(time_vector[1]:slot_len:time_vector[end]+dt) # creates schedule with radar time slots
     tx_map      = round.(mod.(tdma_radar./slot_len,nplat)).+1 # map of which platform is transmitting at each TDMA time point
     # phase_state keeps track of phase error for each individual platform at each transmit time
-    phase_state = Array{Float64}(undef, nplat, length(tdma_radar)) # Nplatforms x N TDMA times
+    phase_state = Array{Float64}(undef, nplat, length(tdma_radar), 2) # Nplatforms x N TDMA x 2 times (transmit and receive [after TOF] times)
 
 elseif mode == 2 #SIMO
     # only the one transmitter. So the schedule is given by the input time vector
     tdma_radar = time_vec[1:end-1]
     tx_map = master.*ones(size(tdma_radar)) #only single transmitter
     # phase_state keeps track of phase error for each individual platform at each transmit time
-    phase_state = Array{Float64}(undef, nplat, ntimes) # Nplatforms x Ntimes
+    phase_state = Array{Float64}(undef, nplat, ntimes, 2) # Nplatforms x Ntimes x 2 (transmit and receive [after TOF] times)
 
 elseif mode == 3 # MIMO, # code for this mode could get more complex if we decide to have only N transmitters out of M platforms
     slot_len    = dt/nplat # split the PRI evenly between each tx //TODO: replace with Ilgin's schedule
     tdma_radar  = collect(time_vector[1]:slot_len:time_vector[end]+dt) # creates schedule with radar time slots
     tx_map      = round.(mod.(tdma_radar./slot_len,nplat)).+1 # map of which platform is transmitting at each time
-    phase_state = Array{Float64}(undef, nplat, length(tdma_radar)) # Nplatforms x N TDMA times (collects phase error at each platform at each TDMA slot)
+    phase_state = Array{Float64}(undef, nplat, length(tdma_radar), 2) # Nplatforms x N TDMA times (collects phase error at each platform at each TDMA slot) x 2 (transmit and receive [after TOF] times)
 
 else
     error("Undefined radar mode")
-end
+end#if mode
 
 ## find the phase error
-
-    # find CRLB based on SNR of sync connection at each time point. Will interpolate to SRI time vector later (This assumes that SNR doesn't vary rapidly as compared to the orbit sampling)
-    (sig_crlb, snr_dB) = getSensorCRLB_network(pos, sync_signal_len, sync_fc, sync_fs, sync_fbw)
-    #(sig_crlb, snr_dB) = getSensorCRLB_network(pos, sync_signal_len, sync_fc, sync_fs, sync_fbw,parameters)
-    #display(plot(time_vector,snr_dB',xlabel="Slow time (s)",ylabel="SNR (dB)",title="Link to Master Platform SNR"))
-    #display(plot(time_vector,crlb,xlabel="time (s)",title="CRLB"))
-
     # create matrix of phase error values
     if mode == 1 || mode == 2
-         phase_err   = Array{Float64}(undef, szp[2], szp[3]) # Nplatforms x Ntimes
+         phase_err   = Array{Float64}(undef, szp[2], szp[3], 2) # Nplatforms x Ntimes x 2 (tx/rx times)
     elseif mode == 3
-         phase_err   = Array{Float64}(undef, szp[2], szp[2], szp[3]) # Nplatforms x Nplatforms x Ntimes
+         phase_err   = Array{Float64}(undef, szp[2], szp[2], szp[3], 2) # Nplatforms x Nplatforms x Ntimes x 2 (tx/rx times)
     end#if
 
      # save the PSD outputs so they can be reused. Saves time when multiple trials are used and is more important at longer SRI
@@ -423,6 +437,9 @@ end
          pulse_idx = collect(1:length(tx_map))
      end#if
      platform_pulse_times = tdma_radar[pulse_idx]
+     
+     # Calulate time of flight for signal delay from transmitter to receiver
+     path_delays = calculate_time_of_flight_delays(pos, t_xyz_3xN, tdma_radar, tx_map, parameters)
 
     for i = 1:nplat #for each platform, generate oscillator phase errors at each time point
 
@@ -442,12 +459,11 @@ end
 
             Sphi_sync = sync_PSDs[i,j,:] # load precalculated PSD
             # generate time series of phase error
-            Sphi_sync_uc = up_convert_psd .* Sphi
 
             if use_measured_psd_flag
-                    (r, t)    = osc_timeseries_from_psd_onesided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag, delay_since_sync)
+                    (r, t)    = osc_timeseries_from_psd_onesided(Sphi, sync_clk_fs,phase_offset_flag, delay_since_sync)
             else
-                    (r, t)    = osc_timeseries_from_psd_twosided(Sphi_sync_uc, sync_clk_fs,phase_offset_flag, delay_since_sync)
+                    (r, t)    = osc_timeseries_from_psd_twosided(Sphi, sync_clk_fs,phase_offset_flag, delay_since_sync)
             end
 
             # t and r are longer than PRI, cut to PRI
@@ -475,7 +491,7 @@ end
 
         # reset phase error to 0 at each sync time. Do this by finding the start/stop indices at each of the sync times
         if no_sync_flag
-
+            #no reset to 0 error
         else
             for nsync = 1 : length(t_sync)-1
                 sync_time       = t_sync[nsync]
@@ -499,16 +515,35 @@ end
         end# no sync_flag
 
         # Now, create interpolant and interpolate to the TDMA schedule
-        itp_tdma = LinearInterpolation(internal_time_vec, phase_err_internal,extrapolation_bc = Flat()) # create interpolant, hold same value at end if out of bounds
-        phase_state[i,:] = itp_tdma(tdma_radar);
-         # display(plot(tdma_radar,phase_state[i,:].*180/pi,xlabel="time (s)",ylabel="phase (deg)",title="Phase Error at TDMA Sampling"))
+        itp_tdma = linear_interpolation(internal_time_vec, phase_err_internal,extrapolation_bc = Flat()) # create interpolant, hold same value at end if out of bounds
+        
+        # correct receiver TDMA time to include path delay and interpolate phase state to those times
+        # calculating the Rx times using the transmit time from transmitter (for each Tx in SAR/MIMO Mode, and the one Tx in SIMO mode)
+        if mode == 1 #SAR
+            phase_state[i,:,1] = itp_tdma(tdma_radar); #phase state of each oscillator at all pulse transmit times
+            for j = 1 : nplat
+                phase_state[i,:,2] = itp_tdma(tdma_radar .+ path_delays[j,i]); #phase state of each oscillator at all pulse transmit times
+            end
+        elseif mode == 2  #SIMO
+            phase_state[i,:,1] = itp_tdma(tdma_radar); #phase state of each oscillator at all pulse transmit times
+            for j = 1 : nplat
+                phase_state[i,:,2] = itp_tdma(tdma_radar .+ path_delays[j,i]) #phase state of each oscillator at all pulse receive times
+            end
+        elseif mode == 3 # MIMO    
+            phase_state[i,:,1] = itp_tdma(tdma_radar);
+            for j = 1 : nplat #rx index
+                times = tdma_radar .+ path_delays[j,i]
+                phase_state[i,:,2] = itp_tdma(times) #phase state of each oscillator at all pulse receive times
+            end
+        end
+         # display(plot(tdma_radar,phase_state[i,:,1].*180/pi,xlabel="time (s)",ylabel="phase (deg)",title="Phase Error at TDMA Sampling"))
 
     end # loop over platforms
 
     if mode == 1 # SAR
             for m = 1 : nplat
                 pulse_idx = findall(tx_map->tx_map == m,tx_map) # gives all radar pulse times for given transmitter
-                phase_err[m,:] = up_convert.* phase_state[m,pulse_idx[1:ntimes]]
+                phase_err[m,:,:] = up_convert.* phase_state[m,pulse_idx[1:ntimes],:]                
             end#for nplat
 
     elseif mode == 2 #SIMO
@@ -518,7 +553,7 @@ end
         for m = 1 : nplat
             pulse_idx = findall(tx_map->tx_map == m,tx_map) # gives all radar pulse times for given transmitter
             for n = 1 : nplat
-                phase_err[m,n,:] = up_convert.* phase_state[n,pulse_idx[1:ntimes]] # gives phase error state for rx platformat tx times
+                phase_err[m,n,:,:] = up_convert.* phase_state[n,pulse_idx[1:ntimes],:] # gives phase error state for rx platformat tx times
             end#for nplat
         end#for nplat
     end#if
@@ -625,8 +660,8 @@ function osc_psd_measured(fs::Float64, N::Float64, f_psd_meas::Vector{Float64}, 
     # create frequency vector to interpolate to
     f = collect( ( (-N/2):1:(N/2-1) ) ).*fs./N
 
-    # freq_itp = LinearInterpolation(f_psd[1,:], osc_psd[1,:], extrapolation_bc=Line());
-    freq_itp = LinearInterpolation(f_psd_meas, osc_psd_meas, extrapolation_bc=Line());
+    # freq_itp = linear_interpolation(f_psd[1,:], osc_psd[1,:], extrapolation_bc=Line());
+    freq_itp = linear_interpolation(f_psd_meas, osc_psd_meas, extrapolation_bc=Line());
 
     Sphi_1S = 10 .^ (freq_itp.(f)./10) # convert from dB to linear units
 
@@ -711,7 +746,7 @@ if delay_since_sync > 0 # generate extended phase value for time before aperture
     # savefig("phase_history_wDelay")
     # now we will interpolate the phases to the pulse times of the aperture
     t_int = t .+ delay_since_sync # shift the aperture time vector "t" to the time vector that now includes the delay_since_sync
-    itp_phase_hist = LinearInterpolation(time_vec, phase_hist) # create interpolant
+    itp_phase_hist = linear_interpolation(time_vec, phase_hist) # create interpolant
     r = itp_phase_hist(t_int);
 end#if delay_since_sync > 0
 
@@ -789,7 +824,7 @@ if delay_since_sync > 0 # generate extended phase value for time before aperture
     # savefig("phase_history_wDelay")
     # now we will interpolate the phases to the pulse times of the aperture
     t_int = t .+ delay_since_sync # shift the aperture time vector "t" to the time vector that now includes the delay_since_sync
-    itp_phase_hist = LinearInterpolation(time_vec, phase_hist) # create interpolant
+    itp_phase_hist = linear_interpolation(time_vec, phase_hist) # create interpolant
     r = itp_phase_hist(t_int);
 
 
@@ -1163,6 +1198,7 @@ function shift(x,n)
 end#function
 #--end--function-------------------------------------------------------------------------------------------
 
+#-start-function-------------------------------------------------------------------------------------------
 """
 This function reads measured PSD data in from an excel or jld2 file, returns frequency vector and PSD amplitude
 
@@ -1199,4 +1235,83 @@ function read_PSD_excel_data(filename::String)
 
     return f_psd_meas, osc_psd_meas
 end #function
+#--end--function-------------------------------------------------------------------------------------------
+
+
+
+#-start-function-------------------------------------------------------------------------------------------
+"""
+This function takes the position of the platforms and the radar pulse TDMA schedule to estimate TOF delays for received oscillator times
+
+# Arguments
+- `pos::3 x N_plat x N_time Array`: vector of platform positions
+- `t_xyz_3xN::3 x Ntarget Array`: 3D ECEF position(s) of target(s)
+- `tdma_radar::1 x Npulses Vector`: time slots for the tdma schedule of pulses
+- `tx_map::1 x Npulses Vector`: tdma schedule of who is transmitting
+- `params::Parameters`: user parameters with radar mode and master node
+
+# Output
+- `taus:: Ntimes x  N_plat x N_plat(if MIMO) Array`: Array of path length delays in seconds, calculated from Tx -> first target in scene -> Rx
+"""
+function calculate_time_of_flight_delays(pos::Array{Float64,3}, t_xyz_3xN, tdma_radar, tx_map, params)
+    mode = params.mode
+    
+    
+    szp = size(pos)
+    if ndims(pos) == 3
+        nplat = szp[2]
+        ntimes = szp[3]
+    elseif ndims(pos) == 2
+        nplat = 1
+        ntimes = szp[2]
+    end
+    # grab only first position of target (if multiple targets). We'll assume path length delays are roughly equivalent for all targets, can be represented by first
+    pos_target = t_xyz_3xN[:,1]
+
+if nplat == 1 # check for multiple platform indexing
+    @error("single platform path length delays not implemented yet") #TODO copy same loops from SAR-SISO mode, remove platforms loop
+else
+    if mode == 1 #SAR-SIMO
+        taus = zeros(nplat,ntimes)
+        for n = 1 : nplat
+            for i = 1 : ntimes
+                
+                pos_tx = pos[:,n,i]
+                taus[n,i] = 2 * Geometry.distance(pos_tx,pos_target) / 299792458 # m / (m/s) = s
+            end#ntimes
+        end#nplat
+
+    elseif mode == 2 #SIMO
+        tx_el = params.tx_el
+        taus = zeros(nplat,ntimes)
+        for n = 1 : nplat
+            for i = 1 : ntimes
+                pos_rx =  pos[:,n,i]
+                pos_tx = pos[:,tx_el,i]
+                taus[n,i] = (Geometry.distance(pos_tx,pos_target) + Geometry.distance(pos_rx,pos_target)) / 299792458 # m / (m/s) = s
+            end#ntimes
+        end#nplat
+
+    elseif mode == 3 #MIMO
+        ntimes = length(tdma_radar) # more pulse times than positions, will reuse positions at first tx's pulse time for other platforms' sequence of tx pulses
+        taus = zeros(nplat,ntimes)
+        for n = 1 : nplat # receiver index
+            for i = 1 : ntimes
+                time_idx = Int64(floor(i/nplat)+1)
+                if time_idx > szp[2]#edge case
+                    time_idx = szp[2]
+                end
+                pos_rx = pos[:,n,time_idx]
+                n2 = Int64(tx_map[i]) # transmitter index
+                pos_tx = pos[:,n2,time_idx]
+                taus[n,i] = (Geometry.distance(pos_tx,pos_target) + Geometry.distance(pos_rx,pos_target)) / 299792458 # m / (m/s) = s
+            end#ntimes
+        end#nplat
+
+    end#if mode
+end#if nplat == 1
+    return taus
+end#function
+#--end--function-------------------------------------------------------------------------------------------
+
 end #module

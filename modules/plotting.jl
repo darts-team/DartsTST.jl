@@ -98,7 +98,7 @@ function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis3
             if PSF_cuts==1
                 plot!(s_loc_2[k2]*ones(Ns_3),s_loc_3,lc=[:white],leg=false)
                 display(plot!(s_loc_2,s_loc_3[k3]*ones(Ns_2),lc=[:white],leg=false))
-            elseif PSF_cuts==2;display(plot!(scene_axis22,scene_axis33,lc=[:white],leg=false));end
+            elseif PSF_cuts==2;end#display(plot!(scene_axis22,scene_axis33,lc=[:white],leg=false));end
         end
         if Ns_1>1 && Ns_3>1
             display(heatmap(s_loc_1,s_loc_3,image_3D[:,k2,:]',xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[3]*" (m)",xlabel=coords[1]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
@@ -108,7 +108,7 @@ function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis3
             if PSF_cuts==1
                 plot!(s_loc_1[k1]*ones(Ns_3),s_loc_3,lc=[:white],leg=false)
                 display(plot!(s_loc_1,s_loc_3[k3]*ones(Ns_1),lc=[:white],leg=false))
-            elseif PSF_cuts==2;display(plot!(scene_axis11,scene_axis33,lc=[:white],leg=false));end
+            elseif PSF_cuts==2;end#display(plot!(scene_axis11,scene_axis33,lc=[:white],leg=false));end
         end
         if Ns_1>1 && Ns_2>1
             display(heatmap(s_loc_2,s_loc_1,image_3D[:,:,k3],xguidefontsize=20,yguidefontsize=20,xtickfontsize=18,ytickfontsize=18,titlefont=24;ylabel=coords[1]*" (m)",xlabel=coords[2]*" (m)",title="2D Tomogram ("*mode_txt*" mode)",
@@ -118,7 +118,7 @@ function plot_tomogram(image_3D, coords, scene_axis11, scene_axis22, scene_axis3
             if PSF_cuts==1
                 plot!(s_loc_2[k2]*ones(Ns_1),s_loc_1,lc=[:white],leg=false)
                 display(plot!(s_loc_2,s_loc_1[k1]*ones(Ns_2),lc=[:white],leg=false))
-            elseif PSF_cuts==2;display(plot!(scene_axis22,scene_axis11,lc=[:white],leg=false,size=psize));end
+            elseif PSF_cuts==2;end#display(plot!(scene_axis22,scene_axis11,lc=[:white],leg=false,size=psize));end
         end
     elseif display_tomograms==2
         gr()

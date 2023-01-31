@@ -87,8 +87,8 @@ end
     sync_fc = fc # waveform center frequency - set to same as radar freq
     sync_fs::Float64 = 25e6 # sync receiver sampling rate
     sync_fbw = sync_fs # LFM bandwidth
-    sync_clk_fs::Float64 = 1e5#1e3; # sample rate of clock error process
-    sync_master::Int = 1; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
+    sync_clk_fs::Float64 = 2000; # sample rate of clock error process
+    sync_master::Int = tx_el; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
 
     sync_osc_type::String = "USO"
     sync_a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
@@ -99,7 +99,7 @@ end
     phase_offset_flag::Bool       = false  # if flag == true, then we assume that the oscillators are in phase at the beginning of the aperture, ignored if "delay_since_sync" > 0
     delay_since_sync::Float64     = 0 # a time delay since last synchronization for evaluating synthetic apertures which begin at arbitrary time after most recent sync event. If !=0, phase_offset_flag is ignored, as it assumes the phases are aligned at t=0 before delay
     # sync_fmin::Float64 = 0.1 # minimum frequency > 0 in Hz to window PSD
-    sync_fmin = 0.01 #1/(delay_since_sync+SAR_duration) # minimum frequency > 0 in Hz to window PSD
+    sync_fmin = 0.001 #1/(delay_since_sync+SAR_duration) # minimum frequency > 0 in Hz to window PSD
     
     # positioning parameters
 
