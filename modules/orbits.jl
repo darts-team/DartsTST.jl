@@ -168,7 +168,7 @@ function eci_dcm(time, epoch::DateTime, eop_data)
     dcm = zeros(3,3,length(time))
     for ii = 1:length(time)
           dt = unix2datetime(datetime2unix(epoch)+time[ii]);
-          dcm[:,:,ii] = convert(Array{Float64}, rECItoECEF(J2000(), ITRF(), DatetoJD(dt), eop_data));
+          dcm[:,:,ii] = convert(Array{Float64}, r_eci_to_ecef(J2000(), ITRF(), date_to_jd(dt), eop_data));
     end
     return dcm
 end

@@ -61,7 +61,7 @@ end
 # Add phase error
 const sync_osc_coeffs = repeat(params.sync_a_coeff_dB, Np)
 if params.enable_sync_phase_error
-    const rawdata = Error_Sources.synchronization_errors!(rawdata, slow_time, p_xyz, sync_osc_coeffs, params)
+    const rawdata = Error_Sources.synchronization_errors!(rawdata, slow_time, p_xyz, t_xyz_3xN, sync_osc_coeffs, params)
 end
 
 # Process raw data to generate image
