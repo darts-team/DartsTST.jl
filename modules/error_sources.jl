@@ -68,10 +68,6 @@ function synchronization_errors!(rawdata,slow_time,orbit_pos_interp, t_xyz_3xN, 
     # note: phase_err is (Nplat x N slow-time) for modes 1 & 2, but (Nplat x Nplat x N slow-time) for MIMO
     # for MIMO, first axis is the transmitting platform number, 2nd is receive platform, 3rd is slow-time number
 
-	test_outputfilename = "testing_phase_PSD_output.jld2"
-	@save test_outputfilename phase_err sync_PSDs
-
-
     ## combine with raw data
 
         Nft=size(rawdata)[end] # number of fast-time sampless

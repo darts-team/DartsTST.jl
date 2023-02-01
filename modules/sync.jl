@@ -164,9 +164,6 @@ end#if mode
      
      # Calulate time of flight for signal delay from transmitter to receiver
      path_delays = calculate_time_of_flight_delays(pos, t_xyz_3xN, tdma_radar, tx_map, parameters)
-
-     test_outputfilename = "testing_TOFcalc.jld2" # for debugging
- 	 @save test_outputfilename pos t_xyz_3xN tdma_radar path_delays
      
     for i = 1:nplat #for each platform, generate oscillator phase errors at each time point
 
@@ -557,9 +554,6 @@ end#if mode
             end#for nplat
         end#for nplat
     end#if
-
-    test_outputfilename = "testing_phase_PSD_output.jld2"
-    @save test_outputfilename phase_err sync_PSDs
 
     return phase_err, sync_PSDs, tdma_radar
 
