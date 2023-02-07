@@ -340,7 +340,7 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
   function convert_3D_to_1xN(array_3D)
     N1,N2,N3=size(array_3D)
     N=N1*N2*N3
-    array_1xN=zeros(Float64,3,N)
+    array_1xN=zeros(Float64,1,N) ##?????
     for i=1:N1
       for j=1:N2
         for k=1:N3
@@ -355,7 +355,7 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
   #TODO add function definition
   function take_1D_cuts(image_3D, params)
     @unpack s_loc_1, s_loc_2, s_loc_3, t_loc_1, t_loc_2, t_loc_3, res_dB, PSF_image_point, PSF_cuts, PSF_direction, PSF_image_point, display_1D_cuts = params
-    target_location = [t_loc_1 t_loc_2 t_loc_3]
+    target_location = [t_loc_1 t_loc_2 t_loc_3[1]]
 
     if PSF_cuts == 1
       scene_axis11=s_loc_1;scene_axis22=s_loc_2;scene_axis33=s_loc_3

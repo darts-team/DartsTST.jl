@@ -19,7 +19,7 @@ end
 # or add parameter=value pairs directly in the workflow when creating the inputParameter object.
 @with_kw struct inputParameters
 
-    mode::Int  = 2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
+    mode::Int  = 1 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     tx_el::Int = 1 # which element transmits for SIMO (max value N)
     processing_steps = :bp3d  # :bp3d --> 1-step, :bp2d3d --> 2-step for SAR and tomographic processing
 
@@ -40,21 +40,21 @@ end
     Torbit::Float64    = 10*60 # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
     dt_orbits::Float64 = 0.5 # orbit time resolution (s)
     p_heading::Float64 = 0 # heading (deg), all platforms assumed to have the same heading, 0 deg is north
-    pos_n   = [-7.5 -5 -2 0 3.7 5.5 6.5]*1e3 # relative position of each platform along n (m), 0 is the reference location
+    pos_n   = [-7.5 -5 -2 0 3.7 5.5 6.5] # relative position of each platform along n (m), 0 is the reference location
 
     # target locations and reflectvities
     target_pos_mode::String="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("layered-grid" or "shaped-grid") or a 3xN array ("CR" for corner reflectors)
     ts_coord_sys::String="SCH" # target/scene coordinate system: "LLH", "SCH", "XYZ", using the same coordinate system for targets and scene
     display_geometry_coord::String="SCH" # platform/target/scene geometry (scatter plot) coordinate system: "LLH", "SCH", "XYZ"
     look_angle=30 # in cross-track direction, required only if SCH coordinates, using same look angle for targets and scene (deg)
-    t_loc_1 = [0.] # deg latitude if LLH, along-track if SCH, X if XYZ
-    t_loc_2 = [0.] # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    t_loc_3 = [0.] # m heights if LLH or SCH, Z if XYZ
-    t_ref   = [1.] # reflectivities: a list of CRs in CR mode; an arbitrary vertical profile that will be interpolated on t_loc_3 axis in *grid modes
+    t_loc_1 = [0.0] # deg latitude if LLH, along-track if SCH, X if XYZ
+    t_loc_2 = [0.0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    t_loc_3 = [0.0] # m heights if LLH or SCH, Z if XYZ
+    t_ref   = [1.0] # reflectivities: a list of CRs in CR mode; an arbitrary vertical profile that will be interpolated on t_loc_3 axis in *grid modes
 
 
     # image/scene pixel coordinates
-    s_loc_1 = 0 # deg latitude if LLH, along-track if SCH, X if XYZ
+    s_loc_1 = -40:1:40 # deg latitude if LLH, along-track if SCH, X if XYZ
     s_loc_2 = -40:1:40 # deg longitude if LLH, cross-track if SCH, Y if XYZ
     s_loc_3 = -40:1:40 # m  heights if LLH or SCH, Z if XYZ
 

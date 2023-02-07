@@ -4,7 +4,7 @@ using ..Geometry
 using ..Orbits
 using ..Scene
 
-using PlotlyJS 
+#using PlotlyJS 
 using DataFrames 
 using CSV
 using NCDatasets
@@ -174,7 +174,7 @@ function find_close_val_lat_lon(Geo_location, lat_lon_idx, orbit_pos, orbit_pos_
 end
 
 
-"""
+#= """
 Plotting on map initial version
 
 """
@@ -198,7 +198,7 @@ function maps1(lat_vals, lon_vals, p_var, c1, c2)
     layout = Layout(geo_scope="usa", geo_resolution=50, width=900, height=600,
                     margin=attr(l=0, r=0, t=10, b=0))
     plot(trace, layout)
-end
+end =#
 
 
 function constrct_reflectivity_profile_exp(Canopy_height)

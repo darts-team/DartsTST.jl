@@ -1,26 +1,29 @@
-include("../modules/generate_raw_data.jl")
-include("../modules/process_raw_data.jl")
-include("../modules/geometry.jl")
-include("../modules/scene.jl")
-include("../modules/range_spread_function.jl") # as RSF
-include("../modules/orbits.jl")
-include("../modules/sync.jl")
-include("../modules/error_sources.jl")
-include("../modules/performance_metrics.jl")
-include("../modules/antenna.jl")
-include("../modules/simsetup.jl")
-include("../modules/user_parameters.jl")
-include("../modules/global_scale_support.jl")
-using NCDatasets
-using Statistics
-using Parameters
-using Dates
-using StaticArrays
-using .UserParameters
-using SharedArrays
-using Interpolations
-using Plots
-using Peaks
+using Distributed
+addprocs(4) 
+
+@everywhere include("../modules/generate_raw_data.jl")
+@everywhere include("../modules/process_raw_data.jl")
+@everywhere include("../modules/geometry.jl")
+@everywhere include("../modules/scene.jl")
+@everywhere include("../modules/range_spread_function.jl") # as RSF
+@everywhere include("../modules/orbits.jl")
+@everywhere include("../modules/sync.jl")
+@everywhere include("../modules/error_sources.jl")
+@everywhere include("../modules/performance_metrics.jl")
+@everywhere include("../modules/antenna.jl")
+@everywhere include("../modules/simsetup.jl")
+@everywhere include("../modules/user_parameters.jl")
+@everywhere include("../modules/global_scale_support.jl")
+@everywhere using NCDatasets
+@everywhere using Statistics
+@everywhere using Parameters
+@everywhere using Dates
+@everywhere using StaticArrays
+@everywhere using .UserParameters
+@everywhere using SharedArrays
+@everywhere using Interpolations
+@everywhere using Plots
+@everywhere using Peaks
 c = 299792458 #TODO does not work without redefining c here
 
 #Read canopy heights
@@ -59,7 +62,7 @@ global mast_plat            = 1
 flag_plat           = 1 #descending orbit
 orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_Support.get_orbit_info_fromfile(orbit_dataset, mast_plat, flag_plat)
 
-for i1 = 1:2#size(lat_lon_idx,1)   
+@sync @distributed for i1 = 1:4#size(lat_lon_idx,1)   
     
     if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         #Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0
@@ -173,7 +176,7 @@ for i1 = 1:2#size(lat_lon_idx,1)
             image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
         end
 
-        # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
+#=         # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
         if params.left_right_look == "left";PSFcutdir=-1;elseif params.left_right_look == "right";PSFcutdir=1;end
         params.PSF_direction[3]=PSFcutdir*params.PSF_direction[3]
         scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
@@ -210,7 +213,7 @@ for i1 = 1:2#size(lat_lon_idx,1)
             if params.display_input_scene; Plotting.plot_input_scene(inputscene_3D, ts_coord_txt, params);end
             if params.display_tomograms != 0; Plotting.plot_tomogram(image_3D, ts_coord_txt, scene_axis11, scene_axis22, scene_axis33, params);end
             if params.display_input_scene; Plotting.plot_input_scene(diff_image3D, ts_coord_txt, params);end
-        end
+        end =#
 
 
         if length(params.t_loc_3)!=1
@@ -220,13 +223,13 @@ for i1 = 1:2#size(lat_lon_idx,1)
             plot_var_op = reshape(plot_var_op,length(plot_var_op),1)
             plot_var_ip = targets_ref ./ maximum(targets_ref)
 
-            display(plot(plot_var_op, params.s_loc_3[41:81] ,xlabel="Vertical profile normalized radar intensity",
+#=             display(plot(plot_var_op, params.s_loc_3[41:81] ,xlabel="Vertical profile normalized radar intensity",
             ylabel="Height (m)",title = "BPA output profile",xlim=(0,1), legend = false,linewidth=2, 
             xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15))
 
 			display(plot(transpose(plot_var_ip),targets_loc[3,:] ,xlabel="Vertical profile normalized radar intensity",
             ylabel="Height (m)",title = "Input profile" , xlim=(0,1), legend = false,linewidth=2,
-			xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15))
+			xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15)) =#
 			#Correlation
 			Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],2] = cor(transpose(plot_var_ip),plot_var_op)[1]
 		end
