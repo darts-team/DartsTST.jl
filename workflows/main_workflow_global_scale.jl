@@ -47,10 +47,10 @@ global Par_baseline_mean    = SharedArray(zeros(size_row,size_col,1))
 
 #region_xlims = [50,110]
 #region_ylims = [15,55]
-region_xlims = 59:62
-region_ylims = 17:19
-#region_xlims        = 80:81
-#region_ylims        = 37:37
+#region_xlims = 59:62
+#region_ylims = 17:19
+region_xlims        = 80:80
+region_ylims        = 37:37
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
@@ -59,7 +59,7 @@ global mast_plat            = 1
 flag_plat           = 1 #descending orbit
 orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_Support.get_orbit_info_fromfile(orbit_dataset, mast_plat, flag_plat)
 
-for i1 = 1:2#size(lat_lon_idx,1)   
+for i1 = 1:size(lat_lon_idx,1)   
     
     if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         #Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0
@@ -236,8 +236,9 @@ for i1 = 1:2#size(lat_lon_idx,1)
 		Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =  sqrt( (sum( (transpose(plot_var_ip).-plot_var_op).^2 )) / length(targets_loc[3,:] ) )
 		
 
-		pks_ip, vals_ip = findmaxima(plot_var_ip[:])
-        pks_op, vals_op = findmaxima(plot_var_op[:])
+        val_t = (findmin(abs.(targets_loc[3,:] .- ceil(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]))))[2]
+		pks_ip, vals_ip = findmaxima(plot_var_ip[1:val_t])
+        pks_op, vals_op = findmaxima(plot_var_op[1:val_t])
         Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],3] = length(pks_ip)+1 #Total output peaks
 		Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],4] = length(pks_op)+1 #Total output peaks
 
