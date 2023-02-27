@@ -72,7 +72,7 @@ rotate_vec(v,q) = convert(Array{Float64,1}, vect(q*v*inv(q)))
 
 function convert_platform_target_scene_coordinates(Np,Nst,Nt,p_xyz,t_xyz_3xN,targets_loc,s_xyz_3xN,s_loc_3xN,avg_peg, params)
     @unpack display_geometry_coord, ts_coord_sys = params
-    
+
     Nsc=size(s_loc_3xN,2)
     p_loc=zeros(3,Np,Nst)
     t_loc=zeros(3,Nt)
@@ -482,6 +482,7 @@ function compute_heading(lat, lon)
     Y = cosd.(lat_start).*sind.(lat_end) - sind.(lat_start).*cosd.(lat_end).*cosd.(Δlon);
     heading = atan.(X,Y)*180/π;
     heading[findall(x->x<0.0, heading)] = heading[findall(x->x<0.0, heading)] .+360;
+    heading[findall(x->x>359.9, heading)] .= 0;
     return heading
 end
 function compute_heading(lat, lon, vel)
@@ -499,8 +500,10 @@ function compute_heading(lat, lon, vel)
         v_enu = cat(e[:,ii],n[:,ii],u[:,ii], dims=2)'*vel[:,ii];
         v_enu = v_enu./norm(v_enu);
         heading[ii] = atan(v_enu[1], v_enu[2])*180/π;
-        if heading[ii] < 0
+        if heading[ii] < 0 && heading[ii] < -0.5
             heading[ii] = heading[ii] + 360.0;
+        elseif heading[ii] < 0 && heading[ii] >= -0.5
+            heading[ii] = 0.0;
         end
     end
 
