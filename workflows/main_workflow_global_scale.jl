@@ -21,8 +21,14 @@ using SharedArrays
 using Interpolations
 using Plots
 using Peaks
-c = 299792458 #TODO does not work without redefining c here
+using TimerOutputs
 
+c = 299792458 #TODO does not work without redefining c here
+earth_radius = 6378.137e3 # Earth semi-major axis at equator
+
+const to = TimerOutput()
+
+@timeit to "Initialization " begin
 #Read canopy heights
 filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
 grid_res        = 100;
@@ -45,11 +51,15 @@ global Par_baseline_max     = SharedArray(zeros(size_row,size_col,1))
 global Par_baseline_min     = SharedArray(zeros(size_row,size_col,1))
 global Par_baseline_mean    = SharedArray(zeros(size_row,size_col,1))
 
+#global max_baseline_n    = SharedArray(zeros(size_row,size_col,1))
+global res_theory_n    = SharedArray(zeros(size_row,size_col,1))
+global res_theory_s    = SharedArray(zeros(size_row,size_col,1))
+
 #region_xlims = [50,110]
 #region_ylims = [15,55]
 #region_xlims = 59:62
 #region_ylims = 17:19
-region_xlims        = 80:80
+region_xlims        = 80:81
 region_ylims        = 37:37
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
@@ -59,7 +69,11 @@ global mast_plat            = 1
 flag_plat           = 1 #descending orbit
 orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_Support.get_orbit_info_fromfile(orbit_dataset, mast_plat, flag_plat)
 
-for i1 = 1:size(lat_lon_idx,1)   
+end
+
+@timeit to "Processing loop over all pixels " begin
+
+for i1 = 1:2#size(lat_lon_idx,1)   
     
     if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         #Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0
@@ -78,7 +92,11 @@ for i1 = 1:size(lat_lon_idx,1)
         global Par_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
         global Par_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
         global Par_baseline_mean[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
-    
+
+        #global max_baseline_n[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
+        global res_theory_n[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
+        global res_theory_s[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
+
     else
 
                 
@@ -102,6 +120,15 @@ for i1 = 1:size(lat_lon_idx,1)
             t_ref = interp_fn.(height_range),
             s_loc_1 = -40:1:40,
         )
+
+        # theoretical resolution
+        if params.mode == 1 # SAR
+            global p_mode = 2
+        elseif params.mode == 2 # SIMO
+            global p_mode = 1
+        elseif params.mode == 3 # MIMO
+            global p_mode = 1.38
+        end
 
         # Check consistency of input parameters
         paramsIsValid = UserParameters.validateInputParams(params)
@@ -128,6 +155,22 @@ for i1 = 1:size(lat_lon_idx,1)
         global Par_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,b_at)) ./ 1e3
         global Par_baseline_mean[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = mean(filter(!iszero,b_at)) ./ 1e3
 
+        # platform distributions along-n
+        # pos_n_all[i,:]=params.pos_n
+
+        # input max baseline along-n (Bn = Np x dn)
+        #spacing = mean(diff(params.pos_n,dims=2)) # average spacing for unequally spaced platforms
+        #global max_baseline_n[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (maximum(params.pos_n)-minimum(params.pos_n)) + spacing
+
+        # theoretical resolution along-n
+        range_s, range_g = Scene.lookangle_to_range(lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], mean(Geometry.xyz_to_geo(orbit_pos[:,mast_plat,:])[3,:]), 0, earth_radius)
+        global res_theory_n[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/p_mode/ maximum(bperp) 
+
+        # theoretical resolution along-track
+        mu = 3.986004418e14
+        sc_speed = sqrt(mu./(mean(Geometry.xyz_to_geo(orbit_pos[:,mast_plat,:])[3,:])+earth_radius)); #sqrt(GM/R)->https://en.wikipedia.org/wiki/Orbital_speed
+        Lsa = sc_speed*params.SAR_duration + sc_speed/params.fp
+        global res_theory_s[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/2/Lsa
 
         # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
         p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, SAR_start_time, params)
@@ -244,3 +287,7 @@ for i1 = 1:size(lat_lon_idx,1)
 
     end
 end
+
+end
+
+(to)
