@@ -281,9 +281,9 @@ end
 		#RMSE
 		Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =  sqrt( (sum( (transpose(plot_var_ip).-plot_var_op).^2 )) / length(targets_loc[3,:] ) )
 		
-
-		pks_ip, vals_ip = findmaxima(plot_var_ip[:])
-        pks_op, vals_op = findmaxima(plot_var_op[:])
+        val_t = (findmin(abs.(targets_loc[3,:] .- ceil(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]))))[2]
+		pks_ip, vals_ip = findmaxima(plot_var_ip[1:val_t])
+        pks_op, vals_op = findmaxima(plot_var_op[1:val_t])
         Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],3] = length(pks_ip)+1 #Total output peaks
 		Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],4] = length(pks_op)+1 #Total output peaks
 
