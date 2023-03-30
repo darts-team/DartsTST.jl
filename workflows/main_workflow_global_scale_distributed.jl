@@ -1,5 +1,5 @@
 using Distributed
-addprocs(4) 
+addprocs(24) 
 
 @everywhere include("../modules/generate_raw_data.jl")
 @everywhere include("../modules/process_raw_data.jl")
@@ -25,6 +25,7 @@ addprocs(4)
 @everywhere using Plots
 @everywhere using Peaks
 @everywhere using TimerOutputs
+@everywhere using JLD2
 
 c = 299792458 #TODO does not work without redefining c here
 earth_radius = 6378.137e3 # Earth semi-major axis at equator
@@ -33,7 +34,7 @@ earth_radius = 6378.137e3 # Earth semi-major axis at equator
 
 @timeit to "Initialization " begin
 #Read canopy heights
-filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+filepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
 grid_res        = 100;
 Canopy_heights, Geo_location, size_row, size_col = Global_Scale_Support.read_GEDI_L3_data(filepath_GEDIL3, grid_res)
 
@@ -60,8 +61,8 @@ global res_theory_s    = SharedArray(zeros(size_row,size_col,1))
 
 #region_xlims = [50,110]
 #region_ylims = [15,55]
-region_xlims = 59:62
-region_ylims = 17:19
+region_xlims = 50:110
+region_ylims = 15:55
 #region_xlims        = 80:81
 #region_ylims        = 37:37
 
@@ -76,7 +77,7 @@ end
 
 @timeit to "Processing loop over all pixels " begin
 
-@sync @distributed for i1 = 1:4#size(lat_lon_idx,1)   
+@sync @distributed for i1 = 1:size(lat_lon_idx,1)   
     
     if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         #Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0
@@ -282,9 +283,10 @@ end
 		Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =  sqrt( (sum( (transpose(plot_var_ip).-plot_var_op).^2 )) / length(targets_loc[3,:] ) )
 		
 
-		pks_ip, vals_ip = findmaxima(plot_var_ip[:])
-        pks_op, vals_op = findmaxima(plot_var_op[:])
-        Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],3] = length(pks_ip)+1 #Total output peaks
+        	val_t = (findmin(abs.(targets_loc[3,:] .- ceil(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]))))[2]
+		pks_ip, vals_ip = findmaxima(plot_var_ip[1:val_t])
+        	pks_op, vals_op = findmaxima(plot_var_op[1:val_t])        
+		Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],3] = length(pks_ip)+1 #Total output peaks
 		Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],4] = length(pks_op)+1 #Total output peaks
 
     end
@@ -293,3 +295,8 @@ end
 end
 
 to
+
+@save "../Outputs/output_gs_study_run_032023_1.jld" Geo_location Output_stat Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to 
+
+[rmprocs(p) for p in workers()]
+
