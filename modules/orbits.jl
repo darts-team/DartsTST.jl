@@ -36,7 +36,7 @@ function computeTimePosVel(params)
     Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename, left_right_look = params
 
     ## PLATFORM LOCATIONS and HEADINGS
-    if left_right_look == "left";C_dir=-1;elseif left_right_look == "right";C_dir=1;end
+    if left_right_look == "left";N_dir=1;elseif left_right_look == "right";N_dir=-1;end
     if user_defined_orbit==1 # orbits from file
         orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
         t12_orbits=orbit_dataset["time"][1:2] # first two time samples
@@ -56,8 +56,8 @@ function computeTimePosVel(params)
         orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF
     elseif user_defined_orbit==2 # user defined, TCN option
         pos_T = zeros(1,length(pos_n)) # no along-track spacings
-        pos_C = -1 * C_dir * pos_n * cosd(look_angle)
-        pos_N = -1 * pos_n * sind(look_angle)
+        pos_C = 1 * pos_n * cosd(look_angle)
+        pos_N = N_dir * pos_n * sind(look_angle)
         pos_TCN = [pos_T;pos_C;pos_N]
         pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
         orbit_time_all=-Torbit/2:dt_orbits:Torbit/2
