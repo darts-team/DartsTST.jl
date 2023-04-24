@@ -174,6 +174,71 @@ function main_SAR_tomo_3D(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, params) #
     end
     return abs.(processed_image)
 end
+
+function main_SAR_tomo_3D_new(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, params) # with fast-time, slow-time, and tomographic processing; pixels in 3D
+    @unpack Ns_1, Ns_2, Ns_3, mode, tx_el, fc = params
+
+    Nft         = length(t_rx) # number of fast-time samples
+    s_xyz_3D    = reshape(s_xyz_grid,3,Ns_3,Ns_2,Ns_1) # convert scene to 3D
+    Δt          = t_rx[2]-t_rx[1] # fast-time resolution
+    processed_image = zeros(ComplexF64,Ns_1,Ns_2,Ns_3) # 3D image array
+    λ           = c/fc # wavelength (m)
+    ref_delay   = 2*ref_range/c # reference delay
+    CI          = CartesianIndices(processed_image) 
+
+    if mode==1 # SAR (ping-pong)
+        for j1=1:length(CI)
+            pixel_j         = @view(s_xyz_3D[:,CI[j1]])
+            range_rx        = permutedims( sum((pixel_j.-p_xyz_3D).^2,dims=1).^0.5, [3,2,1]) 
+            range_tx        = range_rx
+            rel_delay       = (range_tx.+range_rx)./c.-ref_delay
+            rel_delay_ind   = round.(Int,rel_delay./Δt)
+            index3          = round(Int,Nft/2).+rel_delay_ind
+            CI2             = CartesianIndices(index3[:,:,1])
+            index_all       = CartesianIndex.(getindex.(CI2,1)[:],getindex.(CI2,2)[:],index3[:])
+            RanF            = exp.(im.*4. *pi./λ.*range_tx)
+            processed_image[CI[j1]] = sum(rawdata[index_all]  .* RanF[CI2[:]])
+        end
+        processed_image = permutedims(processed_image,[3,2,1])
+    elseif mode==2 # SIMO
+        for j1=1:length(CI)
+            pixel_j         = @view(s_xyz_3D[:,CI[j1]])
+            range_rx        = permutedims( sum((pixel_j.-p_xyz_3D).^2,dims=1).^0.5, [3,2,1]) 
+            range_tx        = permutedims(repeat(range_rx2[:,tx_el,:],outer = [10,1,1]), [3,1,2])
+            rel_delay       = (range_tx.+range_rx)./c.-ref_delay
+            rel_delay_ind   = round.(Int,rel_delay./Δt)
+            index3          = round(Int,Nft/2).+rel_delay_ind
+            CI2             = CartesianIndices(index3[:,:,1])
+            index_all       = CartesianIndex.(getindex.(CI2,1)[:],getindex.(CI2,2)[:],index3[:])
+            RanF            = exp.(im.*4. *pi./λ.*range_tx)
+            processed_image[CI[j1]] = sum(rawdata[index_all]  .* RanF[CI2[:]])
+        end
+        processed_image = permutedims(processed_image,[3,2,1])
+    elseif mode==3 # MIMO
+        for j1=1:Ns_1 # for each pixel in axis-1
+            for j2=1:Ns_2 # for each pixel in axis-2
+                for j3=1:Ns_3 # for each pixel in axis-3
+                    pixel_j = @view(s_xyz_3D[:,j3,j2,j1])
+                    pixel_sum = 0.0im
+                    for s=1:Nst # slow-time (pulses)
+                        for i=1:Np # RX platform
+                            range_rx=distance(pixel_j,@view(p_xyz_3D[:,i,s]))
+                            for k=1:Np # TX platform
+                                range_tx=distance(pixel_j,@view(p_xyz_3D[:,k,s]))
+                                rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
+                                rel_delay_ind=round(Int,rel_delay/Δt)
+                                pixel_sum += rawdata[s,i,k,round(Int,Nft/2)+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
+                            end
+                        end
+                    end
+                    processed_image[j1,j2,j3] = pixel_sum
+                end
+            end
+        end
+    end
+    return abs.(processed_image)
+end
+
 function SAR_processing(rawdata, s_xyz_grid, p_xyz_3D, t_rx, ref_range, params) # slow-time processing of rawdata with fast-time
     @unpack Ns_1, Ns_2, Ns_3, mode, tx_el, fc = params
 
