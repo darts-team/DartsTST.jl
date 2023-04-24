@@ -36,6 +36,7 @@ function computeTimePosVel(params)
     Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename, left_right_look = params
 
     ## PLATFORM LOCATIONS and HEADINGS
+    #if left_right_look == "left";N_dir=1;elseif left_right_look == "right";N_dir=-1;end
     if left_right_look == "left";C_dir=-1;elseif left_right_look == "right";C_dir=1;end
     if user_defined_orbit==1 # orbits from file
         orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
@@ -55,13 +56,16 @@ function computeTimePosVel(params)
         #orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
         orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF
     elseif user_defined_orbit==2 # user defined, TCN option
-        pos_T = zeros(1,length(pos_n)) # no along-track spacings
-        pos_C = -1 * C_dir * pos_n * cosd(look_angle)
-        pos_N = -1 * pos_n * sind(look_angle)
-        pos_TCN = [pos_T;pos_C;pos_N]
+        #pos_T = zeros(1,length(pos_n)) # no along-track spacings
+        #pos_C =   C_dir * pos_n * cosd(look_angle)
+        #pos_N =  -1 * pos_n * sind(look_angle)
+        #pos_C = 1 * pos_n * cosd(look_angle)
+        #pos_N = N_dir * pos_n * sind(look_angle)
+        #pos_TCN = [pos_T;pos_C;pos_N]
         pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
         orbit_time_all=-Torbit/2:dt_orbits:Torbit/2
-        orbit_pos_all,orbit_vel_all=Orbits.make_orbit(pos_XYZ,p_heading,pos_TCN,orbit_time_all)
+        #orbit_pos_all,orbit_vel_all=Orbits.make_orbit(pos_XYZ,p_heading,pos_TCN,orbit_time_all)
+        orbit_pos_all,orbit_vel_all = Orbits.make_orbit_new(pos_XYZ, p_heading, pos_n, orbit_time_all, look_angle, 0.0, left_right_look)
     end
     if user_defined_orbit==2
         if display_custom_orbit  #plot orbit on surface sphere
@@ -359,5 +363,95 @@ function make_orbit(pos, hdg, baselines, tvec, mu = 3.986004418e14)
     return platf_pos, platf_vel
 end
 
+"""
+Updated helper function to create synthetic orbits.
+Arguments
+    - `position::Array{3x1}`, ECEF xyz position (m,m,m)
+    - `heading::Float64`, heading (deg)
+    - `baselines::Array{3,Np}`, TCN baselines for Np platforms
+    - `tvec::Array{3x1}`, time vector
+    - `θ::Float`: elevation angle (rad)
+    - `ϕ::Float`: azimuth angle (rad)
+   # Output
+    - `platf_pos`
+    - `platf_vel`
+"""
+function make_orbit_new(pos, hdg, baseline_pos, tvec, theta, phi=0.0, left_right_look="right", mu = 3.986004418e14)
+    @assert ndims(pos)==1 "POS needs to be 3 x 1 Vector"
+
+    # create velocity vector from heading
+    pos_llh             = Geometry.xyz_to_geo(pos); #position in geodetic coords
+    ehat,nhat,uhat      = Geometry.enu_from_geo(pos_llh[1], pos_llh[2]); #ENU basis
+    vel                 = cosd(hdg)*nhat + sind(hdg)*ehat;
+    
+    #spacecraf speed
+    sc_speed            = sqrt(mu./norm(pos)); #sqrt(GM/R)->https://en.wikipedia.org/wiki/Orbital_speed
+    platf_vel           = vel .* sc_speed;
+
+    that, chat, nhat    = Geometry.get_tcn(pos, platf_vel[:,1]);
+    if left_right_look == "right"
+        lhat                = Geometry.tcn_lvec(that, chat, nhat, theta*(pi/180), phi*(pi/180))
+        bhat                = cross(-that,lhat)
+    elseif left_right_look == "left"
+        lhat                = Geometry.tcn_lvec(that, chat, nhat, -theta*(pi/180), phi*(pi/180))
+        bhat                = cross(that,lhat)
+    end
+
+    #create platform position and velocity vectors
+    platf_pos           = zeros(3,size(baseline_pos,2), length(tvec));
+    platf_vel           = repeat(platf_vel, 1, size(baseline_pos,2), length(tvec));
+
+    for jj=1:length(tvec)  
+        platf_pos[:,:,jj] = ( pos .+ ( bhat .* baseline_pos) ) .+ (platf_vel[:,:,jj]*tvec[jj]);
+    end
+
+    return platf_pos, platf_vel
+end
+
+"Updated helper function to compute perpendicular baselines.
+Inputs include 3D position vector (3xNpxNt) [m], velocity vector (3xNpxNt) [m/s]
+look angle (θ in degrees), and reference index"
+function get_perp_baselines_new(pos, vel, theta, phi=0.0, left_right_look="right", refind=1)
+    @assert ndims(pos)==3 "POS needs to be 3 x Np x Nt"
+    @assert ndims(vel)==3 "VEL needs to be 3 x Np x Nt"
+    @assert size(pos)==size(vel) "POS and VEL need to have same size"
+    @assert refind <= size(pos,2) "Reference index needs to be <= Np"
+
+    #set aside some space
+    Nplats          = size(pos,2); #number of platforms
+    Ntimes          = size(pos,3); #number of time steps
+    bperp           = zeros(Nplats, Nplats, Ntimes); #output perp-baseline matrix
+    b_at            = zeros(Nplats, Nplats, Ntimes); #output along-track baseline matrix
+    bnorm           = zeros(Nplats, Nplats, Ntimes); #output along-track baseline matrix
+
+    for itimes = 1:Ntimes
+        #create geocetric TCN frame for reference satellite
+        that, chat, nhat = Geometry.get_tcn(pos[:,refind,itimes], vel[:,refind,itimes]);
+        #get look vector based on TCN-frame and look angle TODO: add azimuth
+        if left_right_look == "right"
+            lhat                = Geometry.tcn_lvec(that, chat, nhat, theta*(pi/180), phi*(pi/180))
+        elseif left_right_look == "left"
+            lhat                = Geometry.tcn_lvec(that, chat, nhat, -theta*(pi/180), phi*(pi/180))
+        end
+
+        #iterate over platforms and compute full perp-baseline matrix
+        for iplat = 1:Nplats
+            for jplat = 1:Nplats
+                baseline = pos[:,jplat,itimes] - pos[:,iplat,itimes];
+
+                bnorm[iplat,jplat,itimes] = norm(baseline);
+                # use the imaging plane baseline only
+                baseline_nc = dot(baseline,nhat)*nhat + dot(baseline,chat)*chat;
+                # find baseline component perpendicular to look direction
+                bperp[iplat,jplat,itimes] = norm(baseline_nc - dot(baseline_nc,lhat)*lhat);
+                # find the along-track baseline component
+                b_at[iplat,jplat,itimes]  = abs(dot(baseline,that));
+            end
+        end
+
+    end
+    return bperp, b_at, bnorm
+
+end
 
 end #end of module
