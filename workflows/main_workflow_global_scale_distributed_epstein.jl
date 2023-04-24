@@ -61,14 +61,14 @@ global res_theory_s    = SharedArray(zeros(size_row,size_col,1))
 
 #region_xlims = [50,110]
 #region_ylims = [15,55]
-region_xlims = 50:110
-region_ylims = 15:55
+region_xlims = 20:330
+region_ylims = 15:130
 #region_xlims        = 80:81
 #region_ylims        = 37:37
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
-orbit_dataset       = Dataset("inputs/orbitOutput_082020.nc") # Read orbits data in NetCDF format
+orbit_dataset       = Dataset("inputs/orbit_output_04052023.nc") # Read orbits data in NetCDF format
 global mast_plat            = 1
 flag_plat           = 1 #descending orbit
 orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_Support.get_orbit_info_fromfile(orbit_dataset, mast_plat, flag_plat)
@@ -263,7 +263,7 @@ end
         if length(params.t_loc_3)!=1
             val_max,ind_max = findmax(abs.(image_3D))
 		    norm_BPA_data = abs.(image_3D) ./ val_max
-		    plot_var_op = (norm_BPA_data[41,41,41:81])
+		    plot_var_op = (norm_BPA_data[21,21,11:51])
             plot_var_op = reshape(plot_var_op,length(plot_var_op),1)
             plot_var_ip = targets_ref ./ maximum(targets_ref)
 
@@ -296,7 +296,7 @@ end
 
 to
 
-@save "../Outputs/output_gs_study_run_032023_1.jld" Geo_location Output_stat Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to 
+@save "../Outputs/output_gs_study_run_042023_3.jld" Geo_location Output_stat Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to 
 
 [rmprocs(p) for p in workers()]
 
