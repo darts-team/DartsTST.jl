@@ -9,6 +9,7 @@ include("../modules/error_sources.jl")
 include("../modules/performance_metrics.jl")
 include("../modules/antenna.jl")
 include("../modules/simsetup.jl")
+include("../modules/plotting.jl")
 include("../modules/user_parameters.jl")
 using NCDatasets
 using Statistics
@@ -96,7 +97,6 @@ function main_workflow(params::UserParameters.inputParameters)
 
     # Plots (1D PSF cuts are displayed by default in the performance.metrics module)
     if params.display_geometry || params.display_RSF_rawdata || params.display_input_scene || params.display_tomograms != 0
-        include("../modules/plotting.jl")
         display_geometry_coord_txt=Plotting.coordinates(params.display_geometry_coord)
         ts_coord_txt=Plotting.coordinates(params.ts_coord_sys)
         if params.display_RSF_rawdata; Plotting.plot_RSF_rawdata(ft, t_rx, MF, Srx, Np, Nst, rawdata, params); end
