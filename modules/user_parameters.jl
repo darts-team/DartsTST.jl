@@ -64,12 +64,12 @@ end
     bandwidth::Float64 = 40e6 # bandwidth (Hz)
 
     # derived parameters (some are needed further below)
-    λ = c/fc # wavelength (m)
+    λ::Float64 = c/fc # wavelength (m)
     h = p_t0_LLH[3] # default altitude TODO p_t0_LLH may be different than actual average height if user_defined_orbit=1, need to calculate h from orbit avg altitude OR should set PSF cut direction manually
     inc_angle = asind((earth_radius+h)./earth_radius.*sind(look_angle))
-    Ns_1 = length(s_loc_1)
-    Ns_2 = length(s_loc_2)
-    Ns_3 = length(s_loc_3)
+    Ns_1::Int = length(s_loc_1)
+    Ns_2::Int = length(s_loc_2)
+    Ns_3::Int = length(s_loc_3)
 
     # performance metrics
     res_dB::Float64 = 4 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
