@@ -17,7 +17,7 @@ using Dates
 using StaticArrays
 using .UserParameters
 
-function main(params::inputParameters)
+function main_workflow(params::UserParameters.inputParameters)
     # Define user parameters
     #include("../inputs/predefined-input-parameters.jl") TODO gives errors    params = UserParameters.inputParameters()
 
@@ -111,4 +111,4 @@ function main(params::inputParameters)
     end
 
 end
-main() = main(UserParameters.inputParameters())
+main_workflow() = main_workflow(UserParameters.inputParameters())
