@@ -17,10 +17,9 @@ using Dates
 using StaticArrays
 using .UserParameters
 
-function main()
+function main(params::inputParameters)
     # Define user parameters
-    #include("../inputs/predefined-input-parameters.jl") TODO gives errors
-    params = UserParameters.inputParameters()
+    #include("../inputs/predefined-input-parameters.jl") TODO gives errors    params = UserParameters.inputParameters()
 
     # Check consistency of input parameters
     UserParameters.validateInputParams(params)
@@ -112,3 +111,4 @@ function main()
     end
 
 end
+main() = main(UserParameters.inputParameters())
