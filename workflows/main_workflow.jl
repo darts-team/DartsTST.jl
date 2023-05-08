@@ -23,22 +23,22 @@ function main()
     params = UserParameters.inputParameters()
 
     # Check consistency of input parameters
-    paramsIsValid = UserParameters.validateInputParams(params)
+    UserParameters.validateInputParams(params)
 
     # Compute orbits time, position, and velocity
     orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
 
     # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
-    const p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
+    p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
 
     # Create target/scene location
     targets_loc, targets_ref, Nt = Scene.construct_targets_str(params) # Nt: number of targets, targets: structure array containing target locations and reflectivities
-    const s_loc_3xN  = Scene.form3Dgrid_for(params.s_loc_1, params.s_loc_2, params.s_loc_3) # using 3 nested for loops
+    s_loc_3xN  = Scene.form3Dgrid_for(params.s_loc_1, params.s_loc_2, params.s_loc_3) # using 3 nested for loops
     t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, params) ## calculate avg heading from platform positions
     #t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, orbit_vel, params) ## calculate avg heading from platform positions/velocities
 
     # Read number of platforms (todo: move into a struct)
-    const Np  = size(orbit_pos)[2] # number of platforms
+    Np  = size(orbit_pos)[2] # number of platforms
 
     # Apply antenna pattern
     if params.include_antenna # calculate look angle (average over platforms and slow-time positions)
@@ -46,30 +46,30 @@ function main()
     end
 
     # Generate range spread function (matched filter output)
-    const min_range, max_range = Geometry.find_min_max_range(t_xyz_3xN, p_xyz)
-    const Trx = 2*(max_range-min_range)/c + 5*params.pulse_length # s duration of RX window
-    const Srx, MF, ft, t_rx = RSF.ideal_RSF(Trx, params) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
+    min_range, max_range = Geometry.find_min_max_range(t_xyz_3xN, p_xyz)
+    Trx = 2*(max_range-min_range)/c + 5*params.pulse_length # s duration of RX window
+    Srx, MF, ft, t_rx = RSF.ideal_RSF(Trx, params) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
     # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(params.pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
 
     # Generate TomoSAR raw data
-    const ref_range = Geometry.distance(mean(t_xyz_3xN, dims=2), mean(mean(p_xyz,dims=2), dims=3)) # reference range (equal to slant_range in sch?)
-    const rawdata = Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN, p_xyz, Srx, t_rx, ref_range, targets_ref, params) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
+    ref_range = Geometry.distance(mean(t_xyz_3xN, dims=2), mean(mean(p_xyz,dims=2), dims=3)) # reference range (equal to slant_range in sch?)
+    rawdata = Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN, p_xyz, Srx, t_rx, ref_range, targets_ref, params) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
     if params.enable_thermal_noise # adding random noise based on SNR after range (fast-time) processing
-        const rawdata = Error_Sources.random_noise(rawdata, params)
+        rawdata = Error_Sources.random_noise(rawdata, params)
     end
 
     # Add phase error
-    const sync_osc_coeffs = repeat(params.sync_a_coeff_dB, Np)
+    sync_osc_coeffs = repeat(params.sync_a_coeff_dB, Np)
     if params.enable_sync_phase_error
-        const rawdata = Error_Sources.synchronization_errors!(rawdata, slow_time, p_xyz, t_xyz_3xN, sync_osc_coeffs, params)
+        rawdata = Error_Sources.synchronization_errors!(rawdata, slow_time, p_xyz, t_xyz_3xN, sync_osc_coeffs, params)
     end
 
     # Process raw data to generate image
     if params.processing_steps === :bp3d # 1-step processing TODO do we need this option?
-        const image_3D = Process_Raw_Data.main_SAR_tomo_3D(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+        image_3D = Process_Raw_Data.main_SAR_tomo_3D(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
     elseif params.processing_steps === :bp2d3d # 2-step processing, first SAR (along-track), then tomographic
-        const SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
-        const image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
+        SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+        image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
     end
 
     # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
@@ -79,7 +79,7 @@ function main()
 
     # Calculate point target performance metrics
     if size(t_xyz_3xN,2) == 1 # PSF related performance metrics are calculated when there is only one point target
-        const resolutions, PSLRs, ISLRs, loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
+        resolutions, PSLRs, ISLRs, loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
         println("Resolutions: ",round.(resolutions,digits=8)," in scene axes units")
         println("Location Errors: ",round.(loc_errors,digits=8)," in scene axes units")
         println("PSLRs: ",round.(PSLRs,digits=2)," dB")
@@ -90,16 +90,16 @@ function main()
     end
 
     # Relative Radiometric Accuracy (amplitude difference between input 3D scene and output 3D image, max normalized to 1)
-    const inputscene_3D = Scene.generate_input_scene_3D(targets_ref, Nt, params)
-    const diff_image3D, mean_diff_image, std_diff_image = Performance_Metrics.relative_radiometric_accuracy(inputscene_3D, image_3D)
+    inputscene_3D = Scene.generate_input_scene_3D(targets_ref, Nt, params)
+    diff_image3D, mean_diff_image, std_diff_image = Performance_Metrics.relative_radiometric_accuracy(inputscene_3D, image_3D)
     println("Relative Radiometric Accuracy: Mean: ", round(mean_diff_image, digits=2),", Std: ",round(std_diff_image, digits=2)) # mean=0 & std_dev=0 means perfect result
 
 
     # Plots (1D PSF cuts are displayed by default in the performance.metrics module)
     if params.display_geometry || params.display_RSF_rawdata || params.display_input_scene || params.display_tomograms != 0
         include("../modules/plotting.jl")
-        const display_geometry_coord_txt=Plotting.coordinates(params.display_geometry_coord)
-        const ts_coord_txt=Plotting.coordinates(params.ts_coord_sys)
+        display_geometry_coord_txt=Plotting.coordinates(params.display_geometry_coord)
+        ts_coord_txt=Plotting.coordinates(params.ts_coord_sys)
         if params.display_RSF_rawdata; Plotting.plot_RSF_rawdata(ft, t_rx, MF, Srx, Np, Nst, rawdata, params); end
         if params.display_geometry
             # convert platform and target locations to desired coordinate system
