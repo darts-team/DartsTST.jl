@@ -40,7 +40,7 @@ const to = TimerOutput()
 #Read canopy heights
 filepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
 #filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
-grid_res        = 10;
+grid_res        = 100;
 Canopy_heights, Geo_location, size_row, size_col = Global_Scale_Support.read_GEDI_L3_data(filepath_GEDIL3, grid_res)
 
 GC.gc()
@@ -78,19 +78,12 @@ end
 #region_ylims = [15,55]
 #region_xlims = 59:61
 #region_ylims = 17:19
-<<<<<<< HEAD
-#region_xlims        = 1:868
-#region_ylims        = 1:366
-region_xlims 	    = 530:1150
-region_ylims        = 170:600
-=======
 region_xlims = 1:346
 region_ylims = 1:147
-region_xlims = 530:1150
-region_ylims = 170:600
+#region_xlims = 530:1150
+#region_ylims = 170:600
 #region_xlims        = 80:81
 #region_ylims        = 37:37
->>>>>>> 49125af124cb88f3da5104531e727ee44420469f
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
@@ -101,12 +94,31 @@ orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_S
 
 end
 
+lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
+global data2= data
+
+lat2 = lat' .* ones(length(lon))
+lon2  = ones(length(lat))' .* lon
+
+Lats_p = Geo_location.A[1,:,1]
+Lons_p = Geo_location.A[:,1,2]
+global mask = SharedArray(zeros(length(Lats_p),length(Lons_p)) )
+
+@sync @distributed for i1 =1:size(lat_lon_idx,1)   
+    
+        close_val_lat_lon   = findmin(abs.(lat2.-Lats_p[lat_lon_idx[i1,2]]) + abs.(lon2.-Lons_p[lat_lon_idx[i1,1]]))
+        if data2[close_val_lat_lon[2]]>0
+            global mask[lat_lon_idx[i1,2],lat_lon_idx[i1,1]] = 1
+        end
+end
+
 
 @timeit to "Processing loop over all pixels " begin
 
 @sync @distributed for i1 = 1:size(lat_lon_idx,1)   
     
-    if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
+    if mask[lat_lon_idx[i1,2],lat_lon_idx[i1,1]] !=1
+    #if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         #Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0
         global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
         global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],2] = NaN
@@ -139,9 +151,18 @@ end
         global res_theory_s[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
     
     else
+        if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
+            Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0
+        end
 
+        global close_val_lat_lon   = Global_Scale_Support.find_close_val_lat_lon(Geo_location, lat_lon_idx[i1,:], orbit_pos_all, orbit_pos_geo_all)
 
-        global params = UserParameters.inputParameters()
+        global Orbit_index[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = close_val_lat_lon[2]
+
+        slrng_temp2 = Geometry.distance(orbit_pos_all[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2]]; 0]))
+        global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = acosd(orbit_pos_geo_all[:,close_val_lat_lon[2]][3] / slrng_temp2) 
+
+        global params = UserParameters.inputParameters(look_angle = lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         # Check consistency of input parameters
         paramsIsValid = UserParameters.validateInputParams(params)
         # theoretical resolution
@@ -153,12 +174,6 @@ end
             global p_mode = 1.38
         end
                 
-        global close_val_lat_lon   = Global_Scale_Support.find_close_val_lat_lon(Geo_location, lat_lon_idx[i1,:], orbit_pos_all, orbit_pos_geo_all)
-
-        global Orbit_index[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = close_val_lat_lon[2]
-
-        slrng_temp2 = Geometry.distance(orbit_pos_all[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2]]; 0]))
-        global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = acosd(orbit_pos_geo_all[:,close_val_lat_lon[2]][3] / slrng_temp2) 
 
         # Compute orbits time, position, and velocity
         global orbit_time = orbit_time_all[close_val_lat_lon[2]-10:close_val_lat_lon[2]+10]
@@ -349,7 +364,7 @@ end
 
 to
 
-@save "../Outputs/output_gs_study_res_run_062023_3US.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to
+@save "../Outputs/output_gs_study_res_run_062023_11.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to
 
 [rmprocs(p) for p in workers()]
 

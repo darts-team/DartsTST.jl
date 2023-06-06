@@ -85,12 +85,32 @@ orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_S
 
 end
 
+lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
+global data2= data
+
+lat2 = lat' .* ones(length(lon))
+lon2  = ones(length(lat))' .* lon
+
+Lats_p = Geo_location.A[1,:,1]
+Lons_p = Geo_location.A[:,1,2]
+global mask = SharedArray(zeros(length(Lats_p),length(Lons_p)) )
+
+@sync @distributed for i1 =1:size(lat_lon_idx,1)   
+    
+        close_val_lat_lon   = findmin(abs.(lat2.-Lats_p[lat_lon_idx[i1,2]]) + abs.(lon2.-Lons_p[lat_lon_idx[i1,1]]))
+        if data2[close_val_lat_lon[2]]>0
+            global mask[lat_lon_idx[i1,2],lat_lon_idx[i1,1]] = 1
+        end
+end
+
+
 
 @timeit to "Processing loop over all pixels " begin
 
 for i1 = 1:2#size(lat_lon_idx,1)   
     
-    if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
+    if mask[lat_lon_idx[i1,2],lat_lon_idx[i1,1]] !=1
+    #if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         #Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0
         global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
         global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],2] = NaN
@@ -124,8 +144,18 @@ for i1 = 1:2#size(lat_lon_idx,1)
     
     else
 
+        if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
+            Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0
+        end
 
-        global params = UserParameters.inputParameters()
+        global close_val_lat_lon   = Global_Scale_Support.find_close_val_lat_lon(Geo_location, lat_lon_idx[i1,:], orbit_pos_all, orbit_pos_geo_all)
+
+        global Orbit_index[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = close_val_lat_lon[2]
+
+        slrng_temp2 = Geometry.distance(orbit_pos_all[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2]]; 0]))
+        global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = acosd(orbit_pos_geo_all[:,close_val_lat_lon[2]][3] / slrng_temp2) 
+
+        global params = UserParameters.inputParameters(look_angle = lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         # Check consistency of input parameters
         paramsIsValid = UserParameters.validateInputParams(params)
         # theoretical resolution
@@ -137,13 +167,6 @@ for i1 = 1:2#size(lat_lon_idx,1)
             global p_mode = 1.38
         end
                 
-        global close_val_lat_lon   = Global_Scale_Support.find_close_val_lat_lon(Geo_location, lat_lon_idx[i1,:], orbit_pos_all, orbit_pos_geo_all)
-
-        global Orbit_index[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = close_val_lat_lon[2]
-
-        slrng_temp2 = Geometry.distance(orbit_pos_all[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2]]; 0]))
-        global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = acosd(orbit_pos_geo_all[:,close_val_lat_lon[2]][3] / slrng_temp2) 
-
         # Compute orbits time, position, and velocity
         global orbit_time = orbit_time_all[close_val_lat_lon[2]-10:close_val_lat_lon[2]+10]
         global orbit_pos = orbit_pos_all[:,:,close_val_lat_lon[2]-10:close_val_lat_lon[2]+10]
