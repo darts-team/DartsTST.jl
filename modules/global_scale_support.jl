@@ -29,8 +29,12 @@ function read_GEDI_L3_data(filepath_GEDIL3, grid_res)
     size_col      = 146;
   elseif grid_res == 40 #40km
     ##40km x 40km grid 
-    #size_row     = 868;
-    #size_col     = 366;
+    size_row     = 868;
+    size_col     = 366;
+  elseif grid_res == 10 #40km
+    ##40km x 40km grid 
+    size_row     = 3470;
+    size_col     = 1462;
   else
     throw("Resolution not valid! Change to 100 km or 40 km")
   end
@@ -161,6 +165,9 @@ function find_close_val_lat_lon(Geo_location, lat_lon_idx, orbit_pos, orbit_pos_
   # search for the +-search_lim points around the orbit location obtained from previous step
   # compute distacnces and choose the pount with the minimum distance as the orbit point for simulations corresponding to the geo location
   dist_idx              = close_val_lat_lon[2]-search_lim:close_val_lat_lon[2]+search_lim
+  if sum(dist_idx.<=0)>0
+    dist_idx              = 1:close_val_lat_lon[2]+search_lim
+  end
   lookvec_ini           = zeros(3,length(dist_idx))
   slrng_ini             = zeros(length(dist_idx))
   for i3=1:length(dist_idx)
