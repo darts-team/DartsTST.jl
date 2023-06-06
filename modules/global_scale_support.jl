@@ -181,7 +181,7 @@ function find_close_val_lat_lon(Geo_location, lat_lon_idx, orbit_pos, orbit_pos_
   dist_idx              = close_val_lat_lon[2]-search_lim:close_val_lat_lon[2]+search_lim
   if sum(dist_idx.<=0)>0
     dist_idx              = 1:close_val_lat_lon[2]+search_lim
-  end  
+  end
   lookvec_ini           = zeros(3,length(dist_idx))
   slrng_ini             = zeros(length(dist_idx))
   for i3=1:length(dist_idx)

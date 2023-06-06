@@ -39,6 +39,7 @@ const to = TimerOutput()
 
 #Read canopy heights
 filepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+#filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
 grid_res        = 10;
 Canopy_heights, Geo_location, size_row, size_col = Global_Scale_Support.read_GEDI_L3_data(filepath_GEDIL3, grid_res)
 
@@ -77,10 +78,19 @@ end
 #region_ylims = [15,55]
 #region_xlims = 59:61
 #region_ylims = 17:19
+<<<<<<< HEAD
 #region_xlims        = 1:868
 #region_ylims        = 1:366
 region_xlims 	    = 530:1150
 region_ylims        = 170:600
+=======
+region_xlims = 1:346
+region_ylims = 1:147
+region_xlims = 530:1150
+region_ylims = 170:600
+#region_xlims        = 80:81
+#region_ylims        = 37:37
+>>>>>>> 49125af124cb88f3da5104531e727ee44420469f
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
