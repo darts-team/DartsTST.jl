@@ -72,8 +72,8 @@ end
 #region_ylims = [15,55]
 region_xlims = 20:330
 region_ylims = 15:130
-#region_xlims        = 80:81
-#region_ylims        = 37:37
+#region_xlims        = 50:110
+#region_ylims        = 15:55
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
@@ -131,7 +131,7 @@ end
             target_pos_mode = "layered-grid",
             t_loc_3 = height_range,
             t_ref = interp_fn.(height_range),
-            s_loc_1 = -40:1:40,
+            #s_loc_1 = -40:1:40,
         )
 
         # theoretical resolution
@@ -154,7 +154,7 @@ end
         global SAR_start_time = orbit_time_all[close_val_lat_lon[2]] - (params.SAR_duration / 2)
 
         ref_plat = 1 #incicate the reference platform
-        bperp, b_at, bnorm = Orbits.get_perp_baselines(orbit_pos, orbit_vel, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], ref_plat)
+        bperp, b_at, bnorm = Orbits.get_perp_baselines_new(orbit_pos, orbit_vel, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], 0.0, params.left_right_look,  ref_plat)
 
         global Norm_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(bnorm) ./ 1e3
         global Norm_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,bnorm)) ./ 1e3
@@ -318,7 +318,7 @@ end
 
 to
 
-@save "../Outputs/output_gs_study_run_042023_4.jld" Geo_location Output_stat Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to 
+@save "../Outputs/output_gs_study_run_042023_8.jld" Geo_location Output_stat Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to 
 
 [rmprocs(p) for p in workers()]
 

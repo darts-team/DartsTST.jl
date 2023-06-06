@@ -59,7 +59,7 @@ global res_theory_s    = SharedArray(zeros(size_row,size_col,1))
 #region_ylims = [15,55]
 #region_xlims = 59:62
 #region_ylims = 17:19
-region_xlims        = 80:81
+region_xlims        = 80:80
 region_ylims        = 37:37
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
@@ -255,15 +255,16 @@ for i1 = 1:2#size(lat_lon_idx,1)
             if params.display_input_scene; Plotting.plot_input_scene(diff_image3D, ts_coord_txt, params);end
         end
 
-
+        plot_idx 					= [Int64(ceil(length(params.s_loc_1)/2)),Int64(ceil(length(params.s_loc_2)/2)),Int64(ceil(length(params.s_loc_3)/2))]
+        
         if length(params.t_loc_3)!=1
             val_max,ind_max = findmax(abs.(image_3D))
 		    norm_BPA_data = abs.(image_3D) ./ val_max
-		    plot_var_op = (norm_BPA_data[41,41,41:81])
+		    plot_var_op = (norm_BPA_data[plot_idx[1],plot_idx[2],plot_idx[3]:Int64(ceil(length(params.s_loc_3)/2))])
             plot_var_op = reshape(plot_var_op,length(plot_var_op),1)
             plot_var_ip = targets_ref ./ maximum(targets_ref)
 
-            display(plot(plot_var_op, params.s_loc_3[41:81] ,xlabel="Vertical profile normalized radar intensity",
+            display(plot(plot_var_op, params.s_loc_3[plot_idx[3]:Int64(ceil(length(params.s_loc_3)/2))]] ,xlabel="Vertical profile normalized radar intensity",
             ylabel="Height (m)",title = "BPA output profile",xlim=(0,1), legend = false,linewidth=2, 
             xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15))
 

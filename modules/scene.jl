@@ -477,17 +477,17 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
               image_slice=image_3D[:,slice_index2,slice_index3]
               image_1D_1=zeros(Float64,length(image_slice))
               image_1D_1[:]=image_slice
-          else;image_1D_1=NaN;println("PSF metrics along 1st dimension cannot be calculated since image has no 1st dimension.");end
+          else;image_1D_1=NaN;end #println("PSF metrics along 1st dimension cannot be calculated since image has no 1st dimension.");end
           if length(scene_axis2)>1
               image_slice=image_3D[slice_index1,:,slice_index3]
               image_1D_2=zeros(Float64,length(image_slice))
               image_1D_2[:]=image_slice
-          else;image_1D_2=NaN;println("PSF metrics along 2nd dimension cannot be calculated since image has no 2nd dimension.");end
+          else;image_1D_2=NaN;end #println("PSF metrics along 2nd dimension cannot be calculated since image has no 2nd dimension.");end
           if length(scene_axis3)>1
               image_slice=image_3D[slice_index1,slice_index2,:]
               image_1D_3=zeros(Float64,length(image_slice))
               image_1D_3[:]=image_slice
-          else;image_1D_3=NaN;println("PSF metrics along 3rd dimension cannot be calculated since image has no 3rd dimension.");end
+          else;image_1D_3=NaN;end #println("PSF metrics along 3rd dimension cannot be calculated since image has no 3rd dimension.");end
       end
       return image_1D_1,image_1D_2,image_1D_3
   end

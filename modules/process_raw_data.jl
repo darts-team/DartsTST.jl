@@ -181,7 +181,7 @@ function main_SAR_tomo_3D_new(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, param
     Nft         = length(t_rx) # number of fast-time samples
     s_xyz_3D    = reshape(s_xyz_grid,3,Ns_3,Ns_2,Ns_1) # convert scene to 3D
     Δt          = t_rx[2]-t_rx[1] # fast-time resolution
-    processed_image = zeros(ComplexF64,Ns_1,Ns_2,Ns_3) # 3D image array
+    processed_image = zeros(ComplexF64,Ns_3,Ns_2,Ns_1) # 3D image array
     λ           = c/fc # wavelength (m)
     ref_delay   = 2*ref_range/c # reference delay
     CI          = CartesianIndices(processed_image) 

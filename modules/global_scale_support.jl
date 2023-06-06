@@ -29,8 +29,12 @@ function read_GEDI_L3_data(filepath_GEDIL3, grid_res)
     size_col      = 146;
   elseif grid_res == 40 #40km
     ##40km x 40km grid 
-    #size_row     = 868;
-    #size_col     = 366;
+    size_row     = 868;
+    size_col     = 366;
+  elseif grid_res == 10 #40km
+    ##40km x 40km grid 
+    size_row     = 3470;
+    size_col     = 1462;
   else
     throw("Resolution not valid! Change to 100 km or 40 km")
   end
@@ -142,6 +146,20 @@ function find_close_val_lat_lon(Geo_location, lat_lon_idx, orbit_pos, orbit_pos_
     #if no, get the next closest point left of the current orbit
     #if yes, check for look angle limit and get teh next closest point to left if look angle criterion is not satisfied  
     #To ensure right looking SAR geometry
+    #if orbit_pos_geo[:,close_val_lat_lon[2]][2] >= (Geo_location[lat_lon_idx[1],lat_lon_idx[2],2])
+    #  close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2]-(i2.*0.5))) 
+    #  + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
+    #else
+    #  slrng_temp        = Geometry.distance(orbit_pos[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[1],lat_lon_idx[2]]; 0]))
+    #  look_angle        = acosd(orbit_pos_geo[:,close_val_lat_lon[2]][3] / slrng_temp) 
+    #  if (look_angle < (look_ang_lower_lim)) 
+    #    close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2]-(i2.*0.5))) 
+    #    + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
+    #  else
+    #    break
+    #  end
+    #end
+  #end
     if orbit_pos_geo[:,close_val_lat_lon[2]][2] >= (Geo_location[lat_lon_idx[1],lat_lon_idx[2],2])
       close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2]-(i2.*0.5))) 
       + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
@@ -161,6 +179,9 @@ function find_close_val_lat_lon(Geo_location, lat_lon_idx, orbit_pos, orbit_pos_
   # search for the +-search_lim points around the orbit location obtained from previous step
   # compute distacnces and choose the pount with the minimum distance as the orbit point for simulations corresponding to the geo location
   dist_idx              = close_val_lat_lon[2]-search_lim:close_val_lat_lon[2]+search_lim
+  if sum(dist_idx.<=0)>0
+    dist_idx              = 1:close_val_lat_lon[2]+search_lim
+  end  
   lookvec_ini           = zeros(3,length(dist_idx))
   slrng_ini             = zeros(length(dist_idx))
   for i3=1:length(dist_idx)
