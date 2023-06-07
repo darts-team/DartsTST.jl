@@ -19,7 +19,7 @@ end
 # or add parameter=value pairs directly in the workflow when creating the inputParameter object.
 @with_kw struct inputParameters
 
-    mode::Int  = 1 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
+    mode::Int  = 2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     tx_el::Int = 1 # which element transmits for SIMO (max value N)
     processing_steps = :bp2d3d  # :bp3d --> 1-step, :bp2d3d --> 2-step for SAR and tomographic processing
 
@@ -31,9 +31,9 @@ end
     SAR_start_time::Float64 = 0 # SAR imaging start time (s)
 
     # platform locations in xyz (including slow-time locations)
-    user_defined_orbit::Int = 2 # 1: use orbits file; 2: user defined orbits in TCN
+    user_defined_orbit::Int = 1 # 1: use orbits file; 2: user defined orbits in TCN
     left_right_look::String = "right" # left or right looking geometry
-    orbit_filename::String = "orbit_output_062021.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
+    orbit_filename::String =  "orbit_output_06062023_1.nc" # "orbit_output_062021.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
 
     # User defined orbits in TCN, used only if user_defined_orbit=2
     p_t0_LLH::Array{Float64,1} = [0;0;750e3] # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)

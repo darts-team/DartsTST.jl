@@ -314,8 +314,11 @@ function tomo_CAPON(Cov_mat, steering_mat, azimuth_lim, srange_lim, size_op)
 		for idx_r=srange_lim[1]:srange_lim[2]
 			a 							= transpose(steering_mat[idx_st, idx_r, :,:]) #transpose of steering vector
 			#PC[idx_st,idx_r,:] 		=  abs.(diag(1 ./ (conj(transpose(a)) * inv(Cov_mat[idx_st,idx_r,:,:]) * (a))) )# power of conventional beamformer
-			PC[idx_st,idx_r,:] 		=  (diag(1 ./ abs.(conj(transpose(a)) * inv(Cov_mat[idx_st,idx_r,:,:]) * (a))) )# power of conventional beamformer
-
+			try 
+				PC[idx_st,idx_r,:] 		=  (diag(1 ./ abs.(conj(transpose(a)) * inv(Cov_mat[idx_st,idx_r,:,:]) * (a))) )# power of conventional beamformer
+			catch
+				continue
+			end
 		end
 	end
 	return PC
