@@ -240,19 +240,19 @@ function main_SAR_tomo_3D_new(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, param
 end
 
 function SAR_processing(rawdata, s_xyz_grid, p_xyz_3D, t_rx, ref_range, params) # slow-time processing of rawdata with fast-time
-    @unpack Ns_1, Ns_2, Ns_3, mode, tx_el, fc = params
+    @unpack Ns_1, Ns_2, Ns_3, mode, tx_el, fc, λ = params
 
     Nft=length(t_rx) # number of fast-time samples
     Nst=size(p_xyz_3D)[3] # number of slow-time samples
     s_xyz_3D=reshape(s_xyz_grid,3,Ns_3,Ns_2,Ns_1) # convert scene to 3D
-    Np=size(p_xyz_3D)[2] # number of platforms
+    #Np=size(p_xyz_3D)[2] # number of platforms
+    Np=size(rawdata)[2] # number of platforms
     Δt=t_rx[2]-t_rx[1] # fast-time resolution
     if mode==1 || mode==2 # SAR (ping-pong) or SIMO
         SAR_images_3D=zeros(ComplexF64,Np,Ns_1,Ns_2,Ns_3) # complex SAR images array (4D)
     elseif mode==3
         SAR_images_3D=zeros(ComplexF64,Np,Np,Ns_1,Ns_2,Ns_3) # complex SAR images array (5D)
     end
-    λ=c/fc # wavelength (m)
     ref_delay=2*ref_range/c # reference delay
     if mode==1 # SAR (ping-pong)
         for i=1:Np # TX or RX platform
@@ -282,7 +282,7 @@ function SAR_processing(rawdata, s_xyz_grid, p_xyz_3D, t_rx, ref_range, params) 
                         pixel_sum = 0.0im
                         for s=1:Nst # slow-time (pulses)
                             range_tx=distance(pixel_j,@view(p_xyz_3D[:,tx_el,s]))
-                            range_rx=distance(pixel_j,@view(p_xyz_3D[:,i,s]))
+                            range_rx=distance(pixel_j,@view(p_xyz_3D[:,i+1,s]))
                             rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
                             rel_delay_ind=round(Int,rel_delay/Δt)
                             pixel_sum=pixel_sum+rawdata[s,i,round(Int,Nft/2)+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))

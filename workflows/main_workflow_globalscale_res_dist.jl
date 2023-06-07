@@ -1,5 +1,5 @@
 using Distributed
-addprocs(24) 
+addprocs(4) 
 
 @everywhere include("../modules/generate_raw_data.jl")
 @everywhere include("../modules/process_raw_data.jl")
@@ -40,8 +40,8 @@ const to = TimerOutput()
 @timeit to "Reading L3 file for canopy heights " begin
 
 #Read canopy heights
-filepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
-#filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+#ßfilepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
 grid_res        = 100;
 Canopy_heights, Geo_location, size_row, size_col = Global_Scale_Support.read_GEDI_L3_data(filepath_GEDIL3, grid_res)
 
@@ -80,8 +80,8 @@ end
 #region_ylims = [15,55]
 #region_xlims = 59:61
 #region_ylims = 17:19
-region_xlims = 1:347
-region_ylims = 1:146
+region_xlims = 93:96#1:347
+region_ylims = 30:31#1:146
 #region_xlims = 530:1150
 #region_ylims = 170:600
 #region_xlims        = 80:81
@@ -89,40 +89,47 @@ region_ylims = 1:146
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
-orbit_dataset       = Dataset("inputs/orbit_output_06062023_1.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
+orbit_dataset       = Dataset("inputs/NISAR_orbit_coflier_lag3_theta_15_new.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
 global mast_plat            = 1
 flag_plat           = 1 #descending orbit
 orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_Support.get_orbit_info_fromfile(orbit_dataset, mast_plat, flag_plat)
 
 end
 
-#=
+
 
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 global data2= data
 
-lat2 = lat' .* ones(length(lon))
-lon2  = ones(length(lat))' .* lon
+global lat2 = lat' .* ones(length(lon))
+global lon2  = ones(length(lat))' .* lon
 
-Lats_p = Geo_location.A[1,:,1]
-Lons_p = Geo_location.A[:,1,2]
-global mask = SharedArray(zeros(length(Lats_p),length(Lons_p)) )
+global Lats_p = Geo_location.A[1,:,1]
+global Lons_p = Geo_location.A[:,1,2]
+global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
 
+#=
 @sync @distributed for i1 =1:size(lat_lon_idx,1)   
     
         close_val_lat_lon   = findmin(abs.(lat2.-Lats_p[lat_lon_idx[i1,2]]) + abs.(lon2.-Lons_p[lat_lon_idx[i1,1]]))
         if data2[close_val_lat_lon[2]]>0
-            global mask[lat_lon_idx[i1,2],lat_lon_idx[i1,1]] = 1
+            global mask[lat_lon_idx[i1,1],lat_lon_idx[i1,2]] = 1
         end
 end
 =#
+
 
 @timeit to "Processing loop over all pixels " begin
 
 @sync @distributed for i1 = 1:size(lat_lon_idx,1)   
     
-    #if mask[lat_lon_idx[i1,2],lat_lon_idx[i1,1]] !=1
-    if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
+    close_val_lat_lon_m   = findmin(abs.(lat2.-Lats_p[lat_lon_idx[i1,2]]) + abs.(lon2.-Lons_p[lat_lon_idx[i1,1]]))
+    if data2[close_val_lat_lon_m[2]]>0
+        global mask[lat_lon_idx[i1,1],lat_lon_idx[i1,2]] = 1
+    end
+
+    if mask[lat_lon_idx[i1,1],lat_lon_idx[i1,2]] !=1
+    #if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         #Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0
         global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
         global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],2] = NaN
@@ -155,66 +162,9 @@ end
         global res_theory_s[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
     
     else
-     #=   if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
-            Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0.0
-	    
-        global close_val_lat_lon   = Global_Scale_Support.find_close_val_lat_lon(Geo_location, lat_lon_idx[i1,:], orbit_pos_all, orbit_pos_geo_all)
-
-        global Orbit_index[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = close_val_lat_lon[2]
-
-        slrng_temp2 = Geometry.distance(orbit_pos_all[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2]]; 0]))
-        global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = acosd(orbit_pos_geo_all[:,close_val_lat_lon[2]][3] / slrng_temp2)
-
-        global params = UserParameters.inputParameters(look_angle = lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
-        # Check consistency of input parameters
-        paramsIsValid = UserParameters.validateInputParams(params)
-        # theoretical resolution
-        if params.mode == 1 # SAR
-            global p_mode = 2
-        elseif params.mode == 2 # SIMO
-            global p_mode = 1
-        elseif params.mode == 3 # MIMO
-            global p_mode = 1.38
+        if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
+            global Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0.0
         end
-
-
-        # Compute orbits time, position, and velocity
-        global orbit_time = orbit_time_all[close_val_lat_lon[2]-10:close_val_lat_lon[2]+10]
-        global orbit_pos = orbit_pos_all[:,:,close_val_lat_lon[2]-10:close_val_lat_lon[2]+10]
-        global orbit_vel = orbit_vel_all[:,:,close_val_lat_lon[2]-10:close_val_lat_lon[2]+10]
-
-        global SAR_start_time = orbit_time_all[close_val_lat_lon[2]] - (params.SAR_duration / 2)
-
-        ref_plat = 1 #incicate the reference platform
-        bperp, b_at, bnorm = Orbits.get_perp_baselines(orbit_pos, orbit_vel, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], ref_plat)
-
-        global Norm_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(bnorm) ./ 1e3
-        global Norm_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,bnorm)) ./ 1e3
-        #global Norm_baseline_mean[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = mean(filter(!iszero,bnorm)) ./ 1e3
-
-        global Perp_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(bperp) ./ 1e3
-        global Perp_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,bperp)) ./ 1e3
-        #global Perp_baseline_mean[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = mean(filter(!iszero,bperp)) ./ 1e3
-
-        global Par_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(b_at) ./ 1e3
-        global Par_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,b_at)) ./ 1e3
-        #global Par_baseline_mean[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = mean(filter(!iszero,b_at)) ./ 1e3
-
-        # theoretical resolution along-n
-        range_s, range_g = Scene.lookangle_to_range(lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], mean(Geometry.xyz_to_geo(orbit_pos[:,mast_plat,:])[3,:]), 0, earth_radius)
-        global res_theory_n[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/p_mode/ maximum(bperp)
-
-        # theoretical resolution along-track
-        mu = 3.986004418e14
-        sc_speed = sqrt(mu./(mean(Geometry.xyz_to_geo(orbit_pos[:,mast_plat,:])[3,:])+earth_radius)); #sqrt(GM/R)->https://en.wikipedia.org/wiki/Orbital_speed
-        Lsa = sc_speed*params.SAR_duration + sc_speed/params.fp
-        global res_theory_s[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/2/Lsa		
-        
-        continue 
-
-        end
-
-=#
 
         global close_val_lat_lon   = Global_Scale_Support.find_close_val_lat_lon(Geo_location, lat_lon_idx[i1,:], orbit_pos_all, orbit_pos_geo_all)
 
@@ -268,17 +218,16 @@ end
         Lsa = sc_speed*params.SAR_duration + sc_speed/params.fp
         global res_theory_s[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/2/Lsa
 
-        # Compute orbits time, position, and velocity
-        orbit_time, orbit_pos, orbit_vel = Orbits.computeTimePosVel(params)
-
         # interpolate orbit to slow time, 3 x Np x Nst, convert km to m
-         p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, params)
-         v_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_vel, params)
+         p_xyz, Nst, slow_time = Orbits.interpolateOrbitsToSlowTime(orbit_time, orbit_pos, SAR_start_time, params)
 
         # Create target/scene location
         targets_loc, targets_ref, Nt = Scene.construct_targets_str(params) # Nt: number of targets, targets: structure array containing target locations and reflectivities
          s_loc_3xN  = Scene.form3Dgrid_for(params.s_loc_1, params.s_loc_2, params.s_loc_3) # using 3 nested for loops
-        t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, params) ## calculate avg heading from platform positions
+        #t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, params) ## calculate avg heading from platform positions
+
+        #For co-flyer cofiguration
+        t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, reshape(orbit_pos[:,1,:],(size(orbit_pos)[1],1,size(orbit_pos)[3])), params) ## calculate avg heading from platform positions
 
         # Read number of platforms (todo: move into a struct)
          Np  = size(orbit_pos)[2] # number of platforms
@@ -311,7 +260,9 @@ end
         if params.processing_steps === :bp3d # 1-step processing TODO do we need this option?
              image_3D = Process_Raw_Data.main_SAR_tomo_3D_new(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
         elseif params.processing_steps === :bp2d3d # 2-step processing, first SAR (along-track), then tomographic
-             SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+             #SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+             # for co-flyer
+             SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata[:,2:size(p_xyz)[2],:], s_xyz_3xN, p_xyz, t_rx, ref_range, params)
              image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
         end
 
@@ -417,7 +368,7 @@ end
         global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],3] = CAPON_resolutions[3]
         global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],4] = CAPON_tomo_resolutions
 
-
+        println("Finished: ", i1 )
     end
 end
 
