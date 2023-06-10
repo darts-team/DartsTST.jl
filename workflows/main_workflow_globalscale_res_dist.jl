@@ -1,5 +1,5 @@
 using Distributed
-addprocs(4) 
+addprocs(24) 
 
 @everywhere include("../modules/generate_raw_data.jl")
 @everywhere include("../modules/process_raw_data.jl")
@@ -40,9 +40,9 @@ const to = TimerOutput()
 @timeit to "Reading L3 file for canopy heights " begin
 
 #Read canopy heights
-#ßfilepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
-filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
-grid_res        = 100;
+filepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+#filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+grid_res        = 40;
 Canopy_heights, Geo_location, size_row, size_col = Global_Scale_Support.read_GEDI_L3_data(filepath_GEDIL3, grid_res)
 
 GC.gc()
@@ -80,8 +80,8 @@ end
 #region_ylims = [15,55]
 #region_xlims = 59:61
 #region_ylims = 17:19
-region_xlims = 93:96#1:347
-region_ylims = 30:31#1:146
+region_xlims = 1:868 #1:347
+region_ylims = 1:366 #1:146
 #region_xlims = 530:1150
 #region_ylims = 170:600
 #region_xlims        = 80:81
@@ -184,7 +184,12 @@ end
         elseif params.mode == 3 # MIMO
             global p_mode = 1.38
         end
-                
+        
+	if close_val_lat_lon[2] < 11
+		close_val_lat_lon = close_val_lat_lon .+ 10
+	elseif close_val_lat_lon[2] > (length(orbit_time_all) - 10)        
+		close_val_lat_lon = close_val_lat_lon .- 10
+	end
 
         # Compute orbits time, position, and velocity
         global orbit_time = orbit_time_all[close_val_lat_lon[2]-10:close_val_lat_lon[2]+10]
@@ -194,7 +199,7 @@ end
         global SAR_start_time = orbit_time_all[close_val_lat_lon[2]] - (params.SAR_duration / 2)
 
         ref_plat = 1 #incicate the reference platform
-        bperp, b_at, bnorm = Orbits.get_perp_baselines(orbit_pos, orbit_vel, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], ref_plat)
+        bperp, b_at, bnorm = Orbits.get_perp_baselines(orbit_pos[:,2:end,:], orbit_vel[:,2:end,:], lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], ref_plat)
 
         global Norm_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(bnorm) ./ 1e3
         global Norm_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,bnorm)) ./ 1e3
@@ -273,8 +278,10 @@ end
         scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
 
         # Calculate point target performance metrics
-        bpa_resolutions, bpa_PSLRs, bpa_ISLRs, bpa_loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
-
+        try
+	
+	bpa_resolutions, bpa_PSLRs, bpa_ISLRs, bpa_loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
+	
 
         # Define parametsr for signal processing - Beamforming , CAPON etc
         Master_platform             = ref_plat # Master platform
@@ -369,6 +376,9 @@ end
         global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],4] = CAPON_tomo_resolutions
 
         println("Finished: ", i1 )
+	catch
+		continue
+	end
     end
 end
 
@@ -376,7 +386,7 @@ end
 
 to
 
-@save "../Outputs/output_gs_study_res_run_062023_11.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to
+@save "../Outputs/output_gs_study_res_run_062023_13.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to
 
 [rmprocs(p) for p in workers()]
 

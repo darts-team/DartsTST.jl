@@ -165,7 +165,12 @@ function find_close_val_lat_lon(Geo_location, lat_lon_idx, orbit_pos, orbit_pos_
       + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
     else
       slrng_temp        = Geometry.distance(orbit_pos[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[1],lat_lon_idx[2]]; 0]))
-      look_angle        = acosd(orbit_pos_geo[:,close_val_lat_lon[2]][3] / slrng_temp) 
+      if (orbit_pos_geo[:,close_val_lat_lon[2]][3] > slrng_temp)
+        look_angle = 0.0
+      else
+        look_angle        = acosd(orbit_pos_geo[:,close_val_lat_lon[2]][3] / slrng_temp) 
+      end
+
       if (look_angle < (look_ang_lower_lim)) 
         close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2]-(i2.*0.5))) 
         + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
