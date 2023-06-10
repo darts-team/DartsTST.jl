@@ -176,6 +176,9 @@ end
         global params = UserParameters.inputParameters(look_angle = lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         # Check consistency of input parameters
         paramsIsValid = UserParameters.validateInputParams(params)
+
+        filt_len = 1
+
         # theoretical resolution
         if params.mode == 1 # SAR
             global p_mode = 2
@@ -271,7 +274,8 @@ end
              image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
         end
 
-        
+        image_3D = Data_Processing.average_2D_data(image_3D, filt_len)
+
         # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
         if params.left_right_look == "left";PSFcutdir=-1;elseif params.left_right_look == "right";PSFcutdir=1;end
         params.PSF_direction[3]=PSFcutdir*params.PSF_direction[3]
@@ -285,7 +289,7 @@ end
 
         # Define parametsr for signal processing - Beamforming , CAPON etc
         Master_platform             = ref_plat # Master platform
-        filt_len                    = 1 # Covariance matrix box filter size 3->5x5 box filter
+        #filt_len                    = 1 # Covariance matrix box filter size 3->5x5 box filter
         azimuth_lim 				= [1, Int64(ceil(length(params.s_loc_1)))]
         srange_lim 					= [1, Int64(ceil(length(params.s_loc_2)))]
         ref_hl                      = Int64(ceil(length(params.s_loc_3)/2))
@@ -317,15 +321,17 @@ end
         end
         s_xyz_3xN_2D                = s_xyz_3xN_2D_all[:,:,:,ref_hl]
 
-        Cov_mat, Corr_mat           = Data_Processing.get_covariance_correlation_matrices(input_SP, azimuth_lim, srange_lim, Ns2, filt_len, 0);
+        # Cov_mat, Corr_mat           = Data_Processing.get_covariance_correlation_matrices(input_SP, azimuth_lim, srange_lim, Ns2, filt_len, 0);
+        # Cov_mat2, Corr_mat2           = Data_Processing.get_covariance_correlation_matrices_2(input_SP, azimuth_lim, srange_lim, Ns2, filt_len, 0);
+        Cov_mat3, Corr_mat3           = Data_Processing.get_covariance_correlation_matrices_new(input_SP,  Ns2, filt_len);
 
         steering_mat                = Data_Processing.get_steering_matrix(p_xyz, s_xyz_3xN_2D, azimuth_lim, srange_lim, heights_t, Ns2, Master_platform, params.λ, params.mode);
 
-        Pbf                         = Data_Processing.tomo_beamforming(Cov_mat, steering_mat, azimuth_lim, srange_lim, [size(Cov_mat)[1] size(Cov_mat)[2] size(heights_t)[1]])
+        Pbf                         = Data_Processing.tomo_beamforming(Cov_mat3, steering_mat, azimuth_lim, srange_lim, [size(Cov_mat)[1] size(Cov_mat)[2] size(heights_t)[1]])
         Pbf2                        = Data_Processing.tomocoordinates_to_scenecoordinates(Pbf, heights_t, params.s_loc_2, params.s_loc_3, params.look_angle, params.left_right_look)
 
  
-        PC                          = Data_Processing.tomo_CAPON(Cov_mat, steering_mat, azimuth_lim, srange_lim, [size(Cov_mat)[1] size(Cov_mat)[2] size(heights_t)[1]])
+        PC                          = Data_Processing.tomo_CAPON(Cov_mat3, steering_mat, azimuth_lim, srange_lim, [size(Cov_mat)[1] size(Cov_mat)[2] size(heights_t)[1]])
         PC2                         = Data_Processing.tomocoordinates_to_scenecoordinates(PC, heights_t, params.s_loc_2, params.s_loc_3, params.look_angle, params.left_right_look)
 
         scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(Pbf2, params)

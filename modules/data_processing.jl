@@ -1,6 +1,6 @@
 module Data_Processing
 
-#using ..Waveform
+using ..Waveform
 
 using FFTW
 using LinearAlgebra
@@ -9,6 +9,8 @@ using Interpolations
 using Plots
 using Parameters
 using FIRInterp
+using ImageFiltering
+
 
 ##
 c = 299792458
@@ -205,12 +207,13 @@ function get_covariance_correlation_matrices(signal, azimuth_lim, srange_lim, Np
 		for idx_r=srange_lim[1]:srange_lim[2]
 
 			if noise_flag == 1
-				sz 			= (2^(-0.5))*sqrt(10^(-SNR/10)).*(randn(size(input_SP))+ 1im .* randn(size(input_SP))) #complex Gaussian noise
+				SNR = 30
+				sz 			= (2^(-0.5))*sqrt(10^(-SNR/10)).*(randn(size(signal))+ 1im .* randn(size(signal))) #complex Gaussian noise
 				x 			= signal + sz
 			else
 				x 			= signal#without noise
 			end
-			
+
 			if filt_len == 0
 				Rxx[idx_st, idx_r, :,:] 		= (x[idx_st,:,idx_r] .* conj(transpose(x[idx_st,:,idx_r]))) ./ 1 
 				Corr[idx_st, idx_r, :,:] 		= Rxx[idx_st, idx_r, :,:] ./ sqrt(Rxx[idx_st, idx_r, :,:] .* Rxx[idx_st, idx_r, :,:] )
@@ -253,6 +256,118 @@ function get_covariance_correlation_matrices(signal, azimuth_lim, srange_lim, Np
 
 		end
 	end
+
+	return Rxx, Corr
+
+end
+
+function get_covariance_correlation_matrices_2(signal, azimuth_lim, srange_lim, Np, filt_len, noise_flag=0)
+
+    Rxx                     	= 	 zeros(ComplexF64, length(azimuth_lim[1]:azimuth_lim[2]), length(srange_lim[1]:srange_lim[2]), Np, Np);
+	Rxx9                     	= 	 zeros(ComplexF64, length(azimuth_lim[1]:azimuth_lim[2]), length(srange_lim[1]:srange_lim[2]), Np, Np);
+
+    Corr                     	= 	 zeros(ComplexF64, length(azimuth_lim[1]:azimuth_lim[2]), length(srange_lim[1]:srange_lim[2]), Np, Np);
+
+	kernel 						= ones(filt_len,filt_len)
+	weight 						= kernel ./ sum(kernel)
+
+	for idx_st=azimuth_lim[1]:azimuth_lim[2]
+		for idx_r=srange_lim[1]:srange_lim[2]
+
+			if noise_flag == 1
+				SNR = 30
+				sz 			= (2^(-0.5))*sqrt(10^(-SNR/10)).*(randn(size(signal))+ 1im .* randn(size(signal))) #complex Gaussian noise
+				x 			= signal + sz
+			else
+				x 			= signal#without noise
+			end
+
+			if filt_len == 0
+				Rxx[idx_st, idx_r, :,:] 		= (x[idx_st,:,idx_r] .* conj(transpose(x[idx_st,:,idx_r]))) ./ 1 
+				Corr[idx_st, idx_r, :,:] 		= Rxx[idx_st, idx_r, :,:] ./ sqrt(Rxx[idx_st, idx_r, :,:] .* Rxx[idx_st, idx_r, :,:] )
+			else
+
+				if (idx_st-filt_len > azimuth_lim[1])
+					lims1 = idx_st-filt_len
+				else
+					lims1 = azimuth_lim[1];
+				end
+				if (idx_st+filt_len < azimuth_lim[2])
+					lims2 = idx_st+filt_len
+				else
+					lims2 = azimuth_lim[2];
+				end
+
+				if (idx_r-filt_len > srange_lim[1])
+					limr1 = idx_r-filt_len
+				else
+					limr1 = srange_lim[1];
+				end
+				if (idx_r+filt_len < srange_lim[2])
+					limr2 = idx_r+filt_len
+				else
+					limr2 = srange_lim[2];
+				end
+
+				Rxx9[idx_st, idx_r, :,:] 		= (x[idx_st,:,idx_r] .* conj(transpose(x[idx_st,:,idx_r]))) ./ 1 
+				for l1=1:Np
+					for l2=1:Np
+						Rxx[idx_st, idx_r,l1,l2] = mean(Rxx9[lims1:lims2,limr1:limr2,l1,l2]) 
+						#Rxx[idx_st, idx_r,l1,l2] = mean(x[lims1:lims2,l1,limr1:limr2]) .* conj(transpose(mean(x[lims1:lims2,l2,limr1:limr2])))  ./ 1
+						#Rxx[idx_st, idx_r,l1,l2] = cov(x[lims1:lims2,l1,limr1:limr2][:],x[lims1:lims2,l2,limr1:limr2][:]) 
+
+						Rxx1 =  mean(Rxx9[lims1:lims2,limr1:limr2,l1,l1]) 
+						Rxx2 =  mean(Rxx9[lims1:lims2,limr1:limr2,l2,l2]) 
+
+						#Corr[idx_st, idx_r, l1,l2] = Rxx[idx_st, idx_r,l1,l2] ./ sqrt(Rxx1 .* Rxx2)
+
+					end
+				end
+
+			end
+
+		end
+	end
+
+	for l1=1:Np
+		for l2=1:Np
+			Corr[:, :,l1,l2] = imfilter(Rxx9[:,:,l1,l2], weight)
+
+		end
+	end
+
+	return Rxx, Corr
+
+end
+
+
+function get_covariance_correlation_matrices_new(signal, Np, filt_len)
+
+	A, B, C 					= size(signal)
+	Rxxp                     	= zeros(ComplexF64, A, C, Np);
+	Rxx                     	= zeros(ComplexF64, A, C, Np, Np);
+    Corr                     	= zeros(ComplexF64, A, C, Np, Np);
+
+	kernel 						= ones(filt_len,filt_len)
+	weight 						= kernel ./ sum(kernel)
+
+	for idx_p=1:Np
+		signal_pow 				= (abs.(signal[:,idx_p,:])).^2
+		Rxxp[:,:,idx_p] 		= imfilter(signal_pow, weight)
+	end
+
+	for idx_p1=1:Np
+		for idx_p2=1:Np
+			sam_cov_mat 		= signal[:,idx_p1,:] .* conj(signal[:,idx_p2,:])
+			#sam_cov_mat_real 	= imfilter(real(sam_cov_mat), weight)
+			#sam_cov_mat_imag 	= imfilter(imag(sam_cov_mat), weight)
+			#Rxx[:,:,idx_p1,idx_p2] = sam_cov_mat_real .+ (1im .* sam_cov_mat_imag)
+			Rxx[:,:,idx_p1,idx_p2] = imfilter(sam_cov_mat, weight)
+
+			Corr[:,:,idx_p1,idx_p2] = Rxx[:,:,idx_p1,idx_p2] ./ ((Rxxp[:,:,idx_p1] .* Rxxp[:,:,idx_p2]).^ 0.5)
+		end
+	end
+
 	return Rxx, Corr
 
 end
@@ -310,12 +425,13 @@ end
 function tomo_CAPON(Cov_mat, steering_mat, azimuth_lim, srange_lim, size_op)
 
 	PC                         = zeros(size_op[1],size_op[2],size_op[3])
+	Data_mat_size 			   = size(Cov_mat)[3]
     for idx_st=azimuth_lim[1]:azimuth_lim[2]
 		for idx_r=srange_lim[1]:srange_lim[2]
 			a 							= transpose(steering_mat[idx_st, idx_r, :,:]) #transpose of steering vector
 			#PC[idx_st,idx_r,:] 		=  abs.(diag(1 ./ (conj(transpose(a)) * inv(Cov_mat[idx_st,idx_r,:,:]) * (a))) )# power of conventional beamformer
 			try 
-				PC[idx_st,idx_r,:] 		=  (diag(1 ./ abs.(conj(transpose(a)) * inv(Cov_mat[idx_st,idx_r,:,:]) * (a))) )# power of conventional beamformer
+				PC[idx_st,idx_r,:] 		=  abs.(diag(1 ./ (conj(transpose(a)) * inv(Cov_mat[idx_st,idx_r,:,:] .+ (0.2 .* Matrix{Float64}(I, Data_mat_size, Data_mat_size))) * (a))) )# power of conventional beamformer
 			catch
 				continue
 			end
@@ -360,6 +476,21 @@ function tomocoordinates_to_scenecoordinates(signal, heights_t, scene_axis2, sce
 
 end
 
+
+function average_2D_data(signal_ip, filt_len)
+
+	Avg_signal_ip               = zeros( size(signal_ip));
+
+	kernel 						= ones(filt_len,filt_len)
+	weight 						= kernel ./ sum(kernel)
+
+	for idx_p=1:size(signal_ip)[3]
+		Avg_signal_ip[:,:,idx_p] 		= imfilter(signal_ip[:,:,idx_p], weight)
+	end
+
+	return Avg_signal_ip
+
+end
 
 ##
 """
