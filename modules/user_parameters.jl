@@ -32,7 +32,7 @@ end
 
     # platform locations in xyz (including slow-time locations)
     user_defined_orbit::Int = 1 # 1: use orbits file; 2: user defined orbits in TCN
-    left_right_look::String = "right" # left or right looking geometry
+    left_right_look::String = "left" # left or right looking geometry
     orbit_filename::String =  "NISAR_orbit_coflier_lag3_theta_15_new.nc" #"orbit_output_06062023_1.nc" # "orbit_output_062021.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
 
     # User defined orbits in TCN, used only if user_defined_orbit=2

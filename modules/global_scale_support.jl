@@ -136,10 +136,11 @@ function find_close_val_lat_lon(Geo_location, lat_lon_idx, orbit_pos, orbit_pos_
 
   search_lim            = 100 
   look_ang_lower_lim    = 29.9 #look angle lower limit
+  earth_radius          = 6378.137e3 # Earth semi-major axis at equator
 
   #Search for the closest orbit point from the geo point
   close_val_lat_lon     = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2])) 
-  + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
+                          + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
 
   for i2=1:25 #25 can be changed based on the search required
     #Check whether the closest orbit point is to the left of the geo point
@@ -162,18 +163,19 @@ function find_close_val_lat_lon(Geo_location, lat_lon_idx, orbit_pos, orbit_pos_
   #end
     if orbit_pos_geo[:,close_val_lat_lon[2]][2] >= (Geo_location[lat_lon_idx[1],lat_lon_idx[2],2])
       close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2]-(i2.*0.5))) 
-      + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
+                            + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
     else
       slrng_temp        = Geometry.distance(orbit_pos[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[1],lat_lon_idx[2]]; 0]))
       if (orbit_pos_geo[:,close_val_lat_lon[2]][3] > slrng_temp)
         look_angle = 0.0
       else
-        look_angle        = acosd(orbit_pos_geo[:,close_val_lat_lon[2]][3] / slrng_temp) 
+        look_angle        = Scene.slantrange_to_lookangle(earth_radius,slrng_temp,orbit_pos_geo[:,close_val_lat_lon[2]][3],0.0)[2]
+        #look_angle        = acosd(orbit_pos_geo[:,close_val_lat_lon[2]][3] / slrng_temp) 
       end
 
       if (look_angle < (look_ang_lower_lim)) 
         close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2]-(i2.*0.5))) 
-        + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
+                              + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
       else
         break
       end

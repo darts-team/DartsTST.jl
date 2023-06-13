@@ -1,6 +1,6 @@
 module Data_Processing
 
-using ..Waveform
+#using ..Waveform
 
 using FFTW
 using LinearAlgebra
@@ -387,7 +387,7 @@ function get_steering_matrix(p_xyz, s_xyz_3xN_2D, azimuth_lim, srange_lim, heigh
             for idx_z = 1:length(heights_z)
 				for idx_p=1:Np
 
-                    Va = mean(p_xyz[:,idx_p,:],dims=2) - s_xyz_3xN_2D[:,idx_st,idx_r]
+                    Va = mean(p_xyz[:,idx_p+1,:],dims=2) - s_xyz_3xN_2D[:,idx_st,idx_r]
                     Vb = mean(p_xyz[:,Master_platform,:],dims=2) - s_xyz_3xN_2D[:,idx_st,idx_r]
                     
                     if ((Va[2]) >= (Vb[2]))

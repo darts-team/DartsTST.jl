@@ -1,5 +1,5 @@
 using Distributed
-addprocs(24) 
+addprocs(4) 
 
 @everywhere include("../modules/generate_raw_data.jl")
 @everywhere include("../modules/process_raw_data.jl")
@@ -40,9 +40,9 @@ const to = TimerOutput()
 @timeit to "Reading L3 file for canopy heights " begin
 
 #Read canopy heights
-filepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
-#filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
-grid_res        = 40;
+#filepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+grid_res        = 100;
 Canopy_heights, Geo_location, size_row, size_col = Global_Scale_Support.read_GEDI_L3_data(filepath_GEDIL3, grid_res)
 
 GC.gc()
@@ -80,8 +80,8 @@ end
 #region_ylims = [15,55]
 #region_xlims = 59:61
 #region_ylims = 17:19
-region_xlims = 1:868 #1:347
-region_ylims = 1:366 #1:146
+region_xlims = 1:347#1:868 
+region_ylims = 1:146#1:366
 #region_xlims = 530:1150
 #region_ylims = 170:600
 #region_xlims        = 80:81
@@ -89,7 +89,7 @@ region_ylims = 1:366 #1:146
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
-orbit_dataset       = Dataset("inputs/NISAR_orbit_coflier_lag3_theta_15_new.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
+orbit_dataset       = Dataset("/Users/joshil/Documents/Orbits/Outputs/06122023/3/NISAR_orbit_coflier_lag3_theta_15_new.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
 global mast_plat            = 1
 flag_plat           = 1 #descending orbit
 orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_Support.get_orbit_info_fromfile(orbit_dataset, mast_plat, flag_plat)
@@ -162,6 +162,9 @@ end
         global res_theory_s[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
     
     else
+
+        @everywhere include("../modules/user_parameters.jl")
+
         if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
             global Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0.0
         end
@@ -171,13 +174,15 @@ end
         global Orbit_index[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = close_val_lat_lon[2]
 
         slrng_temp2 = Geometry.distance(orbit_pos_all[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2]]; 0]))
-        global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = acosd(orbit_pos_geo_all[:,close_val_lat_lon[2]][3] / slrng_temp2) 
+        #global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = acosd(orbit_pos_geo_all[:,close_val_lat_lon[2]][3] / slrng_temp2) 
+        global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = Scene.slantrange_to_lookangle(earth_radius,slrng_temp2,orbit_pos_geo_all[:,close_val_lat_lon[2]][3],0.0)[2]
+
 
         global params = UserParameters.inputParameters(look_angle = lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         # Check consistency of input parameters
         paramsIsValid = UserParameters.validateInputParams(params)
 
-        filt_len = 1
+        filt_len = 5
 
         # theoretical resolution
         if params.mode == 1 # SAR
@@ -282,7 +287,7 @@ end
         scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
 
         # Calculate point target performance metrics
-        try
+        #try
 	
 	bpa_resolutions, bpa_PSLRs, bpa_ISLRs, bpa_loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
 	
