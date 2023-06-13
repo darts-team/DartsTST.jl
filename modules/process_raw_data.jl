@@ -282,7 +282,7 @@ function SAR_processing(rawdata, s_xyz_grid, p_xyz_3D, t_rx, ref_range, params) 
                         pixel_sum = 0.0im
                         for s=1:Nst # slow-time (pulses)
                             range_tx=distance(pixel_j,@view(p_xyz_3D[:,tx_el,s]))
-                            range_rx=distance(pixel_j,@view(p_xyz_3D[:,i+1,s]))
+                            range_rx=distance(pixel_j,@view(p_xyz_3D[:,i,s]))
                             rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
                             rel_delay_ind=round(Int,rel_delay/Δt)
                             pixel_sum=pixel_sum+rawdata[s,i,round(Int,Nft/2)+rel_delay_ind]*exp(im*2*pi/λ*(range_tx+range_rx))
