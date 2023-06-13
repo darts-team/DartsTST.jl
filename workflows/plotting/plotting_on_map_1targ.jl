@@ -4,15 +4,18 @@ using PyPlot
 using GeoDatasets
 using JLD2
 
-@load "/Users/joshil/Documents/Code/global_scale_outputs/outputs/output_gs_study_res_run_062023_13.jld"
+@load "/Users/joshil/Documents/Code/global_scale_outputs/outputs/output_gs_study_res_run_062023_10m_1.jld"
 
-img_path = "/Users/joshil/Documents/Code/global_scale_outputs/plots/13/"
+img_path = "/Users/joshil/Documents/Code/global_scale_outputs/plots/10m_1/"
 
 #xlim_plot = (-128,-66)
 #ylim_plot = (15,53)
 
-xlim_plot = (-180,180)
-ylim_plot = (-75,75)
+#xlim_plot = (-180,180)
+#ylim_plot = (-75,75)
+
+xlim_plot = (95,140)
+ylim_plot = (-10,15)
 
 Lats_p = Geo_location.A[1,:,1]
 Lons_p = Geo_location.A[:,1,2]

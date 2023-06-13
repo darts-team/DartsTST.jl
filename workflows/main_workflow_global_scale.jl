@@ -59,8 +59,8 @@ global res_theory_s    = SharedArray(zeros(size_row,size_col,1))
 #region_ylims = [15,55]
 #region_xlims = 59:62
 #region_ylims = 17:19
-region_xlims        = 80:80
-region_ylims        = 37:37
+region_xlims        = 270:270#80:80
+region_ylims        = 58:58#37:37
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
@@ -141,7 +141,8 @@ for i1 = 1:2#size(lat_lon_idx,1)
         global SAR_start_time = orbit_time_all[close_val_lat_lon[2]] - (params.SAR_duration / 2)
 
         ref_plat = 1 #incicate the reference platform
-        bperp, b_at, bnorm = Orbits.get_perp_baselines(orbit_pos, orbit_vel, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], ref_plat)
+        #bperp, b_at, bnorm = Orbits.get_perp_baselines(orbit_pos, orbit_vel, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], ref_plat)
+        bperp, b_at, bnorm = Orbits.get_perp_baselines_new(orbit_pos, orbit_vel, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], 0.0, params.left_right_look, ref_plat)
 
         global Norm_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(bnorm) ./ 1e3
         global Norm_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,bnorm)) ./ 1e3
@@ -260,15 +261,15 @@ for i1 = 1:2#size(lat_lon_idx,1)
         if length(params.t_loc_3)!=1
             val_max,ind_max = findmax(abs.(image_3D))
 		    norm_BPA_data = abs.(image_3D) ./ val_max
-		    plot_var_op = (norm_BPA_data[plot_idx[1],plot_idx[2],plot_idx[3]:Int64(ceil(length(params.s_loc_3)/2))])
+		    plot_var_op = (norm_BPA_data[plot_idx[1],plot_idx[2],plot_idx[3]:Int64(ceil(length(params.s_loc_3)))])
             plot_var_op = reshape(plot_var_op,length(plot_var_op),1)
             plot_var_ip = targets_ref ./ maximum(targets_ref)
 
-            display(plot(plot_var_op, params.s_loc_3[plot_idx[3]:Int64(ceil(length(params.s_loc_3)/2))]] ,xlabel="Vertical profile normalized radar intensity",
+            display(plot(plot_var_op, params.s_loc_3[plot_idx[3]:Int64(ceil(length(params.s_loc_3)))] ,xlabel="Vertical profile normalized radar intensity",
             ylabel="Height (m)",title = "BPA output profile",xlim=(0,1), legend = false,linewidth=2, 
             xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15))
 
-			display(plot(transpose(plot_var_ip),targets_loc[3,:] ,xlabel="Vertical profile normalized radar intensity",
+			display(plot!(transpose(plot_var_ip),targets_loc[3,:] ,xlabel="Vertical profile normalized radar intensity",
             ylabel="Height (m)",title = "Input profile" , xlim=(0,1), legend = false,linewidth=2,
 			xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15))
 			#Correlation
@@ -285,6 +286,15 @@ for i1 = 1:2#size(lat_lon_idx,1)
         pks_op, vals_op = findmaxima(plot_var_op[1:val_t])
         Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],3] = length(pks_ip)+1 #Total output peaks
 		Output_stat[lat_lon_idx[i1,1],lat_lon_idx[i1,2],4] = length(pks_op)+1 #Total output peaks
+
+        display(plot(plot_var_op, params.s_loc_3[plot_idx[3]:Int64(ceil(length(params.s_loc_3)))] ,xlabel="Vertical profile normalized radar intensity",
+        ylabel="Height (m)",title = "BPA output profile",xlim=(0,1), label="Output",legend = false,linewidth=2, color=:black,
+        xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15))
+
+        display(plot!(transpose(plot_var_ip),targets_loc[3,:] ,xlabel="Vertical profile normalized radar intensity",
+        ylabel="Height (m)",title = "Profile comparison" , xlim=(0,1), labels="Input", legend=:topright,linewidth=2,color=:blue,
+        xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15, ylim=(-1,33)))
+
 
     end
 end
