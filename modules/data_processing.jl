@@ -468,7 +468,7 @@ function tomocoordinates_to_scenecoordinates(signal, heights_t, scene_axis2, sce
         end 
     end
 
-    if left_right_look == "right"
+    if left_right_look == "left"
         op_signal = op_signal[:,end:-1:1,:];
     end
 

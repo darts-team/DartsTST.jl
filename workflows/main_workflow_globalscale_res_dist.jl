@@ -1,5 +1,5 @@
 using Distributed
-addprocs(4) 
+addprocs(12) 
 
 @everywhere include("../modules/generate_raw_data.jl")
 @everywhere include("../modules/process_raw_data.jl")
@@ -162,9 +162,6 @@ end
         global res_theory_s[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
     
     else
-
-        @everywhere include("../modules/user_parameters.jl")
-
         if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
             global Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0.0
         end
@@ -287,7 +284,7 @@ end
         scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
 
         # Calculate point target performance metrics
-        #try
+        try
 	
 	bpa_resolutions, bpa_PSLRs, bpa_ISLRs, bpa_loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
 	
@@ -349,7 +346,7 @@ end
 
         params = UserParameters.inputParameters(
             PSF_cuts = 2, 
-            PSF_direction = [0 1 -tand(params.inc_angle)]
+            PSF_direction = [0 1 tand(params.inc_angle)]
         )
 
         # Along tomography axis
@@ -397,7 +394,7 @@ end
 
 to
 
-@save "../Outputs/output_gs_study_res_run_062023_13.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to
+@save "../Outputs/output_gs_study_res_run_062023_100m_5f_11.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to
 
 [rmprocs(p) for p in workers()]
 
