@@ -253,7 +253,7 @@ function SAR_processing(rawdata, s_xyz_grid, p_xyz_3D, t_rx, ref_range, params) 
     elseif mode==3
         SAR_images_3D=zeros(ComplexF64,Np,Np,Ns_1,Ns_2,Ns_3) # complex SAR images array (5D)
     end
-    ref_delay=2*ref_range/c # reference delay
+    ref_delay::Float64=2*ref_range/c # reference delay
     if mode==1 # SAR (ping-pong)
         for i=1:Np # TX or RX platform
             for j1=1:Ns_1 # for each pixel in axis-1

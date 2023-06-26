@@ -15,6 +15,7 @@ using Proj
 using CoordinateTransformations
 using LinearAlgebra
 using Statistics
+using Statistics
 
 
 """  
@@ -36,6 +37,10 @@ function read_GEDI_L3_data(filepath_GEDIL3, grid_res)
     #10km x 10km grid 
     size_row     = 3470;
     size_col     = 1462;
+  elseif grid_res == 20
+    #20km x 20km grid
+    size_row     = 1735;
+    size_col     = 731;
   elseif grid_res == 20 
     #20km x 20km grid 
     size_row     = 1735;
@@ -262,6 +267,32 @@ function constrct_reflectivity_profile_exp(Canopy_height)
 
 end
 
+function compute_nrmse(obs, pred, type="mean") 
+
+  if size(obs) != size(pred)
+    error("data size not matching")
+  end
+  
+  squared_sums    = sum((obs - pred).^2)
+  mse             = squared_sums / length(obs)
+  rmse            = sqrt(mse)
+  if (type == "sd") 
+    nrmse = rmse/std(obs)
+  elseif (type == "mean") 
+    nrmse = rmse/mean(obs)
+  elseif (type == "maxmin") 
+    nrmse = rmse/ (maximum(obs) - minimum(obs))
+  elseif (type == "none")
+    nrmse = rmse / 1
+  else 
+    error("wrong nrmse type")
+  end
+
+  nrmse = round(nrmse, digits=3)
+  
+  return nrmse
+  
+end
 function compute_nrmse(obs, pred, type="mean") 
 
   if size(obs) != size(pred)

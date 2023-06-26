@@ -28,10 +28,10 @@ end
     fp::Float64  = 10 # pulse repetition frequency (Hz)
     SNR::Float64 = 50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
     SAR_duration::Float64   = 5 # synthetic aperture duration (s)
-    SAR_start_time::Float64 = 0 # SAR imaging start time (s)
+    SAR_start_time::Float64 = -2.5#0 # SAR imaging start time (s)
 
     # platform locations in xyz (including slow-time locations)
-    user_defined_orbit::Int = 1 # 1: use orbits file; 2: user defined orbits in TCN
+    user_defined_orbit::Int = 2 # 1: use orbits file; 2: user defined orbits in TCN
     left_right_look::String = "left" # left or right looking geometry
     orbit_filename::String =  "NISAR_orbit_coflier_lag3_theta_15_new.nc" #"orbit_output_06062023_1.nc" # "orbit_output_062021.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
 
@@ -40,7 +40,7 @@ end
     Torbit::Float64    = 10*60 # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
     dt_orbits::Float64 = 0.5 # orbit time resolution (s)
     p_heading::Float64 = 0 # heading (deg), all platforms assumed to have the same heading, 0 deg is north
-    pos_n   = [-7.5 -5 -2 0 3.7 5.5 6.5] # relative position of each platform along n (m), 0 is the reference location
+    pos_n   = [-20 -10 0 10 20]*1e3 # relative position of each platform along n (m), 0 is the reference location
 
     # target locations and reflectvities
     target_pos_mode::String="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("layered-grid" or "shaped-grid") or a 3xN array ("CR" for corner reflectors)
@@ -50,7 +50,7 @@ end
     t_loc_1 = [0.0] # deg latitude if LLH, along-track if SCH, X if XYZ
     t_loc_2 = [0.0] # deg longitude if LLH, cross-track if SCH, Y if XYZ
     t_loc_3 = [0.0] # m heights if LLH or SCH, Z if XYZ
-    t_ref   = [1.0] # reflectivities: a list of CRs in CR mode; an arbitrary vertical profile that will be interpolated on t_loc_3 axis in *grid modes
+    t_ref   = [1.0]  # reflectivities: a list of CRs in CR mode; an arbitrary vertical profile that will be interpolated on t_loc_3 axis in *grid modes
 
 
     # image/scene pixel coordinates
