@@ -391,7 +391,7 @@ function get_steering_matrix(p_xyz, s_xyz_3xN_2D, azimuth_lim, srange_lim, heigh
                     Vb = mean(p_xyz[:,Master_platform,:],dims=2) - s_xyz_3xN_2D[:,idx_st,idx_r]
                     
                     if ((Va[2]) >= (Vb[2]))
-                        angle_ip =  angle_2vec(Va,Vb) * -1
+                        angle_ip =  angle_2vec(Va,Vb) * 1 #-1
                     else
                         angle_ip =   angle_2vec(Va,Vb) * 1  
                     end

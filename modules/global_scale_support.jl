@@ -14,6 +14,7 @@ using GeoArrays
 using Proj
 using CoordinateTransformations
 using LinearAlgebra
+using Statistics
 
 
 """  
@@ -23,18 +24,22 @@ the corresponding geo location.
 """
 function read_GEDI_L3_data(filepath_GEDIL3, grid_res)
   #choose the grid resolution based on teh requirements, update teh size row and size col accordingly
-  if grid_res == 100 #100km 
+  if grid_res == 100  
     #100km x 100km grid 
     size_row      = 347;
     size_col      = 146;
-  elseif grid_res == 40 #40km
-    ##40km x 40km grid 
+  elseif grid_res == 40 
+    #40km x 40km grid 
     size_row     = 868;
     size_col     = 366;
-  elseif grid_res == 10 #40km
-    ##40km x 40km grid 
+  elseif grid_res == 10 
+    #10km x 10km grid 
     size_row     = 3470;
     size_col     = 1462;
+  elseif grid_res == 20 
+    #20km x 20km grid 
+    size_row     = 1735;
+    size_col     = 731;
   else
     throw("Resolution not valid! Change to 100 km or 40 km")
   end
@@ -257,5 +262,31 @@ function constrct_reflectivity_profile_exp(Canopy_height)
 
 end
 
+function compute_nrmse(obs, pred, type="mean") 
+
+  if size(obs) != size(pred)
+    error("data size not matching")
+  end
+  
+  squared_sums    = sum((obs - pred).^2)
+  mse             = squared_sums / length(obs)
+  rmse            = sqrt(mse)
+  if (type == "sd") 
+    nrmse = rmse/std(obs)
+  elseif (type == "mean") 
+    nrmse = rmse/mean(obs)
+  elseif (type == "maxmin") 
+    nrmse = rmse/ (maximum(obs) - minimum(obs))
+  elseif (type == "none")
+    nrmse = rmse / 1
+  else 
+    error("wrong nrmse type")
+  end
+
+  nrmse = round(nrmse, digits=3)
+  
+  return nrmse
+  
+end
 
 end

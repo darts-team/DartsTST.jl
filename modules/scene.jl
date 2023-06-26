@@ -31,7 +31,16 @@ function construct_targets_str(params)
     t_ref_3d  = repeat( t_ref_interpolatedProfile, length(t_loc_1), length(t_loc_2), 1) # repeat the reflectivity in "horizontal S-C layers"
     t_ref_1xN = Scene.convert_3D_to_1xN(t_ref_3d)
     Nt = size(t_loc_3xN, 2) # number of targets
-    @info "Number of targets and interpolated profile" Nt, t_ref_interpolatedProfile
+    #@info "Number of targets and interpolated profile" Nt, t_ref_interpolatedProfile
+
+  elseif target_pos_mode=="layered-grid-GEDIL2"
+    t_loc_3xN = Scene.form3Dgrid_for(t_loc_1, t_loc_2, t_loc_3) # using 3 nested for loops
+
+    # create and flatten 3D grid of layered reflectivities from arbitrary t_ref profile
+    t_ref_3d  = repeat( t_ref, length(t_loc_1), length(t_loc_2), 1) # repeat the reflectivity in "horizontal S-C layers"
+    t_ref_1xN = Scene.convert_3D_to_1xN(t_ref_3d)
+    Nt = size(t_loc_3xN, 2) # number of targets
+    #@info "Number of targets and  profile" Nt, t_ref
 
   elseif target_pos_mode=="shaped-grid" # target positions are defined as a volumetric grid (useful for distributed target)
     @warn "Target position mode shaped-grid not implemented yet"

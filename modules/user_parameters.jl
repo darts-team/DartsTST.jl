@@ -55,8 +55,8 @@ end
 
     # image/scene pixel coordinates
     s_loc_1 = 0#-40:1:40 # deg latitude if LLH, along-track if SCH, X if XYZ
-    s_loc_2 = -30:1:30 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    s_loc_3 = -30:1:30 # m  heights if LLH or SCH, Z if XYZ
+    s_loc_2 = -60:1:10 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    s_loc_3 = -5:1:50 # m  heights if LLH or SCH, Z if XYZ
 
     # range spread function (RSF) parameters
     pulse_length::Float64 = 10e-6 # s pulse length
@@ -134,7 +134,7 @@ function validateInputParams(params)
         @assert length(params.t_loc_1) == length(params.t_loc_2) == length(params.t_loc_3) "Size of target location arrays must be equal for target_pos_mode=CR"
     end
 
-    @assert params.target_pos_mode in ["CR", "layered-grid", "shaped-grid", "grid"]  "Target position mode is not valid"
+    @assert params.target_pos_mode in ["CR", "layered-grid", "layered-grid-GEDIL2", "shaped-grid", "grid"]  "Target position mode is not valid"
 
     # Add more @assert's here
 

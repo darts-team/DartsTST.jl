@@ -56,6 +56,10 @@ global Par_baseline_mean    = SharedArray(zeros(size_row,size_col,1))
 global res_theory_n    = SharedArray(zeros(size_row,size_col,1))
 global res_theory_s    = SharedArray(zeros(size_row,size_col,1))
 
+global amb_H                = SharedArray(zeros(size_row,size_col,1))
+global amb_N                = SharedArray(zeros(size_row,size_col,1))
+global slnt_range           = SharedArray(zeros(size_row,size_col,1))
+
 end
 
 @timeit to "Read orbit file and get orbits " begin
@@ -73,7 +77,7 @@ region_ylims = 1:366
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
-orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/Outputs/orbit_output_05242023_3.nc") # Read orbits data in NetCDF format
+orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/Orbits/darts-orbits-latest/DARTS/orbit_output_06152023_3.nc") # Read orbits data in NetCDF format
 global mast_plat            = 1
 flag_plat           = 1 #descending orbit
 orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_Support.get_orbit_info_fromfile(orbit_dataset, mast_plat, flag_plat)
@@ -127,6 +131,10 @@ end
             #global max_baseline_n[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
             global res_theory_n[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
             global res_theory_s[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
+
+            global amb_H[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
+            global amb_N[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
+            global slnt_range[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
         
         else
 
@@ -169,6 +177,16 @@ end
             # theoretical resolution along-n
             range_s, range_g = Scene.lookangle_to_range(lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], mean(Geometry.xyz_to_geo(orbit_pos[:,mast_plat,:])[3,:]), 0, earth_radius)
             global res_theory_n[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/1.26e9)*range_s/1/ maximum(bperp) 
+
+            # Read number of platforms (todo: move into a struct)
+            Np  = size(orbit_pos)[2] # number of platforms
+
+            avg_sep = maximum(bperp)/(Np - 1)
+            global amb_H[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/p_mode/avg_sep*sind(lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
+            global amb_N[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/p_mode/avg_sep
+                    
+            global slnt_range[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = slrng_temp2
+
         end 
 
     catch
@@ -180,7 +198,7 @@ end
 
 end
 
-@save "/u/epstein-z0/darts/joshil/Outputs/calc_baselines/output_baselines_orbit_2.jld" Geo_location Output_stat Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to
+@save "/u/epstein-z0/darts/joshil/Outputs/calc_baselines/output_baselines_06152023_3.jld" Geo_location Output_stat Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s to
 
 
 [rmprocs(p) for p in workers()]
