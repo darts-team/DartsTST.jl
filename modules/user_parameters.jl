@@ -22,6 +22,7 @@ end
     mode::Int  = 2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     tx_el::Int = 1 # which element transmits for SIMO (max value N)
     processing_steps = :bp2d3d  # :bp3d --> 1-step, :bp2d3d --> 2-step for SAR and tomographic processing
+    processing_mode = 1 #1: All-platforms for processing, 2: Platforms 2-end (Except master) for processing 
 
     # radar parameters
     fc::Float64  = 1.25e9 # center frequency (Hz) L-band; fc=3.2e9 # center frequency (Hz) S-band; fc=6e9 # center frequency (Hz) C-band
@@ -55,8 +56,8 @@ end
 
     # image/scene pixel coordinates
     s_loc_1 = 0#-40:1:40 # deg latitude if LLH, along-track if SCH, X if XYZ
-    s_loc_2 = -60:1:10 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    s_loc_3 = -5:1:50 # m  heights if LLH or SCH, Z if XYZ
+    s_loc_2 =-60:0.5:10 #-100:0.5:100 #-60:1:10 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    s_loc_3 = -5:0.5:50 #-100:0.5:100 #-5:1:50 # m  heights if LLH or SCH, Z if XYZ
 
     # range spread function (RSF) parameters
     pulse_length::Float64 = 10e-6 # s pulse length

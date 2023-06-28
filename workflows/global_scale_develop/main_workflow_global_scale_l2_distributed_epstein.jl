@@ -1,5 +1,5 @@
 using Distributed
-addprocs(24) 
+addprocs(2) 
 
 @everywhere include("../modules/generate_raw_data.jl")
 @everywhere include("../modules/process_raw_data.jl")
@@ -39,14 +39,14 @@ earth_radius = 6378.137e3 # Earth semi-major axis at equator
 @timeit to "Reading L2 and L3 file for canopy heights and profile " begin
 
 #Read canopy heights
-#filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
-filepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+#filepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
 
 grid_res        = 100;
 Canopy_heights_L3, Geo_location, size_row, size_col = Global_Scale_Support.read_GEDI_L3_data(filepath_GEDIL3, grid_res)
 
-#@load "/Users/joshil/Documents/GEDI_Data/Outputs_L2/Output_GEDIL2_1year_2022.jld2"
-@load "/u/epstein-z0/darts/joshil/GEDI/GEDI_L2/Output_GEDIL2_1year_2022.jld2"
+@load "/Users/joshil/Documents/GEDI_Data/Outputs_L2/Output_GEDIL2_1year_2022_res100m.jld2"
+#@load "/u/epstein-z0/darts/joshil/GEDI/GEDI_L2/Output_GEDIL2_1year_2022.jld2"
 
 global Canopy_heights           = Canopy_heights_L2[:,:];
 
@@ -90,15 +90,16 @@ end
 @timeit to "Read orbit file and get orbits " begin
 #region_xlims = [50,110]
 #region_ylims = [15,55]
-region_xlims = 1:347 #90:95
-region_ylims = 1:146 #30:30
+region_xlims = 1:347#93:95#1:347#1:347#90:95
+region_ylims = 70#29:31#73#1:146#30:30
 #region_xlims        = 50:110
 #region_ylims        = 15:55
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
-#orbit_dataset       = Dataset("/Users/joshil/Documents/Orbits/Outputs/06152023/3/orbit_output_06152023_3.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
-orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/orbit_output_06152023_3.nc")
+#orbit_dataset       = Dataset("./inputs/orbit_output_04052023.nc")
+orbit_dataset       = Dataset("/Users/joshil/Documents/Orbits/Outputs/06152023/3/orbit_output_06152023_3.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
+#orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/orbit_output_06152023_3.nc")
 
 global mast_plat            = 1
 flag_plat           = 1 #descending orbit
@@ -163,7 +164,9 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
         global Orbit_index[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = close_val_lat_lon[2]
 
         slrng_temp2 = Geometry.distance(orbit_pos_all[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2]]; 0]))
-        global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = acosd(orbit_pos_geo_all[:,close_val_lat_lon[2]][3] / slrng_temp2) 
+        #global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = acosd(orbit_pos_geo_all[:,close_val_lat_lon[2]][3] / slrng_temp2) 
+        global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = Scene.slantrange_to_lookangle(earth_radius,slrng_temp2,orbit_pos_geo_all[:,close_val_lat_lon[2]][3],0.0)[2]
+
 
         #ref_profile_height, ref_profile_value, NoPeaks  = Global_Scale_Support.constrct_reflectivity_profile_exp(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         #interp_fn = LinearInterpolation(ref_profile_height, ref_profile_value, extrapolation_bc = Flat());
@@ -173,15 +176,21 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
             Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = 49.0
         end
 
-        # Define user parameters
-        #include("../inputs/predefined-input-parameters.jl") TODO gives errors
-        params = UserParameters.inputParameters(
-            target_pos_mode = "layered-grid-GEDIL2",
-            t_loc_3 = Canopy_profile_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1:2:length(0.0:0.5:ceil(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]))],
-            t_ref = Canopy_profiles[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1:2:length(0.0:0.5:ceil(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]))],
-        )
 
-        filt_len = 5
+        targ_loc = Canopy_profile_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1:2:length(0.0:0.5:ceil(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]))];
+        targ_ref = Canopy_profiles[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1:2:length(0.0:0.5:ceil(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]))];
+        #targ_ref = transpose(targ_ref ./ maximum(targ_ref))
+
+        # Define user parameters
+        params = UserParameters.inputParameters(
+            look_angle = lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1],
+            target_pos_mode = "layered-grid-GEDIL2",
+            t_loc_3 = targ_loc,
+            t_ref   = targ_ref, 
+        )
+       #params = UserParameters.inputParameters(look_angle = lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
+       #params = UserParameters.inputParameters()
+        filt_len = 1
 
         # theoretical resolution
         if params.mode == 1 # SAR
@@ -209,7 +218,7 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
         global SAR_start_time = orbit_time_all[close_val_lat_lon[2]] - (params.SAR_duration / 2)
 
         ref_plat = 1 #incicate the reference platform
-        bperp, b_at, bnorm = Orbits.get_perp_baselines_new(orbit_pos[:,2:end,:], orbit_vel[:,2:end,:], lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], 0.0, params.left_right_look,  ref_plat)
+        bperp, b_at, bnorm = Orbits.get_perp_baselines_new(orbit_pos[:,1:end,:], orbit_vel[:,1:end,:], lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], 0.0, params.left_right_look,  ref_plat)
 
         global Norm_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(bnorm) ./ 1e3
         global Norm_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,bnorm)) ./ 1e3
@@ -223,9 +232,13 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
         global Par_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,b_at)) ./ 1e3
         global Par_baseline_mean[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = mean(filter(!iszero,b_at)) ./ 1e3
 
+        # Read number of platforms (todo: move into a struct)
+        Np  = size(orbit_pos)[2] # number of platforms
+        avg_sep = maximum(bperp)/(Np - 1) # Change this
+
         # theoretical resolution along-n
         range_s, range_g = Scene.lookangle_to_range(lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], mean(Geometry.xyz_to_geo(orbit_pos[:,mast_plat,:])[3,:]), 0, earth_radius)
-        global res_theory_n[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/p_mode/ maximum(bperp) 
+        global res_theory_n[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/p_mode/ (maximum(bperp)) 
 
         # theoretical resolution along-track
         mu = 3.986004418e14
@@ -233,10 +246,6 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
         Lsa = sc_speed*params.SAR_duration + sc_speed/params.fp
         global res_theory_s[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/2/Lsa
 
-        # Read number of platforms (todo: move into a struct)
-        Np  = size(orbit_pos)[2] # number of platforms
-
-        avg_sep = maximum(bperp)/(Np - 2) # Change this
         global amb_H[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/p_mode/avg_sep*sind(lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         global amb_N[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/p_mode/avg_sep
         
@@ -257,7 +266,7 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
             Antenna.applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, params)
         end
 
-        try
+       try
             
         # Generate range spread function (matched filter output)
         min_range, max_range = Geometry.find_min_max_range(t_xyz_3xN, p_xyz)
@@ -283,9 +292,9 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
             if params.processing_steps === :bp3d # 1-step processing TODO do we need this option?
                 image_3D = Process_Raw_Data.main_SAR_tomo_3D_new(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
             elseif params.processing_steps === :bp2d3d # 2-step processing, first SAR (along-track), then tomographic
-             #SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+             SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
              # for co-flyer
-             SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata[:,2:size(p_xyz)[2],:], s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+             #SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata[:,2:size(p_xyz)[2],:], s_xyz_3xN, p_xyz, t_rx, ref_range, params)
              image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
             end
         end
@@ -296,8 +305,8 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
         #filt_len                    = 1 # Covariance matrix box filter size 3->5x5 box filter
         azimuth_lim 				= [1, Int64(ceil(length(params.s_loc_1)))]
         srange_lim 					= [1, Int64(ceil(length(params.s_loc_2)))]
-        ref_hl                      = Int64(ceil(length(params.s_loc_3)/2))
-        heights_t 					= params.s_loc_3 #2*minimum(params.s_loc_3):params.s_loc_3[2]-params.s_loc_3[1]:2*maximum(params.s_loc_3);#params.s_loc_3
+        ref_hl                      = 6#Int64(ceil(length(params.s_loc_3)/2)) 
+        heights_t 					= -80:params.s_loc_3[2]-params.s_loc_3[1]:80 #params.s_loc_3  #2*minimum(params.s_loc_3):params.s_loc_3[2]-params.s_loc_3[1]:2*maximum(params.s_loc_3);#params.s_loc_3
 
         # Modify input matrix to desired shape
         input_SP_temp               = SAR_images_3D[:,:,:,ref_hl];
@@ -330,23 +339,28 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
         steering_mat                = Data_Processing.get_steering_matrix(p_xyz, s_xyz_3xN_2D, azimuth_lim, srange_lim, heights_t, Ns2, Master_platform, params.λ, params.mode);
 
         Pbf                         = Data_Processing.tomo_beamforming(Cov_mat3, steering_mat, azimuth_lim, srange_lim, [size(Cov_mat)[1] size(Cov_mat)[2] size(heights_t)[1]])  
-        Pbf = Pbf[:,end:-1:1,:];
+        Pbf = Pbf[:,:,end:-1:1];
+        #Pbf = Pbf[:,end:-1:1,:];
         Pbf2                        = Data_Processing.tomocoordinates_to_scenecoordinates(Pbf, heights_t, params.s_loc_2, params.s_loc_3, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] , params.left_right_look)
 
  
         PC                          = Data_Processing.tomo_CAPON(Cov_mat3, steering_mat, azimuth_lim, srange_lim, [size(Cov_mat)[1] size(Cov_mat)[2] size(heights_t)[1]])  
-        PC = PC[:,end:-1:1,:];
+        PC = PC[:,:,end:-1:1];
+        #PC = PC[:,end:-1:1,:];
         PC2                         = Data_Processing.tomocoordinates_to_scenecoordinates(PC, heights_t, params.s_loc_2, params.s_loc_3, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] , params.left_right_look)
 
-        plot_idx 					= [Int64(ceil(length(params.s_loc_1)/2)),Int64(ceil(length(params.s_loc_2)/2)),6] #Int64(ceil(length(params.s_loc_3)/2))]
+        plot_idx 					= [Int64(ceil(length(params.s_loc_1)/2)),61,81] #Int64(ceil(length(params.s_loc_3)/2))]   Int64(ceil(length(params.s_loc_2)/2))
 
+        temp3 = 6
         if length(params.t_loc_3)!=1
+            #=
             val_max,ind_max         = findmax(abs.(image_3D))
 		    norm_BPA_data           = abs.(image_3D) ./ val_max
-		    plot_var_op_bpa         = (norm_BPA_data[plot_idx[1],plot_idx[2],plot_idx[3]:plot_idx[3]+50])
+		    plot_var_op_bpa         = (norm_BPA_data[plot_idx[1],plot_idx[2],temp3:temp3+50])
             plot_var_op_bpa         = reshape(plot_var_op_bpa,length(plot_var_op_bpa),1)
             plot_var_ip             = targets_ref ./ maximum(targets_ref)
             plot_var_op_bpa         = plot_var_op_bpa[1:length(plot_var_ip)]
+            plot_var_ip             = plot_var_ip[1:length(plot_var_op_bpa)]
             val_t                   = (findmin(abs.(targets_loc[3,:] .- ceil(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]))))[2]
 		    pks_ip, vals_ip         = findmaxima(plot_var_ip[1:val_t])
             pks_op_bpa, vals_op_bpa = findmaxima(plot_var_op_bpa[1:val_t])
@@ -364,40 +378,64 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
             plot_var_op_capon         = reshape(plot_var_op_capon,length(plot_var_op_capon),1)
             plot_var_op_capon         = plot_var_op_capon[1:length(plot_var_ip)]
             pks_op_capon, vals_op_capon = findmaxima(plot_var_op_capon[1:val_t])
-#=
-            display(plot(transpose(plot_var_ip),targets_loc[3,:] ,xlabel="Vertical profile normalized radar intensity",
-            ylabel="Height (m)",title = "Input profile" , xlim=(0,1),linewidth=2,legendfont=font(15),
-			xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15, label="Input profile")) 
+            =#
 
-             display(plot!(plot_var_op_bpa, params.s_loc_3[plot_idx[2]:1plot_idx[2]+length(plot_var_ip)-1] ,xlabel="Vertical profile normalized radar intensity",
-            ylabel="Height (m)",title = "BPA output profile",xlim=(0,1),linewidth=2,legendfont=font(15), 
-            xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15, label="Output profile - Back projection"))
+            plot_var_ip             = ( targets_ref ./ maximum(targets_ref) )[:]
+            pks_ip, vals_ip         = findmaxima(plot_var_ip)
 
-            display(plot!(plot_var_op_beamforming, params.s_loc_3[plot_idx[2]:1plot_idx[2]+length(plot_var_ip)-1] ,xlabel="Vertical profile normalized radar intensity",
-            ylabel="Height (m)",title = "BPA output profile",xlim=(0,1),linewidth=2,legendfont=font(15),  
-            xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15, label="Output profile - Beamforming"))
+		    plot_var_op_bpa         = image_3D[plot_idx[1],plot_idx[2],temp3:temp3+50]
+            plot_var_op_bpa         = plot_var_op_bpa[1:length(plot_var_ip)]
+            plot_var_op_bpa         = plot_var_op_bpa ./ maximum(plot_var_op_bpa)
+            pks_op_bpa, vals_op_bpa = findmaxima(plot_var_op_bpa)
 
-            display(plot!(plot_var_op_capon, params.s_loc_3[plot_idx[2]:1plot_idx[2]+length(plot_var_ip)-1] ,xlabel="Vertical profile normalized radar intensity",
-            ylabel="Height (m)",title = "BPA output profile",xlim=(0,1),linewidth=2,legendfont=font(15), 
-            xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15, label="Output profile - Capon"))
-=#
-			
-			global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],2] = cor(transpose(plot_var_ip),plot_var_op_bpa)[1] #Correlation
-		    global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =  sqrt( (sum( (transpose(plot_var_ip).-plot_var_op_bpa).^2 )) / length(targets_loc[3,:] ) ) #RMSE
+            plot_var_op_beamforming = Pbf2[plot_idx[1],plot_idx[2],plot_idx[3]:plot_idx[3]+50]
+            plot_var_op_beamforming = abs.(plot_var_op_beamforming[1:length(plot_var_ip)])
+            plot_var_op_beamforming = plot_var_op_beamforming ./ maximum(plot_var_op_beamforming) 
+            pks_op_beamforming, vals_op_beamforming = findmaxima(plot_var_op_beamforming)
+
+            plot_var_op_capon       = PC2[plot_idx[1],plot_idx[2],plot_idx[3]:plot_idx[3]+50]
+            plot_var_op_capon       = abs.(plot_var_op_capon[1:length(plot_var_ip)])
+            plot_var_op_capon       = plot_var_op_capon ./ maximum(plot_var_op_capon) 
+            pks_op_capon, vals_op_capon = findmaxima(plot_var_op_capon)
+
+            global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],2] = cor((plot_var_ip),plot_var_op_bpa)[1] #Correlation
+		    #global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =  sqrt( (sum( ((plot_var_ip)-plot_var_op_bpa).^2 )) / length(targets_loc[3,:] ) ) #RMSE
+            global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =  Global_Scale_Support.compute_nrmse(plot_var_op_bpa, plot_var_ip, "none")  #RMSE
             global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],3] = length(pks_ip) #Total output peaks
 		    global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],4] = length(pks_op_bpa) #Total output peaks
 
-            global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],2] = cor(transpose(plot_var_ip),plot_var_op_beamforming)[1] #Correlation
-		    global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =  sqrt( (sum( (transpose(plot_var_ip).-plot_var_op_beamforming).^2 )) / length(targets_loc[3,:] ) ) #RMSE
+            global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],2] = cor((plot_var_ip),plot_var_op_beamforming)[1] #Correlation
+		    global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = Global_Scale_Support.compute_nrmse(plot_var_op_beamforming, plot_var_ip, "none") #RMSE
             global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],3] = length(pks_ip) #Total output peaks
 		    global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],4] = length(pks_op_beamforming) #Total output peaks
 
-            global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],2] = cor(transpose(plot_var_ip),plot_var_op_capon)[1] #Correlation
-		    global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =  sqrt( (sum( (transpose(plot_var_ip).-plot_var_op_capon).^2 )) / length(targets_loc[3,:] ) ) #RMSE
+            global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],2] = cor((plot_var_ip),plot_var_op_capon)[1] #Correlation
+		    global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = Global_Scale_Support.compute_nrmse(plot_var_op_capon, plot_var_ip, "none") #RMSE 
             global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],3] = length(pks_ip) #Total output peaks
 		    global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],4] = length(pks_op_capon) #Total output peaks
 
+
+            display(plot((plot_var_ip),targets_loc[3,:] ,xlabel="Vertical profile normalized radar intensity",
+            ylabel="Height (m)",title = "Input profile" , xlim=(0,1),linewidth=2,legendfont=font(15),legend=:bottomleft,
+			xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15, label="Input ")) 
+
+             display(plot!(plot_var_op_bpa, targets_loc[3,:] ,xlabel="Vertical profile normalized radar intensity",
+            ylabel="Height (m)",title = "BPA output profile",xlim=(0,1),linewidth=2,legendfont=font(15), 
+            xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15, label="Output  - Back projection"))
+
+            p3 = (plot!(plot_var_op_beamforming, targets_loc[3,:] ,xlabel="Vertical profile normalized radar intensity",
+            ylabel="Height [m]",title = "BPA output profile",xlim=(0,1),linewidth=2,legendfont=font(12),  
+            xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15, label="Output  - Beamforming"))
+
+            display(plot!(plot_var_op_capon, targets_loc[3,:] ,xlabel="Vertical profile normalized radar intensity",
+            ylabel="Height (m)",title = "BPA output profile",xlim=(0,1),linewidth=2,legendfont=font(10), 
+            xtickfont=font(15), ytickfont=font(15), guidefont=font(15), titlefontsize=15, label="Output  - Capon"))
 		end
+
+        gr()
+        l = @layout[grid(1,1) a{0.0001w}]
+        p0 = plot(legend=false,grid=false,foreground_color_subplot=:white) 
+        p11 = plot(p3,p0,layout=l)
 		
         GC.gc()
         catch
@@ -410,11 +448,10 @@ end
 
 to
 
-@save "../Outputs/output_gs_study_res_run_062023_100m_5f_506_5plat_4proc_profiles.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s amb_H amb_N slnt_range to 
+@save "../Outputs/output_gs_study_res_run_062023_100m_5f_511_5plat_5proc_profiles.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s amb_H amb_N slnt_range to 
 
 [rmprocs(p) for p in workers()]
 
 
 
 to
-

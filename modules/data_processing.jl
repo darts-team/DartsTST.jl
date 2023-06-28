@@ -377,35 +377,64 @@ function angle_2vec(a, b)
     return acosd(clamp(a⋅b/(norm(a)*norm(b)), -1, 1))
 end
 
-function get_steering_matrix(p_xyz, s_xyz_3xN_2D, azimuth_lim, srange_lim, heights_z, Np, Master_platform, λ, mode)
+function get_steering_matrix(p_xyz, s_xyz_3xN_2D, azimuth_lim, srange_lim, heights_z, Np, Master_platform, λ, mode, processing_mode)
 
 	aT          = zeros(ComplexF64, length(azimuth_lim[1]:azimuth_lim[2]), length(srange_lim[1]:srange_lim[2]), length(heights_z), Np)
 
-    for idx_st=azimuth_lim[1]:azimuth_lim[2]
-		for idx_r=srange_lim[1]:srange_lim[2]
+	if processing_mode==1 
+		for idx_st=azimuth_lim[1]:azimuth_lim[2]
+			for idx_r=srange_lim[1]:srange_lim[2]
 
-            for idx_z = 1:length(heights_z)
-				for idx_p=1:Np
+				for idx_z = 1:length(heights_z)
+					for idx_p=1:Np
 
-                    Va = mean(p_xyz[:,idx_p,:],dims=2) - s_xyz_3xN_2D[:,idx_st,idx_r]
-                    Vb = mean(p_xyz[:,Master_platform,:],dims=2) - s_xyz_3xN_2D[:,idx_st,idx_r]
-                    
-                    if ((Va[2]) >= (Vb[2]))
-                        angle_ip =  angle_2vec(Va,Vb) * 1 #-1
-                    else
-                        angle_ip =   angle_2vec(Va,Vb) * 1  
-                    end
+						Va = mean(p_xyz[:,idx_p,:],dims=2) - s_xyz_3xN_2D[:,idx_st,idx_r]
+						Vb = mean(p_xyz[:,Master_platform,:],dims=2) - s_xyz_3xN_2D[:,idx_st,idx_r]
+						
+						if ((Va[2]) >= (Vb[2]))
+							angle_ip =  angle_2vec(Va,Vb) * 1 #-1
+						else
+							angle_ip =   angle_2vec(Va,Vb) * 1  
+						end
 
-					if mode == 1
-                    	kaz = (4 * pi * ((angle_ip)*pi/180) * heights_z[idx_z]) / (λ )#* sind(look_angle))
-					elseif mode == 2
-						kaz = (2 * pi * ((angle_ip)*pi/180) * heights_z[idx_z]) / (λ )#* sind(look_angle))
+						if mode == 1
+							kaz = (4 * pi * ((angle_ip)*pi/180) * heights_z[idx_z]) / (λ )#* sind(look_angle))
+						elseif mode == 2
+							kaz = (2 * pi * ((angle_ip)*pi/180) * heights_z[idx_z]) / (λ )#* sind(look_angle))
+						end
+						aT[idx_st, idx_r, idx_z,idx_p] = exp.(1im * kaz) #steering vector
 					end
-					aT[idx_st, idx_r, idx_z,idx_p] = exp.(1im * kaz) #steering vector
+				end
+			end
+		end
+	elseif processing_mode==2
+		for idx_st=azimuth_lim[1]:azimuth_lim[2]
+			for idx_r=srange_lim[1]:srange_lim[2]
+	
+				for idx_z = 1:length(heights_z)
+					for idx_p=1:Np
+	
+						Va = mean(p_xyz[:,idx_p+1,:],dims=2) - s_xyz_3xN_2D[:,idx_st,idx_r]
+						Vb = mean(p_xyz[:,Master_platform,:],dims=2) - s_xyz_3xN_2D[:,idx_st,idx_r]
+						
+						if ((Va[2]) >= (Vb[2]))
+							angle_ip =  angle_2vec(Va,Vb) * 1 #-1
+						else
+							angle_ip =   angle_2vec(Va,Vb) * 1  
+						end
+	
+						if mode == 1
+							kaz = (4 * pi * ((angle_ip)*pi/180) * heights_z[idx_z]) / (λ )#* sind(look_angle))
+						elseif mode == 2
+							kaz = (2 * pi * ((angle_ip)*pi/180) * heights_z[idx_z]) / (λ )#* sind(look_angle))
+						end
+						aT[idx_st, idx_r, idx_z,idx_p] = exp.(1im * kaz) #steering vector
+					end
 				end
 			end
 		end
 	end
+	
 	return aT
 end
 
@@ -430,8 +459,9 @@ function tomo_CAPON(Cov_mat, steering_mat, azimuth_lim, srange_lim, size_op)
 		for idx_r=srange_lim[1]:srange_lim[2]
 			a 							= transpose(steering_mat[idx_st, idx_r, :,:]) #transpose of steering vector
 			#PC[idx_st,idx_r,:] 		=  abs.(diag(1 ./ (conj(transpose(a)) * inv(Cov_mat[idx_st,idx_r,:,:]) * (a))) )# power of conventional beamformer
+			diagL = std(diag(Cov_mat[idx_st,idx_r,:,:]))
 			try 
-				PC[idx_st,idx_r,:] 		=  abs.(diag(1 ./ (conj(transpose(a)) * inv(Cov_mat[idx_st,idx_r,:,:] .+ (0.2 .* Matrix{Float64}(I, Data_mat_size, Data_mat_size))) * (a))) )# power of conventional beamformer
+				PC[idx_st,idx_r,:] 		=  abs.(diag(1 ./ (conj(transpose(a)) * inv(Cov_mat[idx_st,idx_r,:,:] .+ (diagL .* Matrix{Float64}(I, Data_mat_size, Data_mat_size))) * (a))) )# power of conventional beamformer
 			catch
 				continue
 			end
@@ -440,16 +470,19 @@ function tomo_CAPON(Cov_mat, steering_mat, azimuth_lim, srange_lim, size_op)
 	return PC
 end
 
-function tomocoordinates_to_scenecoordinates(signal, heights_t, scene_axis2, scene_axis3, look_angle, left_right_look)
+function tomocoordinates_to_scenecoordinates(signal, heights_t, scene_axis2, scene_axis3, look_angle, left_right_look, plat_height)
 
 
     test_mat_h 		= zeros(size(signal,2),size(signal,3))
     test_mat_c 		= zeros(size(signal,2),size(signal,3))
     op_signal       = zeros(size(signal,1),size(signal,2),size(signal,3))
-    heights_z 		= heights_t .*sind(look_angle)
+
+	earth_radius    = 6378.137e3
+	l_inc_angle  	= asind.(sind.(look_angle).*(earth_radius+plat_height)./earth_radius)
+    heights_z 		= heights_t .*sind(l_inc_angle)
 
     for j=1:size(signal,2)
-        grange          = heights_z ./tand(look_angle)
+        grange          = heights_z ./tand(l_inc_angle)
         test_mat_c[j,:] = scene_axis2[j] .+ (grange)
     end
     test_mat_h = transpose(repeat(heights_z,1,size(signal,2)))

@@ -42,7 +42,7 @@ const to = TimerOutput()
 #Read canopy heights
 filepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
 #filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
-grid_res        = 20#100;
+grid_res        = 100;
 Canopy_heights, Geo_location, size_row, size_col = Global_Scale_Support.read_GEDI_L3_data(filepath_GEDIL3, grid_res)
 
 GC.gc()
@@ -83,8 +83,8 @@ end
 #region_ylims = [15,55]
 #region_xlims = 59:61
 #region_ylims = 17:19
-region_xlims = 265:506# 1:347#1:868 
-region_ylims = 85:271#1:146#1:366
+region_xlims = 1:347 #265:506# 1:347#1:868 
+region_ylims = 1:146 #85:271#1:146#1:366
 #region_xlims = 530:1150
 #region_ylims = 170:600
 #region_xlims        = 80:81
@@ -92,8 +92,9 @@ region_ylims = 85:271#1:146#1:366
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
-orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/NISAR_orbit_coflier_p5_lag4_theta15_06152023_3.nc") # orbit_output_06132023_1.nc
+#orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/NISAR_orbit_coflier_p5_lag4_theta15_06152023_3.nc") # orbit_output_06132023_1.nc
 #orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/orbit_output_06152023_3.nc")
+orbit_dataset       = Dataset("/Users/joshil/Documents/Orbits/Outputs/06152023/3/orbit_output_06152023_3.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
 
 global mast_plat            = 1
 flag_plat           = 1 #descending orbit
@@ -185,11 +186,11 @@ end
             global p_mode = 1.38
         end
         
-	if close_val_lat_lon[2] < 11
-		close_val_lat_lon = close_val_lat_lon .+ 10
-	elseif close_val_lat_lon[2] > (length(orbit_time_all) - 10)        
-		close_val_lat_lon = close_val_lat_lon .- 10
-	end
+	    if close_val_lat_lon[2] < 11
+		    close_val_lat_lon = close_val_lat_lon .+ 10
+	    elseif close_val_lat_lon[2] > (length(orbit_time_all) - 10)        
+		    close_val_lat_lon = close_val_lat_lon .- 10
+	    end
 
         # Compute orbits time, position, and velocity
         global orbit_time = orbit_time_all[close_val_lat_lon[2]-10:close_val_lat_lon[2]+10]
@@ -198,8 +199,17 @@ end
 
         global SAR_start_time = orbit_time_all[close_val_lat_lon[2]] - (params.SAR_duration / 2)
 
+        # Read number of platforms (todo: move into a struct)
+        Np  = size(orbit_pos)[2] # number of platforms
+
         ref_plat = 1 #incicate the reference platform
-        bperp, b_at, bnorm = Orbits.get_perp_baselines(orbit_pos[:,1:end,:], orbit_vel[:,1:end,:], lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], ref_plat)
+        if params.processing_mode == 1
+            bperp, b_at, bnorm = Orbits.get_perp_baselines_new(orbit_pos[:,1:end,:], orbit_vel[:,1:end,:], lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], 0.0, params.left_right_look,  ref_plat)
+            avg_sep = maximum(bperp)/(Np - 1) # Change this
+        elseif params.processing_mode == 2
+            bperp, b_at, bnorm = Orbits.get_perp_baselines_new(orbit_pos[:,2:end,:], orbit_vel[:,2:end,:], lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], 0.0, params.left_right_look,  ref_plat)
+            avg_sep = maximum(bperp)/(Np - 2) # Change this
+        end
 
         global Norm_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(bnorm) ./ 1e3
         global Norm_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,bnorm)) ./ 1e3
@@ -223,10 +233,6 @@ end
         Lsa = sc_speed*params.SAR_duration + sc_speed/params.fp
         global res_theory_s[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/2/Lsa
 
-        # Read number of platforms (todo: move into a struct)
-        Np  = size(orbit_pos)[2] # number of platforms
-
-        avg_sep = maximum(bperp)/(Np - 1) #CHANGE THIS
         global amb_H[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/p_mode/avg_sep*sind(lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         global amb_N[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = (c/params.fc)*range_s/p_mode/avg_sep
 
@@ -246,7 +252,7 @@ end
             Antenna.applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, params)
         end
  
-	try 
+	#try 
 
         # Generate range spread function (matched filter output)
          min_range, max_range = Geometry.find_min_max_range(t_xyz_3xN, p_xyz)
@@ -271,10 +277,13 @@ end
         if params.processing_steps === :bp3d # 1-step processing TODO do we need this option?
              image_3D = Process_Raw_Data.main_SAR_tomo_3D_new(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
         elseif params.processing_steps === :bp2d3d # 2-step processing, first SAR (along-track), then tomographic
-             SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
-             # for co-flyer
-             #SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata[:,2:size(p_xyz)[2],:], s_xyz_3xN, p_xyz, t_rx, ref_range, params)
-             image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
+            if params.processing_mode == 1
+                SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+            elseif params.processing_mode == 2
+                # for co-flyer
+                SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata[:,2:size(p_xyz)[2],:], s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+            end
+            image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
         end
 
         image_3D = Data_Processing.average_2D_data(image_3D, filt_len)
@@ -329,16 +338,18 @@ end
         # Cov_mat2, Corr_mat2           = Data_Processing.get_covariance_correlation_matrices_2(input_SP, azimuth_lim, srange_lim, Ns2, filt_len, 0);
         Cov_mat3, Corr_mat3           = Data_Processing.get_covariance_correlation_matrices_new(input_SP,  Ns2, filt_len);
 
-        steering_mat                = Data_Processing.get_steering_matrix(p_xyz, s_xyz_3xN_2D, azimuth_lim, srange_lim, heights_t, Ns2, Master_platform, params.λ, params.mode);
+        steering_mat                = Data_Processing.get_steering_matrix(p_xyz, s_xyz_3xN_2D, azimuth_lim, srange_lim, heights_t, Ns2, Master_platform, params.λ, params.mode, params.processing_mode);
 
         Pbf                         = Data_Processing.tomo_beamforming(Cov_mat3, steering_mat, azimuth_lim, srange_lim, [size(Cov_mat)[1] size(Cov_mat)[2] size(heights_t)[1]])
-        Pbf = Pbf[:,end:-1:1,:];
-	Pbf2                        = Data_Processing.tomocoordinates_to_scenecoordinates(Pbf, heights_t, params.s_loc_2, params.s_loc_3, params.look_angle, params.left_right_look)
+        Pbf = Pbf[:,:,end:-1:1];
+        #Pbf = Pbf[:,end:-1:1,:];
+	    Pbf2                        = Data_Processing.tomocoordinates_to_scenecoordinates(Pbf, heights_t, params.s_loc_2, params.s_loc_3, params.look_angle, params.left_right_look, mean(orbit_pos_geo_all[3,:]))
 
  
         PC                          = Data_Processing.tomo_CAPON(Cov_mat3, steering_mat, azimuth_lim, srange_lim, [size(Cov_mat)[1] size(Cov_mat)[2] size(heights_t)[1]])
-        PC = PC[:,end:-1:1,:];
-	PC2                         = Data_Processing.tomocoordinates_to_scenecoordinates(PC, heights_t, params.s_loc_2, params.s_loc_3, params.look_angle, params.left_right_look)
+        PC = PC[:,:,end:-1:1];
+        #PC = PC[:,end:-1:1,:];
+	    PC2                         = Data_Processing.tomocoordinates_to_scenecoordinates(PC, heights_t, params.s_loc_2, params.s_loc_3, params.look_angle, params.left_right_look, mean(orbit_pos_geo_all[3,:]))
 
         scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(Pbf2, params)
         Beamforming_resolutions, Beamforming_PSLRs, Beamforming_ISLRs, Beamforming_loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
@@ -349,6 +360,7 @@ end
 
 
         params = UserParameters.inputParameters(
+            look_angle = lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1],
             PSF_cuts = 2, 
             PSF_direction = [0 1 -tand(params.inc_angle)]
         )
