@@ -261,7 +261,7 @@ end
 
         plat_pt_xyz         = orbit_pos_all[:,1,close_val_lat_lon[2]]
         geo_pt_xyz          = Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1][2], Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1][1], Float64(DEM[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])])
-        look_vec            = (geo_pt_xyz - plat_pt_xyz) / Geometry.distance(geo_pt_xyz, plat_pt_xyz)
+        look_vec            = (plat_pt_xyz - geo_pt_xyz) / Geometry.distance(geo_pt_xyz, plat_pt_xyz)
 
 
         pegθ  = Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1][2]*π/180
@@ -275,7 +275,7 @@ end
 
 
         #global local_inca[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = angle_2vec(look_vec, N[lat_lon_idx[i1,1],lat_lon_idx[i1,2],:])
-        global local_inca[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = angle_2vec(look_vec*-1, Nxyz)
+        global local_inca[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = angle_2vec(look_vec, Nxyz)
 
 
     catch
