@@ -92,9 +92,9 @@ region_ylims = 1:146 #85:271#1:146#1:366
 
 lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
-#orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/NISAR_orbit_coflier_p5_lag4_theta15_06152023_3.nc") # orbit_output_06132023_1.nc
+orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/NISAR_orbit_coflier_p5_lag4_theta15_06152023_3.nc") # orbit_output_06132023_1.nc
 #orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/orbit_output_06152023_3.nc")
-orbit_dataset       = Dataset("/Users/joshil/Documents/Orbits/Outputs/06152023/3/orbit_output_06152023_3.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
+#orbit_dataset       = Dataset("/Users/joshil/Documents/Orbits/Outputs/06152023/3/orbit_output_06152023_3.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
 
 global mast_plat            = 1
 flag_plat           = 1 #descending orbit
@@ -102,9 +102,18 @@ orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_S
 
 end
 
-
+global mask = SharedArray(zeros(size(Geo_location)[1],size(Geo_location)[2]) )
 
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
+itp = LinearInterpolation((lon, lat), data)
+for i=1:size(Geo_location)[1]
+    for j=1:size(Geo_location)[2]
+        mask[i,j] = itp(Geo_location[i,j,2], Geo_location[i,j,1]) 
+
+    end
+end
+
+#=lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 global data2= data
 
 global lat2 = lat' .* ones(length(lon))
@@ -113,7 +122,7 @@ global lon2  = ones(length(lat))' .* lon
 global Lats_p = Geo_location.A[1,:,1]
 global Lons_p = Geo_location.A[:,1,2]
 global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
-
+=#
 #=
 @sync @distributed for i1 =1:size(lat_lon_idx,1)   
     
@@ -124,17 +133,25 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
 end
 =#
 
+Canopy_heights_orig = Canopy_heights
+
+
+global Geo_location2 = zeros(size_row,size_col,2);
+global Geo_location2[:,:,1] = Geo_location[:,:,1];
+global Geo_location2[:,:,2] = Geo_location[:,:,2];
+
+
 
 @timeit to "Processing loop over all pixels " begin
 
 @sync @distributed for i1 = 1:size(lat_lon_idx,1)   
     
-    close_val_lat_lon_m   = findmin(abs.(lat2.-Lats_p[lat_lon_idx[i1,2]]) + abs.(lon2.-Lons_p[lat_lon_idx[i1,1]]))
-    if data2[close_val_lat_lon_m[2]]>0
-        global mask[lat_lon_idx[i1,1],lat_lon_idx[i1,2]] = 1
-    end
+    #close_val_lat_lon_m   = findmin(abs.(lat2.-Lats_p[lat_lon_idx[i1,2]]) + abs.(lon2.-Lons_p[lat_lon_idx[i1,1]]))
+    #if data2[close_val_lat_lon_m[2]]>0
+    #    global mask[lat_lon_idx[i1,1],lat_lon_idx[i1,2]] = 1
+    #end
 
-    if mask[lat_lon_idx[i1,1],lat_lon_idx[i1,2]] !=1
+    if mask[lat_lon_idx[i1,1],lat_lon_idx[i1,2]] <1
     #if isnan(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
         global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],:] .= NaN
         global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],:] .= NaN
@@ -295,7 +312,7 @@ end
         scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(image_3D, params)
 
         # Calculate point target performance metrics
-        #try
+        try
 	
         bpa_resolutions, bpa_PSLRs, bpa_ISLRs, bpa_loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
 	
@@ -351,11 +368,11 @@ end
         #PC = PC[:,end:-1:1,:];
 	    PC2                         = Data_Processing.tomocoordinates_to_scenecoordinates(PC, heights_t, params.s_loc_2, params.s_loc_3, params.look_angle, params.left_right_look, mean(orbit_pos_geo_all[3,:]))
 
-        scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(Pbf2, params)
+        scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(sqrt.(Pbf2), params)
         Beamforming_resolutions, Beamforming_PSLRs, Beamforming_ISLRs, Beamforming_loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
    
 
-        scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(PC2, params)
+        scene_axis11, scene_axis22, scene_axis33, image_1D_1, image_1D_2, image_1D_3, scene_res = Scene.take_1D_cuts(sqrt.(PC2), params)
         CAPON_resolutions, CAPON_PSLRs, CAPON_ISLRs, CAPON_loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
 
 
@@ -374,12 +391,12 @@ end
         BPA_tomo_resolutions, BPA_tomo_PSLRs, BPA_tomo_ISLRs, BPA_tomo_loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
 
 
-        image_1D_1, scene_axis11, scene_axis22, scene_axis33 = Scene.obtain_1D_slice_tilted(Pbf2, params.s_loc_1, params.s_loc_2, params.s_loc_3, params.PSF_direction)
+        image_1D_1, scene_axis11, scene_axis22, scene_axis33 = Scene.obtain_1D_slice_tilted(sqrt.(Pbf2), params.s_loc_1, params.s_loc_2, params.s_loc_3, params.PSF_direction)
         scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
         Beamforming_tomo_resolutions, Beamforming_tomo_PSLRs, Beamforming_tomo_ISLRs, Beamforming_tomo_loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
   
 
-        image_1D_1, scene_axis11, scene_axis22, scene_axis33 = Scene.obtain_1D_slice_tilted(PC2, params.s_loc_1, params.s_loc_2, params.s_loc_3, params.PSF_direction)
+        image_1D_1, scene_axis11, scene_axis22, scene_axis33 = Scene.obtain_1D_slice_tilted(sqrt.(PC2), params.s_loc_1, params.s_loc_2, params.s_loc_3, params.PSF_direction)
         scene_res=((scene_axis11[2]-scene_axis11[1])^2+(scene_axis22[2]-scene_axis22[1])^2+(scene_axis33[2]-scene_axis33[1])^2)^0.5 # scene resolution along the PSF direction
         CAPON_tomo_resolutions, CAPON_tomo_PSLRs, CAPON_tomo_ISLRs, CAPON_tomo_loc_errors = Performance_Metrics.computePTPerformanceMetrics(image_1D_1, image_1D_2, image_1D_3, scene_res, params)
 
@@ -421,7 +438,7 @@ end
         global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],14]      = Beamforming_loc_errors[2]
         global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],15]      = Beamforming_loc_errors[3]
         global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],16]      = Beamforming_tomo_loc_errors
-        global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],17]      = round(maximum(20*log10.(Pbf2)),digits=2)
+        global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],17]      = round(maximum(10*log10.(Pbf2)),digits=2)
 
 
         global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]             = CAPON_resolutions[1]
@@ -440,7 +457,7 @@ end
         global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],14]            = CAPON_loc_errors[2]
         global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],15]            = CAPON_loc_errors[3]
         global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],16]            = CAPON_tomo_loc_errors
-        global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],17]            = round(maximum(20*log10.(PC2)),digits=2)
+        global Output_stat_capon[lat_lon_idx[i1,1],lat_lon_idx[i1,2],17]            = round(maximum(10*log10.(PC2)),digits=2)
 	println("Finished: ", i1 )
 
 	catch
@@ -453,7 +470,7 @@ end
 
 to
 
-@save "../Outputs/output_gs_study_res_run_062023_100m_5f_604_5plat_5proc_lag.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s amb_H amb_N slnt_range to
+@save "../Outputs/output_gs_study_res_run_062023_100m_5f_706_5plat_4proc_lag.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s amb_H amb_N slnt_range to
 
 [rmprocs(p) for p in workers()]
 

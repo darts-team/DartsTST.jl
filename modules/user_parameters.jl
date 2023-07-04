@@ -22,7 +22,7 @@ end
     mode::Int  = 2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     tx_el::Int = 1 # which element transmits for SIMO (max value N)
     processing_steps = :bp2d3d  # :bp3d --> 1-step, :bp2d3d --> 2-step for SAR and tomographic processing
-    processing_mode = 1 #1: All-platforms for processing, 2: Platforms 2-end (Except master) for processing 
+    processing_mode = 2 #1: All-platforms for processing, 2: Platforms 2-end (Except master) for processing 
 
     # radar parameters
     fc::Float64  = 1.25e9 # center frequency (Hz) L-band; fc=3.2e9 # center frequency (Hz) S-band; fc=6e9 # center frequency (Hz) C-band
@@ -32,9 +32,9 @@ end
     SAR_start_time::Float64 = -2.5#0 # SAR imaging start time (s)
 
     # platform locations in xyz (including slow-time locations)
-    user_defined_orbit::Int = 2 # 1: use orbits file; 2: user defined orbits in TCN
+    user_defined_orbit::Int = 1 # 1: use orbits file; 2: user defined orbits in TCN
     left_right_look::String = "left" # left or right looking geometry
-    orbit_filename::String =  "NISAR_orbit_coflier_lag3_theta_15_new.nc" #"orbit_output_06062023_1.nc" # "orbit_output_062021.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
+    orbit_filename::String =  "orbit_output_06152023_3.nc" #"NISAR_orbit_coflier_lag3_theta_15_new.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
 
     # User defined orbits in TCN, used only if user_defined_orbit=2
     p_t0_LLH::Array{Float64,1} = [0;0;750e3] # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
@@ -56,8 +56,8 @@ end
 
     # image/scene pixel coordinates
     s_loc_1 = 0#-40:1:40 # deg latitude if LLH, along-track if SCH, X if XYZ
-    s_loc_2 =-60:0.5:10 #-100:0.5:100 #-60:1:10 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    s_loc_3 = -5:0.5:50 #-100:0.5:100 #-5:1:50 # m  heights if LLH or SCH, Z if XYZ
+    s_loc_2 = -20:0.5:20 #-60:0.5:10 #-100:0.5:100 #-60:1:10 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    s_loc_3 = -20:0.5:20 #-5:0.5:50 #-100:0.5:100 #-5:1:50 # m  heights if LLH or SCH, Z if XYZ
 
     # range spread function (RSF) parameters
     pulse_length::Float64 = 10e-6 # s pulse length

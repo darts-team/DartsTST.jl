@@ -54,11 +54,11 @@ function read_GEDI_L3_data(filepath_GEDIL3, grid_res)
   trans           = Proj.Transformation("EPSG:6933", "WGS84")
   trans2          = Proj.Transformation( "WGS84","EPSG:6933")
 
-  global Canopy_heights = GeoArray(zeros(size_row,size_col)) 
+  Canopy_heights = GeoArray(zeros(size_row,size_col)) 
   epsg!(Canopy_heights, 6933)
   bbox!(Canopy_heights, (min_x=-1.736753044e7, min_y=7.314540830638585e6, max_x=1.736753044e7, max_y=-7.314540830638585e6))
 
-  global Geo_location = GeoArray(zeros(size_row,size_col,2))
+  Geo_location = GeoArray(zeros(size_row,size_col,2))
   epsg!(Geo_location, 6933)
   bbox!(Geo_location, (min_x=-1.736753044e7, min_y=7.314540830638585e6, max_x=1.736753044e7, max_y=-7.314540830638585e6))
 
@@ -206,6 +206,74 @@ function find_close_val_lat_lon(Geo_location, lat_lon_idx, orbit_pos, orbit_pos_
     slrng_ini[i3] 		  = norm(lookvec_ini[:,i3]); #slant range
   end
   close_val_lat_lon     = (findmin(slrng_ini)[1],Int(dist_idx[findmin(slrng_ini)[2]]))
+
+  if close_val_lat_lon[2] < 11
+    close_val_lat_lon = close_val_lat_lon .+ 10
+  elseif close_val_lat_lon[2] > ( size(orbit_pos)[3] - 10)        
+    close_val_lat_lon = close_val_lat_lon .- 10
+  end
+
+  return close_val_lat_lon
+
+end
+
+
+
+function find_close_val_lat_lon_test(Geo_location, orbit_pos, orbit_pos_geo)
+
+  search_lim            = 100
+  look_ang_lower_lim    = 29.9 #look angle lower limit
+  earth_radius          = 6378.137e3 # Earth semi-major axis at equator
+
+  #Search for the closest orbit point from the geo point
+  close_val_lat_lon     = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[2])) 
+                          + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[1])))
+
+  for i2=1:25 #25 can be changed based on the search required
+    #Check whether the closest orbit point is to the left of the geo point
+    #if no, get the next closest point left of the current orbit
+    #if yes, check for look angle limit and get teh next closest point to left if look angle criterion is not satisfied  
+    #To ensure right looking SAR geometry
+    if orbit_pos_geo[:,close_val_lat_lon[2]][2] >= (Geo_location[2])
+      close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[2]-(i2.*0.5))) 
+                            + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[1])))
+    else
+      slrng_temp          = Geometry.distance(orbit_pos[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[1];Geo_location[2]; 0]))
+      if (orbit_pos_geo[:,close_val_lat_lon[2]][3] > slrng_temp)
+        look_angle = 0.0
+      else
+        look_angle        = Scene.slantrange_to_lookangle(earth_radius,slrng_temp,orbit_pos_geo[:,close_val_lat_lon[2]][3],0.0)[2]
+      end
+
+      if (look_angle < (look_ang_lower_lim)) 
+        close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[2]-(i2.*0.5))) 
+                              + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[1])))
+      else
+        break
+      end
+    end
+  end
+
+  #Now that we have the approximate orbit location, the next step is to ensure it is approximately in the center of the geometry required
+  # search for the +-search_lim points around the orbit location obtained from previous step
+  # compute distacnces and choose the pount with the minimum distance as the orbit point for simulations corresponding to the geo location
+  dist_idx              = close_val_lat_lon[2]-search_lim:close_val_lat_lon[2]+search_lim
+  if sum(dist_idx.<=0)>0
+    dist_idx            = 1:close_val_lat_lon[2]+search_lim
+  end
+  lookvec_ini           = zeros(3,length(dist_idx))
+  slrng_ini             = zeros(length(dist_idx))
+  for i3=1:length(dist_idx)
+    lookvec_ini[:,i3] 	= Geometry.geo_to_xyz([Geo_location[1];Geo_location[2]; 0])  .- orbit_pos[:,1,dist_idx[i3]]; # look vector
+    slrng_ini[i3] 		  = norm(lookvec_ini[:,i3]); #slant range
+  end
+  close_val_lat_lon     = (findmin(slrng_ini)[1],Int(dist_idx[findmin(slrng_ini)[2]]))
+
+  if close_val_lat_lon[2] < 11
+    close_val_lat_lon   = close_val_lat_lon .+ 10
+  elseif close_val_lat_lon[2] > ( size(orbit_pos)[3] - 10)        
+    close_val_lat_lon   = close_val_lat_lon .- 10
+  end
 
   return close_val_lat_lon
 
