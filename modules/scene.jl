@@ -45,6 +45,32 @@ function construct_targets_str(params)
   elseif target_pos_mode=="CR" # target positions are defined as 3xN (useful for a few discrete targets)
     t_loc_3xN = vcat(t_loc_1, t_loc_2, t_loc_3)
     t_ref_1xN = t_ref
+
+  elseif target_pos_mode=="surface-grid" # calculating scattering from surface
+    @unpack ts_coord_sys, s_loc_1, s_loc_2, s_loc_3 = params
+    # using the imaging points to find surface locations. Assuming 
+    @assert ts_coord_sys == "SCH" "Only SCH Coordinates currently compatible with the surface scattering mode"
+    
+    # s_loc_1 = 0 # deg latitude if LLH, along-track if SCH, X if XYZ
+    # s_loc_2 = -40:1:40 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    # s_loc_3 = -40:1:40 # m  heights if LLH or SCH, Z if XYZ
+
+      t_loc_3xN = Scene.form3Dgrid_for(s_loc_1, s_loc_2, 0) # using 3 nested for loops
+      Nt = size(t_loc_3xN, 2) # number of targets
+      if size(s_loc_1) == 1
+        patch_area = (s_loc_1[2] - s_loc_1[1]) * (s_loc_2[2] - s_loc_2[1])
+      else
+        patch_area = (s_loc_2[2] - s_loc_2[1])^2
+      end
+      for i = 1 : Nt
+        # need to grab information about TX/RX, or move this calculation into the raw_data generation section. Would be recalculating for every slow time point
+        # also currently have tgt locations in SCH, need to convert to ecef
+        t_ref_3d[i]  = get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area) 
+
+      t_ref_1xN = Scene.convert_3D_to_1xN(t_ref_3d)
+      
+      
+  
   end
 
 
