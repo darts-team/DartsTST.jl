@@ -55,7 +55,7 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
     #correct transmitter azimuth for change of origin direction (origin calculated as target location)
     tx_sph[3] = tx_sph[3] + 180; tx_sph[3] = tx_sph[3]%360 # add 180 degrees and mod360 to enure 0 < azimuth < 360
 
-    # check for "monostatic" bounds -- TODO: How to define what we approxiamte as monostatic? 
+    # check for "monostatic" bounds -- TODO: How to define what we approximate as monostatic? 
     # i.e. what scattering error tolerance is acceptable --> angular difference from direct backscatter that meets tolerance
     #for now we'll say 2 degrees in both azimuth and incidence...
     tol = 2
@@ -78,7 +78,9 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
         elseif σ < λ/21 & m < 0.3
             #use SPM
             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_backscatter(λ,θᵢ,l,σ,θᵥ)
+        else
             error(raw"Scattering surface not supported")
+        end
     else # generalized bistatic geometry
          # Auto-select surface scattering mechanism based on surface properties
          m = 2 * σ / l
@@ -86,7 +88,7 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
              #use GO
              σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA(λ,θ,ϕ,θₛ,ϕₛ,σ,l,θᵥ)
              
-         elseif σ < λ/21 & m < 0.3
+         elseif (σ < λ/21) & (m < 0.3)
              #use SPM
              σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_tsang(λ,θᵢ,ϕᵢ,θₛ,ϕₛ,l,σ,θᵥ)
          else
@@ -111,10 +113,18 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
     end    
 
 
-    # add a random phase because we are looking at non-coherent scattering. Need to consider phase stability over motion?
-    # s= 2*pi; phase = s*rand()
-    phase = 0
+    # check for nadir-like geometry and calculate nadir specular component. use same tolerance as backscatter for area around nadir
+    # seeing if elevation is directly up for tx and rx
+    if abs(90 - tx_sph[2]) < tol & abs(90 - rx_sph[2]) < tol
+        brcs_coh = RCS_coherent(σ,θᵥ,λ,patch_area)
+        brcs = brcs + brcs_coh
+    end
+
+    phase = 0 # keep a fixed phase value
     brcs_complex = brcs*cos(phase)+ (1im*brcs*sin(phase))
+
+
+
     return brcs_complex
 end#function
 # KA-GO brcs calculation from eq. 12.43 in Microwave Remote Sensing Vol. 2, by Ulaby, Moore, Fung   (page 935)
@@ -168,33 +178,45 @@ function BRCS_KA(λ,θ,ϕ,θₛ,ϕₛ,σ,l,θᵥ)
     
     #mean squared slope = σ² * abs(p_dp0)
     #mss = 0.01 # ?? Not sure what value this should be
-    # mss = (σ²/2/pi)
-    s = 2 * σ / l
-
-    #local surface normal is nhat defined as =-xhat*Z_x - yhat*Z_y + zhat
-    # let Z_x, Z_y be Gaussian random numbers with  zero-mean and variance = mss
-    numInstances = 100
-    Z_x = randn(numInstances).*sqrt(σ²/2/pi)
-    Z_y = randn(numInstances).*sqrt(σ²/2/pi)
     
-    # now, we'll need to calculate average brcs based on instanes of Z_x, Z_y
-    σʳ_vh = zeros(1,numInstances)
-    σʳ_hv = zeros(1,numInstances)
-    σʳ_vv = zeros(1,numInstances)
-    σʳ_hh = zeros(1,numInstances)
-    for i = 1 : numInstances
-        U_vh,U_hv,U_hh,U_vv = get_pol_factors_U_pq(ϵ₂,μ₂,θ,f,Z_x[i],Z_y[i]) # no idea how to define Z right now
+    
+    s = 2 * σ / l
+    #----------- using mean slope values ------------
+    mss = s^2/2 #since m = s/sqrt(2) and mss = m^2, where m = rms slope
+    Z_x = mss; Z_y = mss;
+    U_vh,U_hv,U_hh,U_vv = get_pol_factors_U_pq(ϵ₂,μ₂,θ,θₛ,ϕ,ϕₛ,f,Z_x,Z_y) # Here we define slopes Z_x and Z_y as the mss values, assuming 2D gaussian shape(?)
+    σʳ_vh  = (k*q* abs(U_vh) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
+    σʳ_hv  = (k*q* abs(U_hv) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
+    σʳ_vv  = (k*q* abs(U_vv) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
+    σʳ_hh  = (k*q* abs(U_hh) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
+    #----------------------------------------------------
 
-        σʳ_vh[i]  = (k*q* abs(U_vh) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
-        σʳ_hv[i]  = (k*q* abs(U_hv) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
-        σʳ_vv[i]  = (k*q* abs(U_vv) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
-        σʳ_hh[i]  = (k*q* abs(U_hh) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
-    end
-    #find mean BRCS values
-    σʳ_vh = sum(σʳ_vh)/numInstances
-    σʳ_hv = sum(σʳ_hv)/numInstances
-    σʳ_vv = sum(σʳ_vv)/numInstances
-    σʳ_hh = sum(σʳ_hh)/numInstances
+
+    #below is code for calculating a mean value of the scattering using averages over a distribution of surface slopes
+    # #local surface normal is nhat defined as =-xhat*Z_x - yhat*Z_y + zhat
+    # # let Z_x, Z_y be Gaussian random numbers with  zero-mean and variance = mss
+    # numInstances = 100
+    # Z_x = randn(numInstances).*sqrt(σ²/2/pi)
+    # Z_y = randn(numInstances).*sqrt(σ²/2/pi)
+    
+    # # now, we'll need to calculate average brcs based on instances of Z_x, Z_y
+    # σʳ_vh = zeros(1,numInstances)
+    # σʳ_hv = zeros(1,numInstances)
+    # σʳ_vv = zeros(1,numInstances)
+    # σʳ_hh = zeros(1,numInstances)
+    # for i = 1 : numInstances
+    #     U_vh,U_hv,U_hh,U_vv = get_pol_factors_U_pq(ϵ₂,μ₂,θ,θₛ,ϕ,ϕₛ,f,Z_x[i],Z_y[i]) # no idea how to define Z right now
+
+    #     σʳ_vh[i]  = (k*q* abs(U_vh) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
+    #     σʳ_hv[i]  = (k*q* abs(U_hv) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
+    #     σʳ_vv[i]  = (k*q* abs(U_vv) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
+    #     σʳ_hh[i]  = (k*q* abs(U_hh) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
+    # end
+    # #find mean BRCS values
+    # σʳ_vh = sum(σʳ_vh)/numInstances
+    # σʳ_hv = sum(σʳ_hv)/numInstances
+    # σʳ_vv = sum(σʳ_vv)/numInstances
+    # σʳ_hh = sum(σʳ_hh)/numInstances
     
     return  σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh
 end#function
@@ -230,7 +252,7 @@ function BRCS_KA(λ,θ,ϕ,θₛ,ϕₛ,s,θᵥ)
     m = s/sqrt(2)
     Z_x = m; Z_y = m; # these are the slopes (?)
 
-    U_vh,U_hv,U_hh,U_vv = get_pol_factors_U_pq(ϵ₂,μ₂,θ,f,Z_x,Z_y) # no idea how to define Z right now
+    U_vh,U_hv,U_hh,U_vv = get_pol_factors_U_pq(ϵ₂,μ₂,θ,θₛ,ϕ,ϕₛ,f,Z_x,Z_y) # no idea how to define Z right now
     
     # p_dp0 is p''(0), the second order derivative of surface height pdf evaluated at zero ??
     σʳ_vh  = (k*q* abs(U_vh) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
@@ -245,7 +267,7 @@ end#function
 # this function calculates the normalized bistatic radar crossection (nbrcs) of a rough surface using KA-GO for vh,hv,vv,hh polatizations in backscattering direction only
 
 # Arguments
-- `λ::Float64`: slow time vector
+- `λ::Float64`: wavelength
 - `θ::Float64: incidence angle of incident wave (deg)
 - `σ::Float64`: standard deviation of surface heights (m)
 - `l::Float64`: surface correlation length (m)
@@ -269,11 +291,34 @@ function BRCS_KA_backscatter(θ,σ,l,θᵥ)
     return  σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh
 end
 
+"""
+# this function calculates the normalized bistatic radar crossection (nbrcs) of a the coherent component in the nadir direction
+
+# Arguments
+- `λ::Float64`: wavelength
+- `θ::Float64: incidence angle of incident wave (deg)
+- `σ::Float64`: standard deviation of surface heights (m)
+- `θᵥ::Float64: soil moisture volume fraction [0,1]
+- `patch_area::Float64: resolution cell area (m^2)
+
+"""
+function RCS_coherent(σ,θᵥ,λ,patch_area)
+    #going to assume a homogeneous infinite surface approximation for coherent reflection component. Only exists in angular area around specular direction, 
+    # RCS is going to be approximately area of patch divided by First Fresnel zone size * total reflected power (infinite surface assumption)
+    ϵ₁ = 8.854e-12 
+    ϵ₂ = soil_dielectric(θᵥ)
+    ϵᵣ =  ϵ₂/ϵ₁ # assumes free space into soil reflection
+    Γ  = abs((sqrt(ϵ₂)-sqrt(ϵ₁))/(sqrt(ϵ₂)+sqrt(ϵ₁)))^2 # at normal incidence
+
+    σ₀ = Γ * 4*pi*patch_area/λ^2 * ϵᵣ * exp(-16*pi^2*(σ/λ)^2*ϵᵣ)
+
+end#function
+
 # this function calculates the scattering vector components q based on incidence and reflection angles
 function get_q_vec(k,θ,ϕ,θₛ,ϕₛ)
     q_x = k*(sind(θₛ)*cosd(ϕₛ) - sind(θ)*cos(ϕ)) 
     q_y = k*(sind(θₛ)*sind(ϕₛ) - sind(θ)*sin(ϕ)) #note can write qₓ but q_y in same subscript is forbidden in Julia....
-    q_z = k*(cos(θₛ) + cosd(θ))
+    q_z = k*(cosd(θₛ) + cosd(θ))
     return q_x,q_y,q_z
 end#function
 
@@ -290,7 +335,7 @@ end#function
 - `Z_y::Float64`: slope in y-direction
 
 """
-function get_pol_factors_U_pq(ϵ₂,μ₂,θ,f,Z_x,Z_y)
+function get_pol_factors_U_pq(ϵ₂,μ₂,θ,θₛ,ϕ,ϕₛ,f,Z_x,Z_y)
     R_pll0, R_pll1, R_prp0, R_prp1 = get_Fresnel_coeffs(ϵ₂,μ₂,θ,f)
     U_vh = -R_prp0* (1+cosd(θ)*cosd(θₛ)) *sind(ϕₛ-ϕ) - (R_prp0 * sind(θ)*cosd(θₛ) + R_prp1*(1+cosd(θ)*cosd(θₛ)))* sind(ϕₛ-ϕ)*(Z_x*cosd(ϕ) + Z_y*sind(ϕ))
     U_hv = -R_pll0* (1+cosd(θ)*cosd(θₛ)) *sind(ϕₛ-ϕ) + (R_pll0 * sind(θ)*cosd(θₛ)+ R_pll1*(1+cosd(θ)*cosd(θₛ)))* sind(ϕₛ-ϕ)*(Z_x*cosd(ϕ) + Z_y*sind(ϕ))
@@ -335,7 +380,7 @@ function soil_dielectric(θᵥ)
     # this is an empirical model derived from measurements from 20 MHz to 1 GHz. Take care using for freq >>1 GHz
 
     # Combining two models for real (K') and imaginary parts in total, so K = K' + K''
-    ω = f*2*π
+    # ω = f*2*π
     ϵₒ = 8.854e-12 
   
     # real part from Topp
