@@ -349,6 +349,19 @@ function tomo_processing_afterSAR(SAR_images_3D) # tomographic processing of slo
     return abs.(image_3D)
 end
 
+function tomo_processing_afterSAR_full(SAR_images_3D) # tomographic processing of slow-time processed data
+    if ndims(SAR_images_3D)==4
+        image_3D=sum(SAR_images_3D,dims=1)
+        Ns_1=size(SAR_images_3D,2);Ns_2=size(SAR_images_3D,3);Ns_3=size(SAR_images_3D,4)
+        image_3D=reshape(image_3D,Ns_1,Ns_2,Ns_3)
+    elseif ndims(SAR_images_3D)==5
+        image_3D=sum(sum(SAR_images_3D,dims=1),dims=2)
+        Ns_1=size(SAR_images_3D,3);Ns_2=size(SAR_images_3D,4);Ns_3=size(SAR_images_3D,5)
+        image_3D=reshape(image_3D,Ns_1,Ns_2,Ns_3)
+    end
+    return (image_3D)
+end
+
 function distance(xyz1,xyz2)
     dist=((xyz1[1]-xyz2[1]).^2+(xyz1[2]-xyz2[2]).^2+(xyz1[3]-xyz2[3]).^2).^0.5
 end

@@ -4,17 +4,17 @@ using PyPlot
 using GeoDatasets
 using JLD2
 
-@load "/Users/joshil/Documents/Code/global_scale_outputs/outputs_5p/output_gs_study_res_run_062023_100m_5f_604_5plat_5proc_lag.jld"
+@load "/Users/joshil/Documents/Code/global_scale_outputs/outputs_5p_v2/output_gs_study_res_run_062023_100m_5f_726_5plat_5proc_lag.jld"
 
 #@load "/Users/joshil/Documents/Code/Outputs/output_gs_study_res_run_06132023_100m_baselines.jld"
 
-img_path = "/Users/joshil/Documents/Code/global_scale_outputs/plots_5p/20m_5f_604_5plat_5proc_lag/"
+img_path = "/Users/joshil/Documents/Code/global_scale_outputs/plots_5p_v2/100m_5f_726_5plat_5proc_lag/"
 
-xlim_plot = (-125,-75)
-ylim_plot = (15,50)
+#xlim_plot = (-125,-75)
+#ylim_plot = (15,50)
 
-#xlim_plot = (-180,180)
-#ylim_plot = (-75,75)
+xlim_plot = (-180,180)
+ylim_plot = (-75,75)
 
 #xlim_plot = (95,140)
 #ylim_plot = (-10,15)
@@ -31,8 +31,8 @@ plot_v_bpa_h            =  Output_stat_bpa[:,:,3]
 plot_v_bpa_n            =  Output_stat_bpa[:,:,4]
 plot_v_bpa_n_pslr       =  Output_stat_bpa[:,:,8]
 plot_v_bpa_n_islr       =  Output_stat_bpa[:,:,12]
-plot_v_bpa_n_locerr     =  Output_stat_bpa[:,:,16]
-plot_v_bpa_n_pow        =  Output_stat_bpa[:,:,17]
+#plot_v_bpa_n_locerr     =  Output_stat_bpa[:,:,16]
+#plot_v_bpa_n_pow        =  Output_stat_bpa[:,:,17]
 
 plot_v_beamforming_s    =  Output_stat_beamforming[:,:,1]
 plot_v_beamforming_c    =  Output_stat_beamforming[:,:,2]
@@ -40,8 +40,8 @@ plot_v_beamforming_h    =  Output_stat_beamforming[:,:,3]
 plot_v_beamforming_n    =  Output_stat_beamforming[:,:,4]
 plot_v_beamforming_n_pslr       =  Output_stat_beamforming[:,:,8]
 plot_v_beamforming_n_islr       =  Output_stat_beamforming[:,:,12]
-plot_v_beamforming_n_locerr     =  Output_stat_beamforming[:,:,16]
-plot_v_beamforming_n_pow        =  Output_stat_beamforming[:,:,17]
+#plot_v_beamforming_n_locerr     =  Output_stat_beamforming[:,:,16]
+#plot_v_beamforming_n_pow        =  Output_stat_beamforming[:,:,17]
 
 plot_v_capon_s          =  Output_stat_capon[:,:,1]
 plot_v_capon_c          =  Output_stat_capon[:,:,2]
@@ -49,8 +49,8 @@ plot_v_capon_h          =  Output_stat_capon[:,:,3]
 plot_v_capon_n          =  Output_stat_capon[:,:,4]
 plot_v_capon_n_pslr     =  Output_stat_capon[:,:,8]
 plot_v_capon_n_islr     =  Output_stat_capon[:,:,12]
-plot_v_capon_n_locerr   =  Output_stat_capon[:,:,16]
-plot_v_capon_n_pow        =  Output_stat_capon[:,:,17]
+#plot_v_capon_n_locerr   =  Output_stat_capon[:,:,16]
+#plot_v_capon_n_pow        =  Output_stat_capon[:,:,17]
 
 
 plot_v_la               =  lookang_all[:,:,1]
@@ -123,6 +123,7 @@ cbar.set_label("[m]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 plt.set_cmap("magma")
 #plt.clim(5,20)
+#plt.clim(2-2,10-2)
 plt.clim(2,10)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
@@ -136,7 +137,7 @@ plt.ylim(ylim_plot)
 plt.yticks(fontsize=16)
 plt.xticks(fontsize=16)
 gca().set_aspect(1.1) # US 1.1
-plt.savefig(img_path*"BPA_N.png")
+plt.savefig(img_path*"BPA_N_2.png")
 
 
 
@@ -148,7 +149,7 @@ cbar = colorbar(orientation="vertical", shrink=0.70)
 cbar.set_label("[m]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 plt.set_cmap("magma")
-plt.clim(0,2)
+plt.clim(2.5,4.5)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))
@@ -170,7 +171,7 @@ cbar = colorbar(orientation="vertical", shrink=0.70)
 cbar.set_label("[m]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 plt.set_cmap("magma")
-plt.clim(4,6)
+plt.clim(4,8)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))
@@ -193,7 +194,7 @@ cbar.set_label("[m]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 plt.set_cmap("magma")
 #plt.clim(5,40) #20
-plt.clim(1,8)
+plt.clim(2,50)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))
@@ -217,7 +218,7 @@ cbar = colorbar(orientation="vertical", shrink=0.70)
 cbar.set_label("[m]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 plt.set_cmap("magma")
-plt.clim(0.5,1.5)
+plt.clim(0,2)
 #plt.clim(1,3)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
@@ -263,7 +264,7 @@ cbar.set_label("[m]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 plt.set_cmap("magma")
 #plt.clim(0,4)
-plt.clim(0,2)
+plt.clim(0,5)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))
@@ -364,7 +365,7 @@ cbar.set_label("[km]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(192,198)
+plt.clim(0,5)
 #plt.clim(0,2)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
@@ -389,7 +390,7 @@ cbar.set_label("[km]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(0.0,2)
+plt.clim(0.0,1)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))
@@ -414,7 +415,7 @@ cbar.set_label("[km]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(190, 210)
+plt.clim(20, 60)
 #plt.clim(10, 20)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
@@ -514,7 +515,7 @@ cbar.set_label("[m]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(2,12)
+plt.clim(4,15)
 #plt.clim(10,30)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
@@ -564,7 +565,7 @@ cbar.set_label("[m]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(10,25)
+plt.clim(10/2,25/2)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))
@@ -588,7 +589,7 @@ cbar.set_label("[m]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(15,30)
+plt.clim(15/2,30/2)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))
@@ -681,7 +682,7 @@ cbar.set_label("[dB]", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(-20,-10)
+plt.clim(-10,20)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))

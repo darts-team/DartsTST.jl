@@ -54,11 +54,11 @@ function read_GEDI_L3_data(filepath_GEDIL3, grid_res)
   trans           = Proj.Transformation("EPSG:6933", "WGS84")
   trans2          = Proj.Transformation( "WGS84","EPSG:6933")
 
-  Canopy_heights = GeoArray(zeros(size_row,size_col)) 
+  Canopy_heights  = GeoArray(zeros(size_row,size_col)) 
   epsg!(Canopy_heights, 6933)
   bbox!(Canopy_heights, (min_x=-1.736753044e7, min_y=7.314540830638585e6, max_x=1.736753044e7, max_y=-7.314540830638585e6))
 
-  Geo_location = GeoArray(zeros(size_row,size_col,2))
+  Geo_location    = GeoArray(zeros(size_row,size_col,2))
   epsg!(Geo_location, 6933)
   bbox!(Geo_location, (min_x=-1.736753044e7, min_y=7.314540830638585e6, max_x=1.736753044e7, max_y=-7.314540830638585e6))
 

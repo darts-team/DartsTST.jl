@@ -3,9 +3,11 @@ using PyPlot
 using GeoDatasets
 using JLD2
 
-@load "/Users/joshil/Documents/Code/global_scale_outputs/outputs_5p_profiles/output_gs_study_res_run_062023_100m_5f_513_5plat_5proc_profiles.jld"
+#@load "/Users/joshil/Documents/Code/global_scale_outputs/outputs_5p_profiles/output_gs_study_res_run_062023_100m_5f_513_5plat_5proc_profiles.jld"
+@load "/Users/joshil/Documents/Code/global_scale_outputs/outputs_5p_v2/output_gs_study_res_run_062023_100m_5f_901_5plat_5proc_profiles.jld"
 
-img_path = "/Users/joshil/Documents/Code/global_scale_outputs/plots_5p_profiles/100m_5f_513_5plat_5proc_profiles/"
+
+img_path = "/Users/joshil/Documents/Code/global_scale_outputs/plots_5p_v2/100m_5f_901_5plat_5proc_profiles/"
 
 
 @load "/Users/joshil/Documents/GEDI_Data/Outputs_L2/Output_GEDIL2_1year_2022.jld2"
@@ -14,7 +16,7 @@ img_path = "/Users/joshil/Documents/Code/global_scale_outputs/plots_5p_profiles/
 #ylim_plot = (15,53)
 
 xlim_plot = (-180,180)
-ylim_plot = (-50,50)
+ylim_plot = (-52,52)
 
 Lats_p = Geo_location.A[1,:,1]
 Lons_p = Geo_location.A[:,1,2]
@@ -53,6 +55,11 @@ theo_res_S =  res_theory_s[:,:,1]
 amb_Ht                  =  amb_H[:,:,1]
 amb_Nt                  =  amb_N[:,:,1]
 Slnt_range              = slnt_range[:,:,1]./1000
+
+
+
+
+
 
 plot_v_rmse_bpa2 = plot_v_rmse_bpa
 plot_v_rmse_bpa2[isnan.(plot_v_rmse_bpa2)] .= 0.0
@@ -255,7 +262,7 @@ pygui(true)
 gca().set_aspect(1)
 plt.xlabel("Longitude", fontsize=18)
 plt.ylabel("Latitude", fontsize=18)
-plt.title("Baeamforming - RMSE", fontsize=20)
+plt.title("Beamforming - RMSE", fontsize=20)
 plt.xlim(xlim_plot)
 plt.ylim(ylim_plot)
 plt.yticks(fontsize=16)
@@ -279,7 +286,7 @@ pygui(true)
 gca().set_aspect(1)
 plt.xlabel("Longitude", fontsize=18)
 plt.ylabel("Latitude", fontsize=18)
-plt.title("Baeamforming - Correlation", fontsize=20)
+plt.title("Beamforming - Correlation", fontsize=20)
 plt.xlim(xlim_plot)
 plt.ylim(-50,50)
 plt.yticks(fontsize=16)
@@ -304,7 +311,7 @@ pygui(true)
 gca().set_aspect(1)
 plt.xlabel("Longitude", fontsize=18)
 plt.ylabel("Latitude", fontsize=18)
-plt.title("Baeamforming - Number of Input Peaks", fontsize=20)
+plt.title("Beamforming - Number of Input Peaks", fontsize=20)
 plt.xlim(xlim_plot)
 plt.ylim(-50,50)
 plt.yticks(fontsize=16)
@@ -328,7 +335,7 @@ pygui(true)
 gca().set_aspect(1)
 plt.xlabel("Longitude", fontsize=18)
 plt.ylabel("Latitude", fontsize=18)
-plt.title("Baeamforming - Number of Output Peaks", fontsize=20)
+plt.title("Beamforming - Number of Output Peaks", fontsize=20)
 plt.xlim(xlim_plot)
 plt.ylim(ylim_plot)
 plt.yticks(fontsize=16)
@@ -461,7 +468,6 @@ plt.xticks(fontsize=16)
 gca().set_aspect(1.1)
 plt.savefig(img_path*"LookAng.png")
 
-
 #PerpBaselineMax
 pygui(true)
 fig = plt.figure(figsize=(11, 6))
@@ -471,7 +477,7 @@ cbar.set_label("km", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(15,55)
+plt.clim(15,40)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))
@@ -519,7 +525,7 @@ cbar.set_label("km", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(0,4.5)
+plt.clim(0,4)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))
@@ -543,7 +549,7 @@ cbar.set_label("km", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(0.0,1)
+plt.clim(0.0,1.5)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))
@@ -568,7 +574,7 @@ cbar.set_label("km", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(20, 60)
+plt.clim(20, 45)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))
@@ -620,7 +626,7 @@ cbar.set_label("m", size=16)
 cbar.ax.tick_params(labelsize=16) 
 gca().set_aspect(1)
 plt.set_cmap("jet")
-plt.clim(4,15)
+plt.clim(5,12)
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 pygui(true)
 (PyPlot.contour(lon,lat,data',[0.5],colors=[[0.2,0.2,0.2]],linewidths=1.0))

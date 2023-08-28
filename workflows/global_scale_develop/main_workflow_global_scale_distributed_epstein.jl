@@ -70,8 +70,8 @@ end
 @timeit to "Read orbit file and get orbits " begin
 #region_xlims = [50,110]
 #region_ylims = [15,55]
-region_xlims = 20:330
-region_ylims = 15:130
+region_xlims = 94#20:330
+region_ylims = 30#15:130
 #region_xlims        = 50:110
 #region_ylims        = 15:55
 
