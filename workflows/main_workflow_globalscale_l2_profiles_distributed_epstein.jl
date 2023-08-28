@@ -107,7 +107,18 @@ orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_S
 
 end
 
+global mask = SharedArray(zeros(size(Geo_location)[1],size(Geo_location)[2]) )
 
+lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
+itp = LinearInterpolation((lon, lat), data)
+for i=1:size(Geo_location)[1]
+    for j=1:size(Geo_location)[2]
+        mask[i,j] = itp(Geo_location[i,j,2], Geo_location[i,j,1])
+
+    end
+end
+
+#=
 lon,lat,data = GeoDatasets.landseamask(;resolution='c',grid=5)
 global data2= data
 
@@ -117,17 +128,25 @@ global lon2  = ones(length(lat))' .* lon
 global Lats_p = Geo_location.A[1,:,1]
 global Lons_p = Geo_location.A[:,1,2]
 global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
+=#
+
+#Canopy_heights_orig = Canopy_heights
+
+
+#global Geo_location2 = zeros(size_row,size_col,2);
+#global Geo_location2[:,:,1] = Geo_location[:,:,1];
+#global Geo_location2[:,:,2] = Geo_location[:,:,2];
 
 @timeit to "Processing loop over all pixels " begin
 
 @sync @distributed for i1 = 1:size(lat_lon_idx,1)   
 
-    close_val_lat_lon_m   = findmin(abs.(lat2.-Lats_p[lat_lon_idx[i1,2]]) + abs.(lon2.-Lons_p[lat_lon_idx[i1,1]]))
-    if data2[close_val_lat_lon_m[2]]>0
-        global mask[lat_lon_idx[i1,1],lat_lon_idx[i1,2]] = 1
-    end
+    #close_val_lat_lon_m   = findmin(abs.(lat2.-Lats_p[lat_lon_idx[i1,2]]) + abs.(lon2.-Lons_p[lat_lon_idx[i1,1]]))
+    #if data2[close_val_lat_lon_m[2]]>0
+    #    global mask[lat_lon_idx[i1,1],lat_lon_idx[i1,2]] = 1
+    #end
     
-    if mask[lat_lon_idx[i1,1],lat_lon_idx[i1,2]] !=1
+    if mask[lat_lon_idx[i1,1],lat_lon_idx[i1,2]] <1
         #Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] =0
         global Output_stat_bpa[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1:4] .= NaN
         global Output_stat_beamforming[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1:4] .= NaN
@@ -315,7 +334,7 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
         #filt_len                    = 1 # Covariance matrix box filter size 3->5x5 box filter
         azimuth_lim 				= [1, Int64(ceil(length(params.s_loc_1)))]
         srange_lim 					= [1, Int64(ceil(length(params.s_loc_2)))]
-        ref_hl                      = 11#Int64(ceil(length(params.s_loc_3)/2)) 
+        ref_hl                      = 6#Int64(ceil(length(params.s_loc_3)/2)) 
         heights_t 					= -80:height_res:80 #params.s_loc_3  #2*minimum(params.s_loc_3):params.s_loc_3[2]-params.s_loc_3[1]:2*maximum(params.s_loc_3);#params.s_loc_3
 
         # Modify input matrix to desired shape
@@ -359,7 +378,7 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
         #PC = PC[:,end:-1:1,:];
         PC2                         = Data_Processing.tomocoordinates_to_scenecoordinates(PC, heights_t, params.s_loc_2, params.s_loc_3, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] , params.left_right_look, mean(orbit_pos_geo_all[3,:]))
 
-        plot_idx 					= [Int64(ceil(length(params.s_loc_1)/2)),121,Int64(ceil(length(heights_t)/2))] #61 #Int64(ceil(length(params.s_loc_3)/2))]   Int64(ceil(length(params.s_loc_2)/2))
+        plot_idx 					= [Int64(ceil(length(params.s_loc_1)/2)),61,Int64(ceil(length(heights_t)/2))] #61 #Int64(ceil(length(params.s_loc_3)/2))]   Int64(ceil(length(params.s_loc_2)/2))
 
 	    temp3 = ref_hl
 
@@ -468,7 +487,7 @@ end
 
 to
 
-@save "../Outputs/output_gs_study_res_run_062023_100m_5f_514_5plat_5proc_profiles.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s amb_H amb_N slnt_range to 
+@save "../Outputs/output_gs_study_res_run_062023_100m_5f_903_5plat_4proc_profiles.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s amb_H amb_N slnt_range to 
 
 [rmprocs(p) for p in workers()]
 
