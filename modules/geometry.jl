@@ -622,10 +622,10 @@ function enu_to_sph(east, north, up)
         sph[2,i] = elev#elevation
         sph[3,i] = az#azimuth
 
-        println("range: $range")
-        println("elev: $elev")
-        println("az: $az")
-        @assert  ((elev >= -90) & (elev <= 90) & (az >= -108) & (az <= 180) & (range >= 0)) "Invalid Range"
+        # println("range: $range")
+        # println("elev: $elev")
+        # println("az: $az")
+        @assert  ((elev >= -90) & (elev <= 90) & (az >= -180) & (az <= 180) & (range >= 0)) "Invalid Range"
     end
    
     return sph

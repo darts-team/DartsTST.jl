@@ -1,7 +1,142 @@
 ## scattering module
-module scattering
+module Scattering
 using Parameters, LinearAlgebra, Random
+include("../modules/geometry.jl")
 
+"""
+Calculate surface BRCS
+# Usage
+    - brcs = get_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
+
+# Arguments
+    - `params::Parameters`: input parameters struct
+    - `tx_ecef::3x1-element Array`: Transmitter position in ECEF (m)
+    - `rx_ecef::3x1-element Array`: Receiver position in ECEF (m)
+    - `tgt_ecef::3x1-element Array`: Target position in ECEF (m)
+
+# Return
+- `brcs_complex::ComplexF64`: BRCS value (linear magnitude, unitless)
+"""
+function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
+    @unpack λ, polarization, s_loc_1, s_loc_2, σ, l, θᵥ, fc = params
+
+    # this function should probably be called from scene.jl to calculate the brcs for a given target:
+    # in there, geometry of Tx to Tgt and Tgt to Rx needs be solved to find inc angles and scattering angles
+    # generate raw data has to be modified to use target reflectivites that are based on the brcs, and unfortunately there are 
+    # changing values/sizes for all modes (with MIMO having different matrix size).
+
+
+    # ------in this function-----
+    # determine geometry to select backscatter codes or bistatic codes (backscattering faster)
+    # - for geometry: calculate position of tx and rx in ENU frame local to the target position
+    # check constraints to determine SPM or KA usage
+    # determine brcs value from selected value. Report in linear units?
+    # allow for profile of reflectivity. profile should be in a magnitude - phase format so that phase values can be altered by some phasing function to set based on profile data
+    patch_area = (s_loc_1[2]-s_loc_1[1]) * (s_loc_2[2]-s_loc_2[1])
+    
+    
+    #determine scattering geometry given Rx/tx/target locations
+    tx_llh = Geometry.xyz_to_geo(tx_ecef)
+    rx_llh = Geometry.xyz_to_geo(rx_ecef)
+    tgt_llh = Geometry.xyz_to_geo(tgt_ecef)
+
+    #next 3 lines for testing geometry
+    # tx_llh = [0; 0; 500e3]; rx_llh = [0;20; 500e3]; tgt_llh = [0;10;0] # bistatic - specular
+    # tx_llh = [0; 0; 500e3]; tx_llh; tgt_llh = [0;10;0] # monostatic
+    # tx_llh = [0; 0; 500e3]; rx_llh = [.1; 0; 500e3]; tgt_llh = [0;10;0] # quasi-monostatic (?)
+
+    tx_enu = Geometry.llh_to_enu_new_org(tx_llh[1], tx_llh[2], tx_llh[3], tgt_llh)
+    rx_enu = Geometry.llh_to_enu_new_org(rx_llh[1], rx_llh[2], rx_llh[3], tgt_llh)
+    tx_sph = Geometry.enu_to_sph(tx_enu[1], tx_enu[2], tx_enu[3])
+    rx_sph = Geometry.enu_to_sph(rx_enu[1], rx_enu[2], rx_enu[3])
+    #correct transmitter azimuth for change of origin direction (origin calculated as target location)
+    tx_sph[3] = tx_sph[3] + 180; tx_sph[3] = tx_sph[3]%360 # add 180 degrees and mod360 to enure 0 < azimuth < 360
+
+    # check for "monostatic" bounds -- TODO: How to define what we approximate as monostatic? 
+    # i.e. what scattering error tolerance is acceptable --> angular difference from direct backscatter that meets tolerance
+    #for now we'll say 2 degrees in both azimuth and incidence...
+    tol = 2.0
+    if (abs(tx_sph[2] - rx_sph[2]) < tol) & ( abs(  tx_sph[3] - rx_sph[3] + 180 ) < tol)
+
+        monostatic = true
+    else
+        monostatic = false
+    end
+
+
+    # ulaby_terrain_switch will calculate the backscatter RCS value at the incident angle
+    if ulaby_terrain_switch == 1       
+        if monostatic == false
+            @warn raw"Suggest only to use Ulaby Terrain for monostatic-like geometries."
+        end
+        σʳ = Ulaby_book_terrain_backscatter_values(rx_sph[2],fc,terrain,polarization)
+        rx_unit = rx_enu/norm(rx_enu)
+        
+        patch_normal = [0; 0; 1] # using this a placeholder; future work might include a DEM, in which the surface normal may be tilted
+        patch_area_eff = patch_area * dot(patch_normal,rx_unit) # take dot product between surface normal [0 0 1] in ENU and unit vector to receiver
+        # deciding not to take dot product of transmitter and surface normal; thought experiment is that for monostatic case, you don't have cos^2(θ) effect 
+        brcs = σʳ*patch_area_eff
+    else
+        if monostatic #monostatic geometry
+            # Auto-select surface scattering mechanism based on surface properties
+            m = 2 * σ / l
+            if λ*σ < l^2/2.76
+                #use GO
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA_backscatter(tx_sph[2],σ,l,θᵥ)
+                
+            elseif σ < λ/21 & m < 0.3
+                #use SPM
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_backscatter(λ,tx_sph[2],l,σ,θᵥ)
+            else
+                error(raw"Scattering surface not supported")
+            end
+        else # generalized bistatic geometry
+            # Auto-select surface scattering mechanism based on surface properties
+            m = 2 * σ / l
+            if λ*σ < l^2/2.76
+                #use GO
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA(λ,tx_sph[2],tx_sph[3],rx_sph[2],rx_sph[3],σ,l,θᵥ)
+                
+            elseif (σ < λ/21) & (m < 0.3)
+                #use SPM
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_tsang(λ,tx_sph[2],tx_sph[3],rx_sph[2],rx_sph[3],l,σ,θᵥ)
+            else
+                error(raw"Scattering surface not supported")
+            end
+        end#if monostatic
+
+        rx_unit = rx_enu/norm(rx_enu)
+        
+        patch_normal = [0; 0; 1] # using this a placeholder; future work might include a DEM, in which the surface normal may be tilted
+        patch_area_eff = patch_area * dot(patch_normal,rx_unit) # take dot product between surface normal [0 0 1] in ENU and unit vector to receiver
+        # deciding not to take dot product of transmitter and surface normal; thought experiment is that for monostatic case, you don't have cos^2(θ) effect 
+
+        
+        #select polarization for BRCS calc #sadly theres no "switch:case" statement in Julia
+        if polarization == 1 #vh
+            brcs = σʳ_vh * patch_area_eff
+        elseif polarization == 2 # hv
+            brcs = σʳ_hv * patch_area_eff
+        elseif polarization == 3 # vv
+            brcs = σʳ_vv * patch_area_eff
+        elseif polarization == 4 # hh
+            brcs = σʳ_hh * patch_area_eff
+        end    
+
+
+        # check for nadir-like geometry and calculate nadir specular component. use same tolerance as backscatter for area around nadir
+        # seeing if elevation is directly up for tx and rx
+        if (abs(90.0 - tx_sph[2]) < tol) & (abs(90.0 - rx_sph[2]) < tol)
+            brcs_coh = RCS_coherent(σ,θᵥ,λ,patch_area)
+            brcs = brcs + brcs_coh
+        end
+    end
+
+    phase = 0 # keep a fixed phase value
+    brcs_complex = brcs*cos(phase)+ (1im*brcs*sin(phase))
+
+    return brcs_complex
+end#function
 
 """
 Calculate surface BRCS
@@ -16,12 +151,10 @@ Calculate surface BRCS
     - `patch_area::Float32`: Area of surface patch (m^2)
 
 # Return
-- `elev::N-element Array`: elev angle (deg)
-- `phi::N-element Array`: azimuth angle (deg)
-- `range::N-element Array`: range from origin to spherical point
+- `brcs_complex::ComplexF64`: BRCS value (linear magnitude, unitless)
 """
 function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
-    @unpack λ, polarization = params
+    @unpack λ, polarization, σ, l, θᵥ = params
 
     # this function should probably be called from scene.jl to calculate the brcs for a given target:
     # in there, geometry of Tx to Tgt and Tgt to Rx needs be solved to find inc angles and scattering angles
@@ -58,7 +191,7 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
     # check for "monostatic" bounds -- TODO: How to define what we approximate as monostatic? 
     # i.e. what scattering error tolerance is acceptable --> angular difference from direct backscatter that meets tolerance
     #for now we'll say 2 degrees in both azimuth and incidence...
-    tol = 2
+    tol = 2.0
     if (abs(tx_sph[2] - rx_sph[2]) < tol) & ( abs(  tx_sph[3] - rx_sph[3] + 180 ) < tol)
 
         monostatic = true
@@ -73,11 +206,11 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
         m = 2 * σ / l
         if λ*σ < l^2/2.76
             #use GO
-            σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA_backscatter(θ,σ,l,θᵥ)
+            σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA_backscatter(tx_sph[2],σ,l,θᵥ)
             
         elseif σ < λ/21 & m < 0.3
             #use SPM
-            σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_backscatter(λ,θᵢ,l,σ,θᵥ)
+            σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_backscatter(λ,tx_sph[2],l,σ,θᵥ)
         else
             error(raw"Scattering surface not supported")
         end
@@ -86,11 +219,11 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
          m = 2 * σ / l
          if λ*σ < l^2/2.76
              #use GO
-             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA(λ,θ,ϕ,θₛ,ϕₛ,σ,l,θᵥ)
+             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA(λ,tx_sph[2],tx_sph[3],rx_sph[2],rx_sph[3],σ,l,θᵥ)
              
          elseif (σ < λ/21) & (m < 0.3)
              #use SPM
-             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_tsang(λ,θᵢ,ϕᵢ,θₛ,ϕₛ,l,σ,θᵥ)
+             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_tsang(λ,tx_sph[2],tx_sph[3],rx_sph[2],rx_sph[3],l,σ,θᵥ)
          else
              error(raw"Scattering surface not supported")
          end
@@ -478,6 +611,187 @@ function BRCS_SPM_backscatter(λ,θᵢ,l,σ,θᵥ)
     σʳ_vh = 0
     σʳ_hv = 0
     return σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh
+end#function
+
+
+
+"""
+# this function calculates the emperically-derived backscatter values from the Ulaby-Dobson book "Handbook of Radar Scattering Statistics for Terrain"
+
+# Arguments
+- `θ::Float64: incidence angle (deg)
+- `band::String`: frequency band 
+- `terrain::String`: terrain type (from set of available)
+
+# Output
+- `σ ::Float64: Backscatter RCS for HH, HV, or VV (dB). Book gives HV = VH
+"""
+function Ulaby_book_terrain_backscatter_values(θ,fc,terrain,polarization)
+    if fc >= 1e9 && fc < 2e9
+        band = "L"
+    elseif fc >= 2e9 && fc < 4e9
+        band = "S"
+    elseif fc >= 4e9 && fc < 8e9
+        band = "C"
+    else
+        error(raw"Frequency out of bounds")
+    end
+
+
+    if terrain == "soil"   
+        if band == "L" # HH, HV, VV coeffs in tables
+            P₁ = [2442 -30.2 -94.36] # recalculated HH coefficients because book values gave wrong curve
+            P₂ = [-3.771 15.261 99.0] 
+            P₃ = [-2.193 3.56 0.365]
+            P₄ = [-2442 -0.424 -3.398]
+            P₅ = [ 0.1711 0.0 5.0]
+            P₆ = [-0.07967 0.0 -1.739]
+        elseif band == "S"
+            P₁ = [-91.2 -46.467 -97.016]
+            P₂ = [99.0 31.788 99.0]
+            P₃ = [0.433 2.189 0.270]
+            P₄ = [5.063 -17.99 -2.056]
+            P₅ = [2.941 1.34 5.0]
+            P₆ = [-3.142 1.583 -1.754]
+        elseif band == "C"
+            P₁ = [-24.855 -26.7 -24.951]
+            P₂ = [26.351 15.055 28.742]
+            P₃ = [1.146 1.816 1.043]
+            P₄ = [0.204 -0.499 -1.681]
+            P₅ = [0.0 0.0 0.0]
+            P₆ = [0.0 0.0 0.0]
+        end#band
+
+    elseif terrain == "grass" 
+        if band == "L"
+            P₁ = [-29.325 -40.166 -28.022]
+            P₂ = [37.55 26.833 36.59]
+            P₃ = [2.332 2.029 2.53]
+            P₄ = [-2.615 -1.473 -1.53]
+            P₅ = [5.0 3.738 5.0]
+            P₆ = [-1.616 -1.324 -1.513]
+        elseif band == "S"
+            P₁ = [-20.361 -29.035 -21.198]
+            P₂ = [25.727 18.055 26.694]
+            P₃ = [2.979 2.8 2.828]
+            P₄ = [-1.13 -1.556 -0.612]
+            P₅ = [5.0 4.554 5.0]
+            P₆ = [-1.916 -0.464 -2.079]
+        elseif band == "C"
+            P₁ = [-15.75 -23.109 -93.606]
+            P₂ = [17.931 13.591 99]
+            P₃ = [2.369 1.508 0.22]
+            P₄ = [-1.502 -.757 -5.509]
+            P₅ = [4.592 4.491 -2.964]
+            P₆ = [-3.142 -3.142 1.287]
+        end#band
+
+    elseif terrain == "short_veg" 
+        if band == "L"
+            P₁ = [-27.265 -41.6 -24.614]
+            P₂ = [32.39 22.872 27.398]
+            P₃ = [2.133 0.689 2.265]
+            P₄ = [1.438 -1.238 -1.080]
+            P₅ = [-3.847 0.0 5.0]
+            P₆ = [3.142 0.0 -1.999]
+        elseif band == "S"
+            P₁ = [-20.779 -99.0 -20.367]
+            P₂ = [21.867 85.852 21.499]
+            P₃ = [2.434 0.179 2.151]
+            P₄ = [0.347 3.687 -1.069]
+            P₅ = [-0.013 2.121 5.0]
+            P₆ = [-0.393 -3.142 -1.95]
+        elseif band == "C"
+            P₁ = [-87.727 -99.0 -88.593]
+            P₂ = [99.0 93.293 99.0]
+            P₃ = [0.322 0.181 0.326]
+            P₄ = [10.188 5.359 9.574]
+            P₅ = [-1.747 1.948 1.969]
+            P₆ = [3.143 -3.142 -3.142]
+        end#band
+    elseif terrain == "shrubs" 
+        if band == "L"
+            P₁ = [-26.688 -99.0 -81.371]
+            P₂ = [29.454 99.0 99.0]
+            P₃ = [1.814 0.086 0.567]
+            P₄ = [0.873 -21.298 16.2]
+            P₅ = [4.135 0.0 -1.948]
+            P₆ = [-3.142 0.0 3.142]
+        elseif band == "S"
+            P₁ = [-21.202 -89.222 -20.566]
+            P₂ = [99.0 91.002 99.0]
+            P₃ = [0.270 0.156 0.294]
+            P₄ = [6.98 3.948 8.107]
+            P₅ = [-5.0 -0.355 5.0]
+            P₆ = [-3.141 0.526 -1.983]
+        elseif band == "C"
+            P₁ = [-91.95 -99.0 -91.133]
+            P₂ = [99.0 91.003 99.0]
+            P₃ = [0.270 0.156 0.294]
+            P₄ = [6.980 3.948 8.107]
+            P₅ = [1.922 2.239 2.112]
+            P₆ = [-3.142 -3.142 -3.142]
+        end#band    
+
+    elseif terrain == "dry_snow" 
+        if band == "L"
+            P₁ = [-74.019 -91.341 -77.032]
+            P₂ = [99.0 99.0 99.0]
+            P₃ = [1.592 1.202 1.415]
+            P₄ = [-30.0 30.0 -30.0]
+            P₅ = [1.928 1.790 1.720]
+            P₆ = [0.905 -2.304 0.997]
+        elseif band == "S"
+            P₁ = [-47.055 -54.29 -40.652]
+            P₂ = [30.164 13.292 18.826]
+            P₃ = [5.788 10.0 9.211]
+            P₄ = [30.0 -30.0 30.0]
+            P₅ = [1.188 -0.715 0.690]
+            P₆ = [-0.629 3.142 0.214]
+        elseif band == "C"
+            P₁ = [-42.864 -25.543 -19.765]
+            P₂ = [20.762 16.64 19.83]
+            P₃ = [10.0 10.0 10.0]
+            P₄ = [30.0 -2.959 7.089]
+            P₅ = [0.763 3.116 1.54]
+            P₆ = [-0.147 2.085 -0.012]
+        end#band
+
+    elseif terrain == "wet_snow" 
+        if band == "L"
+            P₁ = [-73.069 -90.98 -75.156]
+            P₂ = [95.221 99.0 99.0]
+            P₃ = [1.548 1.129 1.446]
+            P₄ = [30.0 30.0 30.0]
+            P₅ = [1.795 1.827 1.793]
+            P₆ = [-2.126 -2.308 -2.179]
+        elseif band == "S"
+            P₁ = [-45.772 -42.940 -39.328]
+            P₂ = [25.16 9.935 18.594]
+            P₃ = [5.942 15.0 8.046]
+            P₄ = [30.0 30.0 30.0]
+            P₅ = [0.929 0.438 0.666]
+            P₆ = [-0.284 0.712 0.269]
+        elseif band == "C"
+            P₁ = [-31.91 -24.622 4.288]
+            P₂ = [17.749 15.102 15.642]
+            P₃ = [11.854 15.0 15.0]
+            P₄ = [30.0 -3.401 30.0]
+            P₅ = [0.421 2.431 0.535]
+            P₆ = [0.74 3.142 1.994]
+        end#band
+    end#terrain
+    
+    σ_hh = P₁[1] .+ P₂[1] .* exp.(-P₃[1].*θ) .+ P₄[1] .* cos.(P₅[1] .* θ .+ P₆[1])
+    σ_hv = P₁[2] .+ P₂[2] .* exp.(-P₃[2].*θ) .+ P₄[2] .* cos.(P₅[2] .* θ .+ P₆[2])
+    σ_vv = P₁[3] .+ P₂[3] .* exp.(-P₃[3].*θ) .+ P₄[3] .* cos.(P₅[3] .* θ .+ P₆[3])
+    if polarization ==4
+        return σ_hh
+    elseif polarization ==1 || polarization ==2
+        return σ_hv
+    elseif polarization ==3
+        return σ_vv
+    end
 end#function
 
 end#module

@@ -104,6 +104,14 @@ end
     
     # positioning parameters
 
+    # surface scattering parameters
+    σ::Float64                    = 1 # (meter) RMS surface roughness
+    l::Float64                    = 5 # (meter) surface correlation length
+    θᵥ::Float64                   = 0.2 # fractional soil moisture content (0-1 scale)
+    ulaby_terrain_switch          = 1 # 
+    terrain                       = "soil" # terrain types from Ulaby scattering statistics Handbook
+    # terrain types are: soil, grass, short_veg, dry_snow, wet_snow, 
+
     # simulation options
     enable_thermal_noise::Bool    = false # whether to enable or disable random additive noise (e.g. thermal noise)
     display_geometry::Bool        = false # whether to display geometry plots
@@ -141,7 +149,7 @@ function validateInputParams(params)
         @assert length(params.t_loc_1) == length(params.t_loc_2) == length(params.t_loc_3) "Size of target location arrays must be equal for target_pos_mode=CR"
     end
 
-    @assert params.target_pos_mode in ["CR", "layered-grid", "shaped-grid", "grid"]  "Target position mode is not valid"
+    @assert params.target_pos_mode in ["CR", "layered-grid", "shaped-grid", "grid", "surface-grid"]  "Target position mode is not valid"
 
     # Add more @assert's here
 
