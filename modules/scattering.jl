@@ -42,7 +42,7 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
 
     #next 3 lines for testing geometry
     # tx_llh = [0; 0; 500e3]; rx_llh = [0;20; 500e3]; tgt_llh = [0;10;0] # bistatic - specular
-    # tx_llh = [0; 0; 500e3]; tx_llh; tgt_llh = [0;10;0] # monostatic
+    # tx_llh = [0; 0; 500e3]; rx_llh = [0; 0; 500e3]; tgt_llh = [0;10;0] # monostatic
     # tx_llh = [0; 0; 500e3]; rx_llh = [.1; 0; 500e3]; tgt_llh = [0;10;0] # quasi-monostatic (?)
 
     tx_enu = Geometry.llh_to_enu_new_org(tx_llh[1], tx_llh[2], tx_llh[3], tgt_llh)
@@ -52,12 +52,15 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
     #correct transmitter azimuth for change of origin direction (origin calculated as target location)
     tx_sph[3] = tx_sph[3] + 180; tx_sph[3] = tx_sph[3]%360 # add 180 degrees and mod360 to enure 0 < azimuth < 360
 
+    # change elevation angles to incidence angles
+    tx_incidence = 90 - tx_sph[2]
+    rx_incidence = 90 - rx_sph[2]
+    
     # check for "monostatic" bounds -- TODO: How to define what we approximate as monostatic? 
     # i.e. what scattering error tolerance is acceptable --> angular difference from direct backscatter that meets tolerance
     #for now we'll say 2 degrees in both azimuth and incidence...
     tol = 2.0
-    if (abs(tx_sph[2] - rx_sph[2]) < tol) & ( abs(  tx_sph[3] - rx_sph[3] + 180 ) < tol)
-
+    if (abs(tx_incidence - rx_incidence) < tol) & ( abs(  tx_sph[3] - rx_sph[3] + 180 ) < tol)
         monostatic = true
     else
         monostatic = false
@@ -69,7 +72,7 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
         if monostatic == false
             @warn raw"Suggest only to use Ulaby Terrain for monostatic-like geometries."
         end
-        σʳ = Ulaby_book_terrain_backscatter_values(rx_sph[2],fc,terrain,polarization)
+        σʳ = Ulaby_book_terrain_backscatter_values(rx_incidence,fc,terrain,polarization)
         rx_unit = rx_enu/norm(rx_enu)
         
         patch_normal = [0; 0; 1] # using this a placeholder; future work might include a DEM, in which the surface normal may be tilted
@@ -82,11 +85,11 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
             m = 2 * σ / l
             if λ*σ < l^2/2.76
                 #use GO
-                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA_backscatter(tx_sph[2],σ,l,θᵥ)
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA_backscatter(tx_incidence,σ,l,θᵥ)
                 
             elseif σ < λ/21 & m < 0.3
                 #use SPM
-                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_backscatter(λ,tx_sph[2],l,σ,θᵥ)
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_backscatter(λ,tx_incidence,l,σ,θᵥ)
             else
                 error(raw"Scattering surface not supported")
             end
@@ -94,12 +97,11 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
             # Auto-select surface scattering mechanism based on surface properties
             m = 2 * σ / l
             if λ*σ < l^2/2.76
-                #use GO
-                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA(λ,tx_sph[2],tx_sph[3],rx_sph[2],rx_sph[3],σ,l,θᵥ)
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA(λ,tx_incidence,tx_sph[3],rx_incidence,rx_sph[3],σ,l,θᵥ)
                 
             elseif (σ < λ/21) & (m < 0.3)
                 #use SPM
-                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_tsang(λ,tx_sph[2],tx_sph[3],rx_sph[2],rx_sph[3],l,σ,θᵥ)
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_tsang(λ,tx_incidence,tx_sph[3],rx_incidence,rx_sph[3],l,σ,θᵥ)
             else
                 error(raw"Scattering surface not supported")
             end
@@ -126,8 +128,8 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
 
         # check for nadir-like geometry and calculate nadir specular component. use same tolerance as backscatter for area around nadir
         # seeing if elevation is directly up for tx and rx
-        if (abs(90.0 - tx_sph[2]) < tol) & (abs(90.0 - rx_sph[2]) < tol)
-            brcs_coh = RCS_coherent(σ,θᵥ,λ,patch_area)
+        if (abs(90.0 - tx_incidence) < tol) & (abs(90.0 - rx_incidence) < tol)
+            brcs_coh = RCS_coherent(σ, rx_incidence,θᵥ,λ,patch_area)
             brcs = brcs + brcs_coh
         end
     end
@@ -135,6 +137,7 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
     phase = 0 # keep a fixed phase value
     brcs_complex = brcs*cos(phase)+ (1im*brcs*sin(phase))
 
+    #TODO return a scattering matrix instead. We're already calculating all 4 components
     return brcs_complex
 end#function
 
@@ -178,7 +181,7 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
 
     #next 3 lines for testing geometry
     # tx_llh = [0; 0; 500e3]; rx_llh = [0;20; 500e3]; tgt_llh = [0;10;0] # bistatic - specular
-    # tx_llh = [0; 0; 500e3]; tx_llh; tgt_llh = [0;10;0] # monostatic
+    # tx_llh = [0; 0; 500e3]; rx_llh= [0; 0; 500e3]; tgt_llh = [0;10;0] # monostatic
     # tx_llh = [0; 0; 500e3]; rx_llh = [.1; 0; 500e3]; tgt_llh = [0;10;0] # quasi-monostatic (?)
 
     tx_enu = Geometry.llh_to_enu_new_org(tx_llh[1], tx_llh[2], tx_llh[3], tgt_llh)
@@ -188,12 +191,15 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
     #correct transmitter azimuth for change of origin direction (origin calculated as target location)
     tx_sph[3] = tx_sph[3] + 180; tx_sph[3] = tx_sph[3]%360 # add 180 degrees and mod360 to enure 0 < azimuth < 360
 
+    # change elevation angles to incidence angles
+    tx_incidence = 90 - tx_sph[2]
+    rx_incidence = 90 - rx_sph[2]
+
     # check for "monostatic" bounds -- TODO: How to define what we approximate as monostatic? 
     # i.e. what scattering error tolerance is acceptable --> angular difference from direct backscatter that meets tolerance
     #for now we'll say 2 degrees in both azimuth and incidence...
     tol = 2.0
-    if (abs(tx_sph[2] - rx_sph[2]) < tol) & ( abs(  tx_sph[3] - rx_sph[3] + 180 ) < tol)
-
+    if (abs(tx_incidence - rx_incidence) < tol) & ( abs(  tx_sph[3] - rx_sph[3] + 180 ) < tol)
         monostatic = true
     else
         monostatic = false
@@ -206,11 +212,11 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
         m = 2 * σ / l
         if λ*σ < l^2/2.76
             #use GO
-            σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA_backscatter(tx_sph[2],σ,l,θᵥ)
+            σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA_backscatter(tx_incidence,σ,l,θᵥ)
             
         elseif σ < λ/21 & m < 0.3
             #use SPM
-            σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_backscatter(λ,tx_sph[2],l,σ,θᵥ)
+            σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_backscatter(λ,tx_incidence,l,σ,θᵥ)
         else
             error(raw"Scattering surface not supported")
         end
@@ -219,11 +225,11 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
          m = 2 * σ / l
          if λ*σ < l^2/2.76
              #use GO
-             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA(λ,tx_sph[2],tx_sph[3],rx_sph[2],rx_sph[3],σ,l,θᵥ)
+             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA(λ,tx_incidence,tx_sph[3],rx_incidence,rx_sph[3],σ,l,θᵥ)
              
          elseif (σ < λ/21) & (m < 0.3)
              #use SPM
-             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_tsang(λ,tx_sph[2],tx_sph[3],rx_sph[2],rx_sph[3],l,σ,θᵥ)
+             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_tsang(λ,tx_incidence,tx_sph[3],rx_incidence,rx_sph[3],l,σ,θᵥ)
          else
              error(raw"Scattering surface not supported")
          end
@@ -248,8 +254,8 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
 
     # check for nadir-like geometry and calculate nadir specular component. use same tolerance as backscatter for area around nadir
     # seeing if elevation is directly up for tx and rx
-    if abs(90 - tx_sph[2]) < tol & abs(90 - rx_sph[2]) < tol
-        brcs_coh = RCS_coherent(σ,θᵥ,λ,patch_area)
+    if abs(90 - tx_incidence) < tol & abs(90 - rx_incidence) < tol
+        brcs_coh = RCS_coherent(σ,rx_incidence,θᵥ,λ,patch_area)
         brcs = brcs + brcs_coh
     end
 
@@ -310,9 +316,6 @@ function BRCS_KA(λ,θ,ϕ,θₛ,ϕₛ,σ,l,θᵥ)
     μ₂ = 12.566e-7 # free space permeability
     
     #mean squared slope = σ² * abs(p_dp0)
-    #mss = 0.01 # ?? Not sure what value this should be
-    
-    
     s = 2 * σ / l
     #----------- using mean slope values ------------
     mss = s^2/2 #since m = s/sqrt(2) and mss = m^2, where m = rms slope
@@ -392,6 +395,7 @@ function BRCS_KA(λ,θ,ϕ,θₛ,ϕₛ,s,θᵥ)
     σʳ_hv  = (k*q* abs(U_hv) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
     σʳ_vv  = (k*q* abs(U_vv) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
     σʳ_hh  = (k*q* abs(U_hh) )^2 / ( (q_z)^4 * s.^2 ) * exp(-((q_x)^2 + (q_y)^2) / ((q_z)^2 * s.^2 ))
+    #----------------------------------------------------
 
     return  σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh
 end#function
@@ -430,31 +434,80 @@ end
 # Arguments
 - `λ::Float64`: wavelength
 - `θ::Float64: incidence angle of incident wave (deg)
-- `σ::Float64`: standard deviation of surface heights (m)
 - `θᵥ::Float64: soil moisture volume fraction [0,1]
+- `σ::Float64`: standard deviation of surface heights (m)
 - `patch_area::Float64: resolution cell area (m^2)
 
 """
-function RCS_coherent(σ,θᵥ,λ,patch_area)
+# function RCS_coherent(σ,θ,θᵥ,λ,patch_area) #TODO replace with incidence angle dependent version
+#     #going to assume a homogeneous infinite surface approximation for coherent reflection component. Only exists in angular area around specular direction, 
+#     # RCS is going to be approximately area of patch divided by First Fresnel zone size * total reflected power (infinite surface assumption)
+#     ϵ₁ = 8.854e-12 
+#     ϵ₂ = soil_dielectric(θᵥ)
+#     ϵᵣ =  ϵ₂/ϵ₁ # assumes free space into soil reflection
+#     Γ  = abs((sqrt(ϵ₂)-sqrt(ϵ₁))/(sqrt(ϵ₂)+sqrt(ϵ₁)))^2 # at normal incidence
+
+#     σ₀ = Γ * 4*pi*patch_area/λ^2 * ϵᵣ * exp(-16*pi^2*(cosd(θ)*σ/λ)^2*ϵᵣ) # this equation comes from Ilgin's REASON document. used for nadir (but added incidence angle)
+
+#     σᶜ_vh = 0;  σᶜ_hv = 0;
+#     σᶜ_vv = σ₀
+#     σᶜ_hh  = σ₀
+# end#function
+
+function RCS_coherent(σ,θᵥ,λ,θ,ϕ,θₛ,ϕₛ) #Incidence angle dependent version here
     #going to assume a homogeneous infinite surface approximation for coherent reflection component. Only exists in angular area around specular direction, 
     # RCS is going to be approximately area of patch divided by First Fresnel zone size * total reflected power (infinite surface assumption)
+    f = 299792458 / λ
     ϵ₁ = 8.854e-12 
+    μ₂ = 12.566e-7 # free space permeability
     ϵ₂ = soil_dielectric(θᵥ)
     ϵᵣ =  ϵ₂/ϵ₁ # assumes free space into soil reflection
     Γ  = abs((sqrt(ϵ₂)-sqrt(ϵ₁))/(sqrt(ϵ₂)+sqrt(ϵ₁)))^2 # at normal incidence
-
-    σ₀ = Γ * 4*pi*patch_area/λ^2 * ϵᵣ * exp(-16*pi^2*(σ/λ)^2*ϵᵣ)
-
+    k = 2*pi/λ
+    q_x,q_y,q_z = get_q_vec(k,θ,ϕ,θₛ,ϕₛ)
+    
+    # tol = 2  # angular tolerance
+    # # Check if the scattered signal direction is in the specular direction
+    # if theta == 0 && theta_s == 0 # checks if nadir (then azimuth doesn't matter) or if in specular direction
+    #     σ₀ = abs(Γ)^2 * k * dirac(q_x) * dirac(q_y) * exp(-q_z^2 * σ^2)   
+    #     σᶜ_vv = σ₀
+    #     σᶜ_hh  = σ₀
+    # elseif abs(θₛ - θ) < tol && (abs(ϕₛ - ϕₛ - π) < tol) # if off nadir, checks for forward scattering direction
+    #         σ₀ = abs(Γ)^2 * k * dirac(q_x) * dirac(q_y) * exp(-q_z^2 * σ^2)   
+    #         σᶜ_vv = σ₀
+    #         σᶜ_hh  = σ₀
+    #     else
+    #         σᶜ_vv = 0
+    #         σᶜ_hh  = 0
+    #     end
+    # end
+    # σ₀ = abs(Γ)^2 * k * dirac(q_x) * dirac(q_y) * exp.(-q_z.^2 .* σ.^2)   
+    R_pll0, R_pll1, R_prp0, R_prp1 = get_Fresnel_coeffs(ϵ₂,μ₂,θ,f)
+    a₀_hh = -R_prp0*(cosd(θ)+cosd(θₛ))*cosd(ϕ-ϕₛ)
+    a₀_vv = -R_pll0*(cosd(θ)+cosd(θₛ))*cosd(ϕ-ϕₛ)
+    σᶜ_vv = π * k^2 * abs(a₀_vv)^2 *  dirac(q_x) * dirac(q_y) * exp.(-q_z.^2 .* σ.^2)   
+    σᶜ_hh = π * k^2 * abs(a₀_hh)^2 *  dirac(q_x) * dirac(q_y) * exp.(-q_z.^2 .* σ.^2)   
+    σᶜ_vh = 0.0;  
+    σᶜ_hv = 0.0;
+        
+     return σᶜ_vh,  σᶜ_hv,  σᶜ_vv,  σᶜ_hh
 end#function
 
 # this function calculates the scattering vector components q based on incidence and reflection angles
 function get_q_vec(k,θ,ϕ,θₛ,ϕₛ)
-    q_x = k*(sind(θₛ)*cosd(ϕₛ) - sind(θ)*cos(ϕ)) 
-    q_y = k*(sind(θₛ)*sind(ϕₛ) - sind(θ)*sin(ϕ)) #note can write qₓ but q_y in same subscript is forbidden in Julia....
+    q_x = k*(sind(θₛ)*cosd(ϕₛ) - sind(θ)*cosd(ϕ)) 
+    q_y = k*(sind(θₛ)*sind(ϕₛ) - sind(θ)*sind(ϕ)) #note can write qₓ but q_y in same subscript is forbidden in Julia....
     q_z = k*(cosd(θₛ) + cosd(θ))
     return q_x,q_y,q_z
 end#function
 
+function dirac(q) # simple dirac-delta function
+    if q == 0
+        return 1.0
+    else 
+        return 0.0
+    end
+end
 
 """
 # this function calculates the polarization factors U_pq for pq = {vh hv vv hh}
