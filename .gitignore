@@ -3,3 +3,5 @@
 *.ipynb
 *.jld2
 *.nc
+*.gif
+platform_distributions.jld
