@@ -10,3 +10,5 @@ workflows/.DS_Store
 *.nc
 *.xlsx
 sync data/.DS_Store
+*.gif
+*.jld
