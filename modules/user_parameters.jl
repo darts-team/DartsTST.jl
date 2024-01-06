@@ -64,12 +64,12 @@ end
     bandwidth::Float64 = 40e6 # bandwidth (Hz)
 
     # derived parameters (some are needed further below)
-    λ = c/fc # wavelength (m)
+    λ::Float64 = c/fc # wavelength (m)
     h = p_t0_LLH[3] # default altitude TODO p_t0_LLH may be different than actual average height if user_defined_orbit=1, need to calculate h from orbit avg altitude OR should set PSF cut direction manually
     inc_angle = asind((earth_radius+h)./earth_radius.*sind(look_angle))
-    Ns_1 = length(s_loc_1)
-    Ns_2 = length(s_loc_2)
-    Ns_3 = length(s_loc_3)
+    Ns_1::Int = length(s_loc_1)
+    Ns_2::Int = length(s_loc_2)
+    Ns_3::Int = length(s_loc_3)
 
     # performance metrics
     res_dB::Float64 = 4 # dB two-sided resolution relative power level (set to 0 for peak-to-null Rayleigh resolution), positive value needed
@@ -87,14 +87,20 @@ end
     sync_fc = fc # waveform center frequency - set to same as radar freq
     sync_fs::Float64 = 25e6 # sync receiver sampling rate
     sync_fbw = sync_fs # LFM bandwidth
-    sync_fmin::Float64 = 1.0 # minimum frequency > 0 in Hz to window PSD
-    sync_clk_fs::Float64 = 1e3; # sample rate of clock error process
-    sync_master::Int = 1; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
+    sync_clk_fs::Float64 = 2000; # sample rate of clock error process
+    sync_master::Int = tx_el; # selection of master transmitter for sync (assumes a simplified communication achitecture- all talking with one master platform)
 
     sync_osc_type::String = "USO"
     sync_a_coeff_dB = [-95 -90 -200 -130 -155] # [USO: Krieger]
     sync_f_osc::Float64 = 10e6 # local oscillator frequency --> depends on oscillator type
-
+    use_measured_psd_flag::Bool = false
+    osc_psd_meas_filename::String = "inputs/PN 12_8MHz with GPS 17min 220323_1310.xlsx" # Note: S(f) amplitude values must be in dB scale units
+    # osc_psd_meas_filename::String = "inputs/roseL_osc_specs.xlsx" # Note: S(f) amplitude values must be in dB scale units
+    phase_offset_flag::Bool       = false  # if flag == true, then we assume that the oscillators are in phase at the beginning of the aperture, ignored if "delay_since_sync" > 0
+    delay_since_sync::Float64     = 0 # a time delay since last synchronization for evaluating synthetic apertures which begin at arbitrary time after most recent sync event. If !=0, phase_offset_flag is ignored, as it assumes the phases are aligned at t=0 before delay
+    # sync_fmin::Float64 = 0.1 # minimum frequency > 0 in Hz to window PSD
+    sync_fmin = 0.001 #1/(delay_since_sync+SAR_duration) # minimum frequency > 0 in Hz to window PSD
+    
     # positioning parameters
 
     # simulation options
@@ -108,7 +114,7 @@ end
     display_input_scene::Bool     = false # display input scene (targets) and delta between input/output scenes (3 slices at the center of scene) with same scene size as output tomogram scene
     no_sync_flag::Bool            = false # if flag == true, no sync is used. flag == false results in normal sync process estimation
     enable_sync_phase_error::Bool = false # if flag == true, oscillator phase errors considered. If false, ideal oscillators used
-    phase_offset_flag::Bool       = true  # if flag == true, then we assume that the oscillators are in phase at the beginning of the aperture:: Note, should be TRUE if the sync is used
+    
 
     # logging level
 
