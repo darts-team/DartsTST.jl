@@ -165,6 +165,7 @@ function plot_tomo_output(image_3D, params_densesim, norm_flag, plot_idx, savepa
     l = @layout[grid(1,1) a{0.0001w}]
     p0 = plot(legend=false,grid=false,foreground_color_subplot=:white) 
     p1 = (heatmap(s_loc_1,s_loc_2,dB_level .* log10.(transpose(plot_data[:,:,plot_idx[3]])),ylabel="Ground range (C axis) [m]",xlabel="Along-track distance (S axis) [m]",title =title_string, clim=c_lim,
+    #c=:imola, xlim=(xlimp[1],xlimp[2]),ylim=(ylimp[1],ylimp[2]),tickfont=font(18), xtickfont=font(18), ytickfont=font(18), guidefont=font(18), titlefontsize=20, size=(650,500) ))
     xlim=(xlimp[1],xlimp[2]),ylim=(ylimp[1],ylimp[2]),tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(500,360) ))
     p11 = plot(p1,p0,layout=l)
     savefig(p11, savepath*title_string[1:12]*save_name_ext*"_1.png")

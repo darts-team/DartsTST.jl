@@ -1,6 +1,8 @@
 using Distributed
 addprocs(24) 
 
+@everywhere DEPOT_PATH[1]="/u/epstein-z0/wblr/joshil/Julia/.julia"
+
 @everywhere include("../modules/generate_raw_data.jl")
 @everywhere include("../modules/process_raw_data.jl")
 @everywhere include("../modules/geometry.jl")
@@ -29,7 +31,7 @@ addprocs(24)
 @everywhere using TimerOutputs
 @everywhere using JLD2
 @everywhere using GeoDatasets
-
+@everywhere using Distributions
 
 c = 299792458 #TODO does not work without redefining c here
 earth_radius = 6378.137e3 # Earth semi-major axis at equator
@@ -99,7 +101,10 @@ lat_lon_idx         = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_
 
 #orbit_dataset       = Dataset("./inputs/orbit_output_04052023.nc")
 #orbit_dataset       = Dataset("/Users/joshil/Documents/Orbits/Outputs/06152023/3/orbit_output_06152023_3.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
-orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/orbit_output_06152023_3.nc")
+#orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/orbit_output_06152023_3.nc")
+
+orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/orbit_output_ROSEL_12032023_1.nc")
+#orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/ROSEL_orbit_coflier_p4_lag3_theta15_12032023_1.nc")
 
 global mast_plat            = 1
 flag_plat           = 1 #descending orbit
@@ -182,9 +187,10 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
 
         global Orbit_index[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = close_val_lat_lon[2]
 
-        slrng_temp2 = Geometry.distance(orbit_pos_all[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2]]; 0]))
+        global slnt_range[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = Geometry.distance(orbit_pos_all[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2]]; 0]))
+
         #global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = acosd(orbit_pos_geo_all[:,close_val_lat_lon[2]][3] / slrng_temp2) 
-        global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = Scene.slantrange_to_lookangle(earth_radius,slrng_temp2,orbit_pos_geo_all[:,close_val_lat_lon[2]][3],0.0)[2]
+        global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = Scene.slantrange_to_lookangle(earth_radius,slnt_range[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1],orbit_pos_geo_all[:,close_val_lat_lon[2]][3],0.0)[2]
 
 
         #ref_profile_height, ref_profile_value, NoPeaks  = Global_Scale_Support.constrct_reflectivity_profile_exp(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])
@@ -197,6 +203,11 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
 
 
         targ_loc = Canopy_profile_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1:2:length(0.0:0.5:ceil(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]))];
+
+        for i=1:length(targ_loc)
+            targ_loc[i] = targ_loc[i] + (rand(Uniform(-1,1)) .* (0.2367/2))
+        end
+        
         targ_ref = Canopy_profiles[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1:2:length(0.0:0.5:ceil(Canopy_heights[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]))];
         #targ_ref = transpose(targ_ref ./ maximum(targ_ref))
 
@@ -239,13 +250,14 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
         # Read number of platforms (todo: move into a struct)
         Np  = size(orbit_pos)[2] # number of platforms
 
-        ref_plat = 1 #incicate the reference platform
         if params.processing_mode == 1
-            bperp, b_at, bnorm = Orbits.get_perp_baselines_new(orbit_pos[:,1:end,:], orbit_vel[:,1:end,:], lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], 0.0, params.left_right_look,  ref_plat)
+            bperp, b_at, bnorm = Orbits.get_perp_baselines_new(orbit_pos[:,1:end,:], orbit_vel[:,1:end,:], lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], 0.0, params.left_right_look,  1)
             avg_sep = maximum(bperp)/(Np - 1) # Change this
+            ref_plat = 1 #incicate the reference platform
         elseif params.processing_mode == 2
-            bperp, b_at, bnorm = Orbits.get_perp_baselines_new(orbit_pos[:,2:end,:], orbit_vel[:,2:end,:], lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], 0.0, params.left_right_look,  ref_plat)
+            bperp, b_at, bnorm = Orbits.get_perp_baselines_new(orbit_pos[:,2:end,:], orbit_vel[:,2:end,:], lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], 0.0, params.left_right_look,  1)
             avg_sep = maximum(bperp)/(Np - 2) # Change this
+            ref_plat = 2 #incicate the reference platform
         end
 
         global Norm_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(bnorm) ./ 1e3
@@ -369,13 +381,13 @@ global mask = SharedArray(zeros(length(Lons_p),length(Lats_p)) )
 
         Pbf                         = Data_Processing.tomo_beamforming(Cov_mat3, steering_mat, azimuth_lim, srange_lim, [size(Cov_mat)[1] size(Cov_mat)[2] size(heights_t)[1]])  
         Pbf = Pbf[:,:,end:-1:1];
-        #Pbf = Pbf[:,end:-1:1,:];
+        ##Pbf = Pbf[:,end:-1:1,:];
         Pbf2                        = Data_Processing.tomocoordinates_to_scenecoordinates(Pbf, heights_t, params.s_loc_2, params.s_loc_3, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] , params.left_right_look, mean(orbit_pos_geo_all[3,:]))
 
  
         PC                          = Data_Processing.tomo_CAPON(Cov_mat3, steering_mat, azimuth_lim, srange_lim, [size(Cov_mat)[1] size(Cov_mat)[2] size(heights_t)[1]])  
         PC = PC[:,:,end:-1:1];
-        #PC = PC[:,end:-1:1,:];
+        ##PC = PC[:,end:-1:1,:];
         PC2                         = Data_Processing.tomocoordinates_to_scenecoordinates(PC, heights_t, params.s_loc_2, params.s_loc_3, lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] , params.left_right_look, mean(orbit_pos_geo_all[3,:]))
 
         plot_idx 					= [Int64(ceil(length(params.s_loc_1)/2)),61,Int64(ceil(length(heights_t)/2))] #61 #Int64(ceil(length(params.s_loc_3)/2))]   Int64(ceil(length(params.s_loc_2)/2))
@@ -485,9 +497,9 @@ end
 
 end
 
-to
+print(to)
 
-@save "../Outputs/output_gs_study_res_run_062023_100m_5f_903_5plat_4proc_profiles.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s amb_H amb_N slnt_range to 
+@save "../Outputs/output_gs_study_res_run_122023_100m_5f_106_4plat_3proc_profiles.jld" Geo_location Output_stat_bpa Output_stat_beamforming Output_stat_capon Canopy_heights orbit_time_all orbit_pos_all orbit_vel_all lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Norm_baseline_mean Perp_baseline_max Perp_baseline_min Perp_baseline_mean Par_baseline_max Par_baseline_min Par_baseline_mean res_theory_n res_theory_s amb_H amb_N slnt_range to 
 
 [rmprocs(p) for p in workers()]
 

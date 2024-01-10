@@ -39,7 +39,7 @@ function computeTimePosVel(params)
     #if left_right_look == "left";N_dir=1;elseif left_right_look == "right";N_dir=-1;end
     if left_right_look == "left";C_dir=-1;elseif left_right_look == "right";C_dir=1;end
     if user_defined_orbit==1 # orbits from file
-        orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
+        orbit_dataset=Dataset("../inputs/"*orbit_filename) # Read orbits data in NetCDF format
         t12_orbits=orbit_dataset["time"][1:2] # first two time samples
         dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
         orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(ceil((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
@@ -50,6 +50,11 @@ function computeTimePosVel(params)
         #    global dcm=orbit_dataset["dcm"];
         #catch #if not generate from Orbits
             dv = orbit_dataset.attrib["epoch"];
+            if typeof(dv) == String
+                temp = dv
+                dv= []
+                dv = [parse(Int,temp[1:4]);parse(Int,temp[6:7]);parse(Int,temp[9:10]);parse(Int,temp[12:13]);parse(Int,temp[15:16]);parse(Int,temp[18:19])];
+            end
             local epoch = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
             global dcm = Orbits.eci_dcm(orbit_time, epoch);
         #end
@@ -244,14 +249,14 @@ function eci_dcm(time, epoch::DateTime, eop_data)
     dcm = zeros(3,3,length(time))
     for ii = 1:length(time)
           dt = unix2datetime(datetime2unix(epoch)+time[ii]);
-          dcm[:,:,ii] = convert(Array{Float64}, rECItoECEF(J2000(), ITRF(), DatetoJD(dt), eop_data));
+          dcm[:,:,ii] = convert(Array{Float64}, r_eci_to_ecef(J2000(), ITRF(), date_to_jd(dt), eop_data));
     end
     return dcm
 end
 
 "compute DCM to convert ECI to ECEF based on epoch, wrapper method that downloads EOP data"
 function eci_dcm(time, epoch::DateTime)
-    eop_data = get_iers_eop();
+    eop_data = fetch_iers_eop();
     return eci_dcm(time, epoch, eop_data)
 end
 

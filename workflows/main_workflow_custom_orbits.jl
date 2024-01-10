@@ -124,7 +124,7 @@ for i = 1:Ntr
 
     # Apply antenna pattern
     if params.include_antenna # calculate look angle (average over platforms and slow-time positions)
-        Antenna.applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, params)
+        SimSetup.applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, params)
     end
 
     # Generate range spread function (matched filter output)
