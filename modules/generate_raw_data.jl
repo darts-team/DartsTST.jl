@@ -121,6 +121,53 @@ function main_RSF_slowtime(t_xyz_grid,p_xyz_3D,Srx,t_rx,ref_range,t_ref, params)
     return rawdata
 end
 
+function main_RSF_slowtime_perf_opt(t_xyz_grid,p_xyz_3D,Srx::Vector{Float64},t_rx,ref_range,t_ref, params) # with RSF and slow-time
+    # TODO add descriptions of inputs and output
+    @unpack mode, tx_el, λ = params
+    Nt=size(t_xyz_grid,2) # number of targets
+    Np=size(p_xyz_3D,2) # number of platforms
+    Nft=length(t_rx) # number of fast-time samples
+    Nst=size(p_xyz_3D,3) # number of slow-time samples
+    Δt_ft=t_rx[2]-t_rx[1] # fast-time resolution
+    if mode==1 || mode==2 # SAR (ping-pong) or SIMO
+        rawdata=zeros(ComplexF64,Nst,Np,Nft)
+    elseif mode==3
+        rawdata=zeros(ComplexF64,Nst,Np,Np,Nft)
+    end
+    Srx_shifted = zeros(Nft)
+    Srx_shifted2 = zeros(Nft)
+
+    ref_delay=2*ref_range/c # reference delay
+    temp_sum=zeros(ComplexF64,Nft)
+
+    for s=1:Nst # slow-time (pulses)
+        for i=1:Np # RX platform
+            temp_sum.=0.0;
+            for j=1:Nt # targets
+                if t_ref[j]!=0
+                    if mode==2;range_tx=distance(t_xyz_grid[:,j],p_xyz_3D[:,tx_el,s]);end
+                    range_rx=distance(t_xyz_grid[:,j],p_xyz_3D[:,i,s])
+                    if mode==1 # SAR (ping-pong)
+                        range_tx=range_rx
+                        rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
+                        rel_delay_ind::Int64=Int(round(rel_delay/Δt_ft))
+                        if rel_delay_ind>=0 #TODO if rel_delay_ind>=Nft Srx_shifted becomes a larger array which causes issues (also for SIMO and MIMO)
+                            circshift!(Srx_shifted, Srx, rel_delay_ind)
+                            Srx_shifted[1:rel_delay_ind] .= zeros(rel_delay_ind);
+                        elseif rel_delay_ind<0
+                            circshift!(Srx_shifted, Srx, rel_delay_ind)
+                            Srx_shifted[Nft-abs(rel_delay_ind)+1:end] .= zeros(abs(rel_delay_ind))  
+                        end
+                        temp_sum .= temp_sum .+  (t_ref[j].*exp(-im*4*pi/λ*range_tx).*Srx_shifted)
+                    end
+                end
+            end
+            rawdata[s,i,:].=temp_sum
+        end
+    end
+    return rawdata
+end
+
 function main_RSF_slowtime_surfaceBRCS(t_xyz_grid,p_xyz_3D,Srx,t_rx,ref_range,t_ref, params) # with RSF, slow-time, and surface BRCS calculation
     # TODO add descriptions of inputs and output
     @unpack mode, tx_el, λ = params

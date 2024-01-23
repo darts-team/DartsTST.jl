@@ -19,46 +19,45 @@ using Statistics
 
 
 """  
-construct the canopy heights for each pixel and get  
-the corresponding geo location.
+Get the canopy heights for each pixel and the corresponding geo location.
 
 """
 function read_GEDI_L3_data(filepath_GEDIL3, grid_res)
-  #choose the grid resolution based on teh requirements, update teh size row and size col accordingly
+  #choose the grid resolution based on the requirements, update the size row and size col as needed
   if grid_res == 100  
     #100km x 100km grid 
-    size_row      = 347;
-    size_col      = 146;
+    size_row          = 347;
+    size_col          = 146;
   elseif grid_res == 40 
     #40km x 40km grid 
-    size_row     = 868;
-    size_col     = 366;
+    size_row        = 868;
+    size_col        = 366;
   elseif grid_res == 10 
     #10km x 10km grid 
-    size_row     = 3470;
-    size_col     = 1462;
+    size_row        = 3470;
+    size_col        = 1462;
   elseif grid_res == 20
     #20km x 20km grid
-    size_row     = 1735;
-    size_col     = 731;
+    size_row        = 1735;
+    size_col        = 731;
   elseif grid_res == 20 
     #20km x 20km grid 
-    size_row     = 1735;
-    size_col     = 731;
+    size_row        = 1735;
+    size_col        = 731;
   else
     throw("Resolution not valid! Change to 100 km or 40 km")
   end
 
-  ga              = GeoArrays.read(filepath_GEDIL3)
+  ga                = GeoArrays.read(filepath_GEDIL3)
   replace!(ga,missing => NaN)
-  trans           = Proj.Transformation("EPSG:6933", "WGS84")
-  trans2          = Proj.Transformation( "WGS84","EPSG:6933")
+  trans             = Proj.Transformation("EPSG:6933", "WGS84")
+  trans2            = Proj.Transformation( "WGS84","EPSG:6933")
 
-  Canopy_heights  = GeoArray(zeros(size_row,size_col)) 
+  Canopy_heights    = GeoArray(zeros(size_row,size_col)) 
   epsg!(Canopy_heights, 6933)
   bbox!(Canopy_heights, (min_x=-1.736753044e7, min_y=7.314540830638585e6, max_x=1.736753044e7, max_y=-7.314540830638585e6))
 
-  Geo_location    = GeoArray(zeros(size_row,size_col,2))
+  Geo_location      = GeoArray(zeros(size_row,size_col,2))
   epsg!(Geo_location, 6933)
   bbox!(Geo_location, (min_x=-1.736753044e7, min_y=7.314540830638585e6, max_x=1.736753044e7, max_y=-7.314540830638585e6))
 
@@ -76,8 +75,7 @@ function read_GEDI_L3_data(filepath_GEDIL3, grid_res)
 end
 
 """
-Construct the lat and lon index
-to get a 2D matrix corresponding to lat and lon index
+Construct the lat and lon index to get a 2D matrix corresponding to lat and lon index
 
 """
 function get_lat_lon_idx(region_xlims, region_ylims)
@@ -123,8 +121,10 @@ function get_orbit_info_fromfile(orbit_dataset, mast_plat, flag)
   global dcm 		        = Orbits.eci_dcm(orbit_time1, epoch);
   orbit_pos1,orbit_vel1 = Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm)
   
+  # Get orbit position in lat, lon, ht
   orbit_pos_geo         = Geometry.xyz_to_geo(orbit_pos1[:,mast_plat,:])
   
+  # Get data corresponding to ascending or descending orbits
   temp1 				        = orbit_pos_geo[1,1:end-1]
   temp2 				        = orbit_pos_geo[1,2:end]
   temp3 				        = temp1.>temp2
@@ -143,49 +143,38 @@ end
 
 
 """
-Find the closest lat and lon location (orbit index) corresponding to the pixel location
-look angle lower limit is considered
-#TODO, if the look angle goes beyongd the upperlimit?
+Find the closest lat and lon location (orbit index) corresponding to the pixel location,
+lower limit for look angle is considered
+#TODO, if the look angle goes beyond the upperlimit?
 
 """
 function find_close_val_lat_lon(Geo_location, lat_lon_idx, orbit_pos, orbit_pos_geo)
 
-  search_lim            = 100 
-  look_ang_lower_lim    = 29.9 #look angle lower limit
-  earth_radius          = 6378.137e3 # Earth semi-major axis at equator
+  search_lim              = 100 
+  look_ang_lower_lim      = 29.9 #look angle lower limit
+  earth_radius            = 6378.137e3 # Earth semi-major axis at equator
 
   #Search for the closest orbit point from the geo point
-  close_val_lat_lon     = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2])) 
+  close_val_lat_lon       = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2])) 
                           + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
 
   for i2=1:25 #25 can be changed based on the search required
-    #Check whether the closest orbit point is to the left of the geo point
-    #if no, get the next closest point left of the current orbit
-    #if yes, check for look angle limit and get teh next closest point to left if look angle criterion is not satisfied  
-    #To ensure right looking SAR geometry
-    #if orbit_pos_geo[:,close_val_lat_lon[2]][2] >= (Geo_location[lat_lon_idx[1],lat_lon_idx[2],2])
-    #  close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2]-(i2.*0.5))) 
-    #  + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
-    #else
-    #  slrng_temp        = Geometry.distance(orbit_pos[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[1],lat_lon_idx[2]]; 0]))
-    #  look_angle        = acosd(orbit_pos_geo[:,close_val_lat_lon[2]][3] / slrng_temp) 
-    #  if (look_angle < (look_ang_lower_lim)) 
-    #    close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2]-(i2.*0.5))) 
-    #    + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
-    #  else
-    #    break
-    #  end
-    #end
-  #end
+
+    #Algorithm: Check whether the closest orbit point is to the left of the geo point considered
+    #if not, get the next closest orbit point left of the current orbit point
+    #if yes, check for look angle lower limit and get the next closest point to left if look angle criterion is not satisfied  
+    
     if orbit_pos_geo[:,close_val_lat_lon[2]][2] >= (Geo_location[lat_lon_idx[1],lat_lon_idx[2],2])
-      close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2]-(i2.*0.5))) 
+      # Find the closest orbit point by shifting the geolocation 0.5 deg left in longitude
+      close_val_lat_lon     = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],2]-(i2.*0.5))) 
                             + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[lat_lon_idx[1],lat_lon_idx[2],1])))
     else
-      slrng_temp        = Geometry.distance(orbit_pos[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[1],lat_lon_idx[2]]; 0]))
+      # Compute look angle and check for search criterion
+      slrng_temp            = Geometry.distance(orbit_pos[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[1],lat_lon_idx[2]]; 0]))
       if (orbit_pos_geo[:,close_val_lat_lon[2]][3] > slrng_temp)
         look_angle = 0.0
       else
-        look_angle        = Scene.slantrange_to_lookangle(earth_radius,slrng_temp,orbit_pos_geo[:,close_val_lat_lon[2]][3],0.0)[2]
+        look_angle          = Scene.slantrange_to_lookangle(earth_radius,slrng_temp,orbit_pos_geo[:,close_val_lat_lon[2]][3],0.0)[2]
         #look_angle        = acosd(orbit_pos_geo[:,close_val_lat_lon[2]][3] / slrng_temp) 
       end
 
@@ -195,60 +184,73 @@ function find_close_val_lat_lon(Geo_location, lat_lon_idx, orbit_pos, orbit_pos_
       else
         break
       end
+
     end
+
   end
 
-  #Now that we have the approximate orbit location, the next step is to ensure it is approximately in the center of the geometry required
+  # Now that we have the approximate orbit location, the next step is to ensure that teh orbit point is approximately in the center of the scene geometry as required 
   # search for the +-search_lim points around the orbit location obtained from previous step
-  # compute distacnces and choose the pount with the minimum distance as the orbit point for simulations corresponding to the geo location
-  dist_idx              = close_val_lat_lon[2]-search_lim:close_val_lat_lon[2]+search_lim
+  # compute the distances and choose the point with the minimum distance as the orbit point for simulations corresponding to the geo location
+
+  dist_idx                  = close_val_lat_lon[2]-search_lim:close_val_lat_lon[2]+search_lim
+  
+  # Lower boundary condition 
   if sum(dist_idx.<=0)>0
-    dist_idx              = 1:close_val_lat_lon[2]+search_lim
+    dist_idx                = 1:close_val_lat_lon[2]+search_lim
   end
-  lookvec_ini           = zeros(3,length(dist_idx))
-  slrng_ini             = zeros(length(dist_idx))
+
+  lookvec_ini               = zeros(3,length(dist_idx))
+  slrng_ini                 = zeros(length(dist_idx))
   for i3=1:length(dist_idx)
-    lookvec_ini[:,i3] 	= Geometry.geo_to_xyz([Geo_location[lat_lon_idx[1],lat_lon_idx[2]]; 0])  .- orbit_pos[:,1,dist_idx[i3]]; # look vector
-    slrng_ini[i3] 		  = norm(lookvec_ini[:,i3]); #slant range
+    lookvec_ini[:,i3] 	    = Geometry.geo_to_xyz([Geo_location[lat_lon_idx[1],lat_lon_idx[2]]; 0])  .- orbit_pos[:,1,dist_idx[i3]]; # look vector
+    slrng_ini[i3] 		      = norm(lookvec_ini[:,i3]); #slant range
   end
-  close_val_lat_lon     = (findmin(slrng_ini)[1],Int(dist_idx[findmin(slrng_ini)[2]]))
+  close_val_lat_lon         = (findmin(slrng_ini)[1],Int(dist_idx[findmin(slrng_ini)[2]]))
 
+  # Add offsets for near starting and end of orbit index to make sure orbits are within simulation range (only affects two cases)
   if close_val_lat_lon[2] < 11
-    close_val_lat_lon = close_val_lat_lon .+ 10
+    close_val_lat_lon       = close_val_lat_lon .+ 10
   elseif close_val_lat_lon[2] > ( size(orbit_pos)[3] - 10)        
-    close_val_lat_lon = close_val_lat_lon .- 10
+    close_val_lat_lon       = close_val_lat_lon .- 10
   end
 
+  #return the orbit point for the geolocation provided
   return close_val_lat_lon
 
 end
 
 
+"""
+Same as previous function except that the Geo_location variable corresponds to one value 
 
+"""
 function find_close_val_lat_lon_test(Geo_location, orbit_pos, orbit_pos_geo)
 
-  search_lim            = 100
-  look_ang_lower_lim    = 29.9 #look angle lower limit
-  earth_radius          = 6378.137e3 # Earth semi-major axis at equator
+  search_lim              = 100
+  look_ang_lower_lim      = 29.9 #look angle lower limit
+  earth_radius            = 6378.137e3 # Earth semi-major axis at equator
 
   #Search for the closest orbit point from the geo point
-  close_val_lat_lon     = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[2])) 
+  close_val_lat_lon       = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[2])) 
                           + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[1])))
 
   for i2=1:25 #25 can be changed based on the search required
-    #Check whether the closest orbit point is to the left of the geo point
-    #if no, get the next closest point left of the current orbit
-    #if yes, check for look angle limit and get teh next closest point to left if look angle criterion is not satisfied  
+
+    #Algorithm: Check whether the closest orbit point is to the left of the geo point considered
+    #if not, get the next closest orbit point left of the current orbit point
+    #if yes, check for look angle lower limit and get the next closest point to left if look angle criterion is not satisfied  
+
     #To ensure right looking SAR geometry
     if orbit_pos_geo[:,close_val_lat_lon[2]][2] >= (Geo_location[2])
-      close_val_lat_lon   = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[2]-(i2.*0.5))) 
+      close_val_lat_lon     = findmin(abs.(orbit_pos_geo[2,1:end-search_lim].-(Geo_location[2]-(i2.*0.5))) 
                             + abs.(orbit_pos_geo[1,1:end-search_lim].-(Geo_location[1])))
     else
-      slrng_temp          = Geometry.distance(orbit_pos[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[1];Geo_location[2]; 0]))
+      slrng_temp            = Geometry.distance(orbit_pos[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[1];Geo_location[2]; 0]))
       if (orbit_pos_geo[:,close_val_lat_lon[2]][3] > slrng_temp)
         look_angle = 0.0
       else
-        look_angle        = Scene.slantrange_to_lookangle(earth_radius,slrng_temp,orbit_pos_geo[:,close_val_lat_lon[2]][3],0.0)[2]
+        look_angle          = Scene.slantrange_to_lookangle(earth_radius,slrng_temp,orbit_pos_geo[:,close_val_lat_lon[2]][3],0.0)[2]
       end
 
       if (look_angle < (look_ang_lower_lim)) 
@@ -257,62 +259,47 @@ function find_close_val_lat_lon_test(Geo_location, orbit_pos, orbit_pos_geo)
       else
         break
       end
+
     end
+
   end
 
-  #Now that we have the approximate orbit location, the next step is to ensure it is approximately in the center of the geometry required
+  # Now that we have the approximate orbit location, the next step is to ensure that teh orbit point is approximately in the center of the scene geometry as required 
   # search for the +-search_lim points around the orbit location obtained from previous step
-  # compute distacnces and choose the pount with the minimum distance as the orbit point for simulations corresponding to the geo location
-  dist_idx              = close_val_lat_lon[2]-search_lim:close_val_lat_lon[2]+search_lim
+  # compute the distances and choose the point with the minimum distance as the orbit point for simulations corresponding to the geo location
+
+  dist_idx                  = close_val_lat_lon[2]-search_lim:close_val_lat_lon[2]+search_lim
+
+  # Lower boundary condition 
   if sum(dist_idx.<=0)>0
-    dist_idx            = 1:close_val_lat_lon[2]+search_lim
+    dist_idx                = 1:close_val_lat_lon[2]+search_lim
   end
-  lookvec_ini           = zeros(3,length(dist_idx))
-  slrng_ini             = zeros(length(dist_idx))
+
+  lookvec_ini               = zeros(3,length(dist_idx))
+  slrng_ini                 = zeros(length(dist_idx))
   for i3=1:length(dist_idx)
-    lookvec_ini[:,i3] 	= Geometry.geo_to_xyz([Geo_location[1];Geo_location[2]; 0])  .- orbit_pos[:,1,dist_idx[i3]]; # look vector
-    slrng_ini[i3] 		  = norm(lookvec_ini[:,i3]); #slant range
+    lookvec_ini[:,i3] 	    = Geometry.geo_to_xyz([Geo_location[1];Geo_location[2]; 0])  .- orbit_pos[:,1,dist_idx[i3]]; # look vector
+    slrng_ini[i3] 		      = norm(lookvec_ini[:,i3]); #slant range
   end
-  close_val_lat_lon     = (findmin(slrng_ini)[1],Int(dist_idx[findmin(slrng_ini)[2]]))
+  close_val_lat_lon         = (findmin(slrng_ini)[1],Int(dist_idx[findmin(slrng_ini)[2]]))
 
+  # Add offsets for near starting and end of orbit index to make sure orbits are within simulation range (only affects two cases)
   if close_val_lat_lon[2] < 11
-    close_val_lat_lon   = close_val_lat_lon .+ 10
+    close_val_lat_lon       = close_val_lat_lon .+ 10
   elseif close_val_lat_lon[2] > ( size(orbit_pos)[3] - 10)        
-    close_val_lat_lon   = close_val_lat_lon .- 10
+    close_val_lat_lon       = close_val_lat_lon .- 10
   end
 
+  #return the orbit point for the geolocation provided
   return close_val_lat_lon
 
 end
 
 
-#= """
-Plotting on map initial version
+"""
+Construct custom reflectivity profiles for input based on canopy height
 
 """
-function maps1(lat_vals, lon_vals, p_var, c1, c2)
-
-    marker = attr(size=[60,60,60,60],
-                  color=p_var,
-                  cmin=c1,
-                  cmax=c2,
-                  #symbol="square",
-                  colorscale="hot",
-                  colorbar=attr(title="Correlation",
-                                ticksuffix="  ",
-                                showticksuffix="last"),
-                  line_color="black")
-    trace = scattergeo(;mode="markers", lat=lat_vals, lon=lon_vals,
-                        marker=marker, marker_size=3,
-                        marker_line_color="black", marker_line_width=2,
-                        name="Data")
-
-    layout = Layout(geo_scope="usa", geo_resolution=50, width=900, height=600,
-                    margin=attr(l=0, r=0, t=10, b=0))
-    plot(trace, layout)
-end =#
-
-
 function constrct_reflectivity_profile_exp(Canopy_height)
   if (Canopy_height == 0)
       ref_profile_height          = 0
@@ -341,6 +328,10 @@ function constrct_reflectivity_profile_exp(Canopy_height)
 
 end
 
+"""
+Get root mean square error between input and output array based on the method
+
+"""
 function compute_nrmse(obs, pred, type="mean") 
 
   if size(obs) != size(pred)
@@ -351,47 +342,22 @@ function compute_nrmse(obs, pred, type="mean")
   mse             = squared_sums / length(obs)
   rmse            = sqrt(mse)
   if (type == "sd") 
-    nrmse = rmse/std(obs)
+    nrmse         = rmse/std(obs)
   elseif (type == "mean") 
-    nrmse = rmse/mean(obs)
+    nrmse         = rmse/mean(obs)
   elseif (type == "maxmin") 
-    nrmse = rmse/ (maximum(obs) - minimum(obs))
+    nrmse         = rmse/ (maximum(obs) - minimum(obs))
   elseif (type == "none")
-    nrmse = rmse / 1
+    nrmse         = rmse / 1
   else 
     error("wrong nrmse type")
   end
 
-  nrmse = round(nrmse, digits=3)
-  
+  nrmse           = round(nrmse, digits=3)
+
   return nrmse
   
 end
-function compute_nrmse(obs, pred, type="mean") 
 
-  if size(obs) != size(pred)
-    error("data size not matching")
-  end
-  
-  squared_sums    = sum((obs - pred).^2)
-  mse             = squared_sums / length(obs)
-  rmse            = sqrt(mse)
-  if (type == "sd") 
-    nrmse = rmse/std(obs)
-  elseif (type == "mean") 
-    nrmse = rmse/mean(obs)
-  elseif (type == "maxmin") 
-    nrmse = rmse/ (maximum(obs) - minimum(obs))
-  elseif (type == "none")
-    nrmse = rmse / 1
-  else 
-    error("wrong nrmse type")
-  end
-
-  nrmse = round(nrmse, digits=3)
-  
-  return nrmse
-  
-end
 
 end
