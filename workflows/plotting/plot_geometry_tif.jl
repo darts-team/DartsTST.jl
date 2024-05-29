@@ -4,12 +4,12 @@ using GeoArrays
 #path_dir = "../Outputs/global_geometry_10m_new/"
 #path_dir = "/Users/joshil/Documents/Outputs/geometry/global_geometry_10km_Geo/global_geometry_10m_new_v2/"
 #path_dir = "/Users/joshil/Documents/Outputs/geometry/global_geometry_10km_Geo_v2/1km_him_region/global_geometry_1km_new/"
-path_dir = "/Users/joshil/Documents/Outputs/geometry/global_geometry_10km_Geo_v2/10km/global_geometry_10m_new/"
+path_dir = "/Users/joshil/Documents/Outputs/geometry/cartwheel_10km/global_geometry_10km_cartwheel/"
 #path_dir = "/Users/joshil/Documents/Outputs/geometry/global_geometry_100km_Geogrid/Outputs/"
 
 #img_dir = "/Users/joshil/Documents/Outputs/geometry/global_geometry_10km_Geo/global_geometry_10m_new_v2_plots/"
 #img_dir = "/Users/joshil/Documents/Outputs/geometry/global_geometry_10km_Geo_v2/1km_him_region_plots/"
-img_dir = "/Users/joshil/Documents/Outputs/geometry/global_geometry_10km_Geo_v2/10km_plots/"
+img_dir = "/Users/joshil/Documents/Outputs/geometry/cartwheel_10km/global_geometry_10km_cartwheel/Plots/"
 #img_dir = "/Users/joshil/Documents/Outputs/geometry/global_geometry_100km_Geogrid/Plots/"
 
 

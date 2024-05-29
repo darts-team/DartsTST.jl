@@ -131,14 +131,15 @@ function main_RSF_slowtime_perf_opt(t_xyz_grid,p_xyz_3D,Srx::Vector{Float64},t_r
     Δt_ft=t_rx[2]-t_rx[1] # fast-time resolution
     if mode==1 || mode==2 # SAR (ping-pong) or SIMO
         rawdata=zeros(ComplexF64,Nst,Np,Nft)
+        temp_sum=zeros(ComplexF64,Nft)
     elseif mode==3
         rawdata=zeros(ComplexF64,Nst,Np,Np,Nft)
+        temp_sum=zeros(ComplexF64,Np,Nft)
     end
     Srx_shifted = zeros(Nft)
     Srx_shifted2 = zeros(Nft)
 
     ref_delay=2*ref_range/c # reference delay
-    temp_sum=zeros(ComplexF64,Nft)
 
     for s=1:Nst # slow-time (pulses)
         for i=1:Np # RX platform
@@ -159,10 +160,42 @@ function main_RSF_slowtime_perf_opt(t_xyz_grid,p_xyz_3D,Srx::Vector{Float64},t_r
                             Srx_shifted[Nft-abs(rel_delay_ind)+1:end] .= zeros(abs(rel_delay_ind))  
                         end
                         temp_sum .= temp_sum .+  (t_ref[j].*exp(-im*4*pi/λ*range_tx).*Srx_shifted)
+
+                    elseif mode==2 # SIMO
+                        rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
+                        rel_delay_ind=Int(round(rel_delay/Δt_ft))
+                        if rel_delay_ind>=0 #TODO if rel_delay_ind>=Nft Srx_shifted becomes a larger array which causes issues (also for SIMO and MIMO)
+                            circshift!(Srx_shifted, Srx, rel_delay_ind)
+                            Srx_shifted[1:rel_delay_ind] .= zeros(rel_delay_ind);
+                        elseif rel_delay_ind<0
+                            circshift!(Srx_shifted, Srx, rel_delay_ind)
+                            Srx_shifted[Nft-abs(rel_delay_ind)+1:end] .= zeros(abs(rel_delay_ind))  
+                        end
+                        temp_sum .= temp_sum .+  (t_ref[j].*exp(-im*2*pi/λ*(range_tx+range_rx)).*Srx_shifted)
+
+                    elseif mode==3 # MIMO
+                        for k=1:Np # TX platform for MIMO
+                            range_tx=distance(t_xyz_grid[:,j],p_xyz_3D[:,k,s])
+                            rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
+                            rel_delay_ind=Int(round(rel_delay/Δt_ft))
+                            if rel_delay_ind>=0 #TODO if rel_delay_ind>=Nft Srx_shifted becomes a larger array which causes issues (also for SIMO and MIMO)
+                                circshift!(Srx_shifted, Srx, rel_delay_ind)
+                                Srx_shifted[1:rel_delay_ind] .= zeros(rel_delay_ind);
+                            elseif rel_delay_ind<0
+                                circshift!(Srx_shifted, Srx, rel_delay_ind)
+                                Srx_shifted[Nft-abs(rel_delay_ind)+1:end] .= zeros(abs(rel_delay_ind))  
+                            end
+                            temp_sum[k,:] .= temp_sum[k,:] .+  (t_ref[j].*exp(-im*2*pi/λ*(range_tx+range_rx)).*Srx_shifted)
+                        end
                     end
+
                 end
             end
-            rawdata[s,i,:].=temp_sum
+            if mode==1 || mode==2 # SAR (ping-pong) or SIMO
+                rawdata[s,i,:].=temp_sum
+            elseif mode==3
+                rawdata[s,i,:,:].=temp_sum
+            end
         end
     end
     return rawdata

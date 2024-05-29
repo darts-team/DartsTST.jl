@@ -1,7 +1,10 @@
 using Distributed
-addprocs(24) 
-
-@everywhere DEPOT_PATH[1]="/u/epstein-z0/wblr/joshil/Julia/.julia" # for Epstein
+if Sys.islinux()
+    addprocs(24) 
+    @everywhere DEPOT_PATH[1]="/u/epstein-z0/wblr/joshil/Julia/.julia" # for Epstein
+else
+    addprocs(2) 
+end
 
 @everywhere include("../modules/generate_raw_data.jl")
 @everywhere include("../modules/process_raw_data.jl")
@@ -43,9 +46,13 @@ const to = TimerOutput()
 
 @timeit to "Reading L3 file for canopy heights " begin
 
-#Read canopy heights from GEDI dataset
-filepath_GEDIL3       = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
-#filepath_GEDIL3         = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+#Read canopy heights
+if Sys.islinux()
+    filepath_GEDIL3 = "/u/epstein-z0/wblr/joshil/DARTS/GEDI_Data/GEDI03_rh100_mean_2019108_2021104_002_02.tif"
+else
+    filepath_GEDIL3 = "/Users/joshil/Documents/GEDI_Data/GEDI_L3_LandSurface_Metrics_V2_1952/data/GEDI03_rh100_mean_2019108_2021104_002_02.tif" 
+end
+
 grid_res                = 100; # resolution for simulations
 Canopy_heights, Geo_location, size_row, size_col = Global_Scale_Support.read_GEDI_L3_data(filepath_GEDIL3, grid_res)
 
@@ -89,10 +96,15 @@ region_ylims            = 1:146 # 100km res
 
 lat_lon_idx             = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
+
 # Read orbits data in NetCDF format
-orbit_dataset           = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/orbit_output_ROSEL_12032023_1.nc")
-#orbit_dataset          = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/ROSE_L_Cartwheel_4sat.nc")
-#orbit_dataset          = Dataset("/Users/joshil/Documents/Code/darts-simtool/inputs/orbit_output_ROSEL_12032023_1.nc") # "orbit_output_04052023.nc") 
+if Sys.islinux()
+    orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/orbit_output_ROSEL_12032023_1.nc")
+    #orbit_dataset       = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/ROSEL_orbit_coflier_p4_lag3_theta15_12032023_1.nc")
+else
+    #orbit_dataset       = Dataset("/Users/joshil/Documents/Orbits/Outputs/06152023/3/orbit_output_06152023_3.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
+    orbit_dataset       = Dataset("/Users/joshil/Documents/Orbits/Outputs/ROSEL-L/orbit_output_ROSEL_12032023_1.nc") 
+end
 
 global mast_plat        = 1 # master platform
 flag_plat               = 1 # descending orbit

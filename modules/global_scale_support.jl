@@ -101,14 +101,16 @@ Choose data points corresponding to ascending or descending orbits (flag)
 flag 0=ascending orbits, 1=descending orbits
 
 """
-function get_orbit_info_fromfile(orbit_dataset, mast_plat, flag)
+function get_orbit_info_fromfile(orbit_dataset,orbit_file_coords, mast_plat, flag)
 
   t12_orbits 		        = orbit_dataset["time"][1:2] # first two time samples
   dt_orbits 		        = t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
-  orbit_time_index      = Int(1):Int(dt_orbits):length(orbit_dataset["time"])
-  #orbit_time_index      = Int(1):length(orbit_dataset["time"])
+  #orbit_time_index      = Int(1):Int(dt_orbits):length(orbit_dataset["time"])
+  orbit_time_index      = Int(1):length(orbit_dataset["time"])
    # index range for orbit times for time interval of interest
   orbit_time1 		      = orbit_dataset["time"][orbit_time_index] # read in time data
+
+  if orbit_file_coords=="ECI"
   orbit_pos_ECI 	      = 1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
   orbit_vel_ECI         = 1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
   dv 				            = orbit_dataset.attrib["epoch"];
@@ -120,6 +122,13 @@ function get_orbit_info_fromfile(orbit_dataset, mast_plat, flag)
   epoch 			          = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
   global dcm 		        = Orbits.eci_dcm(orbit_time1, epoch);
   orbit_pos1,orbit_vel1 = Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm)
+
+  elseif orbit_file_coords=="ECEF"
+    orbit_pos1=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
+    orbit_vel1=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
+  else
+    @error(raw"Unsupported orbit file coordinate system: Should be 'ECI' or 'ECEF'")
+  end
   
   # Get orbit position in lat, lon, ht
   orbit_pos_geo         = Geometry.xyz_to_geo(orbit_pos1[:,mast_plat,:])

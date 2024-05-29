@@ -1,5 +1,7 @@
 using Distributed
-addprocs(24) 
+addprocs(4) 
+
+#@everywhere DEPOT_PATH[1]="/u/epstein-z0/wblr/joshil/Julia/.julia" # for Epstein
 
 @everywhere include("../modules/geometry.jl")
 @everywhere include("../modules/scene.jl")
@@ -43,20 +45,20 @@ end
     return acosd(clamp(a⋅b/(norm(a)*norm(b)), -1, 1))
 end
 
-res_sim                     = 1 #resolution grid in km
+res_sim                     = 10 #resolution grid in km
 
-file_path                   = "inputs/EPSG4326_v1.0_resamp_cubic_1.03km.tif" # DEM file path
+file_path                   = "/Users/joshil/Documents/Code/Inputs/EPSG4326_v1.0_resamp_cubic_1.03km.tif" # DEM file path
 
 DEM_orig                    = GeoArrays.read(file_path) # Read DEM
 DEM                         = DEM_orig # Make a copy of the DEM
 Geo_location                = GeoArrays.coords(DEM) # Get coordinates corresponding to DEM
 
-#DEM                         = DEM[1:res_sim:end,1:res_sim:end,:] # Skip 10 samples for reducing the resolution 1km -> 10km
-#Geo_location                = Geo_location[1:res_sim:end,1:res_sim:end,:] # Skip 10 samples for reducing the resolution 1km -> 10km
+DEM                         = DEM[1:res_sim:end,1:res_sim:end,:] # Skip 10 samples for reducing the resolution 1km -> 10km
+Geo_location                = Geo_location[1:res_sim:end,1:res_sim:end,:] # Skip 10 samples for reducing the resolution 1km -> 10km
 
 #Himalayan region
-DEM                         = DEM[27001:29000,5351:6850,:] # Remove the first few and last few samples, near the poles
-Geo_location                = Geo_location[27001:29000,5351:6850,:] # Remove the first few and last few samples, near the poles
+#DEM                         = DEM[27001:29000,5351:6850,:] # Remove the first few and last few samples, near the poles
+#Geo_location                = Geo_location[27001:29000,5351:6850,:] # Remove the first few and last few samples, near the poles
 
 #DEM                         = DEM[:,100:end-100,:] # Remove the first few and last few samples, near the poles
 #Geo_location                = Geo_location[:,100:end-100,:] # Remove the first few and last few samples, near the poles
@@ -157,6 +159,7 @@ global res_theory_s         = SharedArray(zeros(size_row,size_col,1)) # Theoreti
 global amb_H                = SharedArray(zeros(size_row,size_col,1)) # Ambiguity along height
 global amb_N                = SharedArray(zeros(size_row,size_col,1)) # Ambiguity along tomo axis
 global slnt_range           = SharedArray(zeros(size_row,size_col,1)) # Slant range
+global altitude             = SharedArray(zeros(size_row,size_col,1)) # Slant range
 
 global local_incidence_angle= SharedArray(zeros(size_row,size_col,1)) # Local incidence angle
 global range_slope_angle    = SharedArray(zeros(size_row,size_col,1)) # Range slope angle
@@ -173,12 +176,17 @@ region_ylims                = 1:size_col
 
 lat_lon_idx                 = Global_Scale_Support.get_lat_lon_idx(region_xlims, region_ylims)
 
-orbit_dataset               = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/orbit_output_06152023_3.nc")
+#orbit_dataset               = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/orbit_output_06152023_3.nc")
+#orbit_dataset               = Dataset("/u/epstein-z0/darts/joshil/code/darts-simtool/inputs/ROSE_L_Helical_4sat.nc") 
+
+#orbit_dataset               = Dataset("/Users/joshil/Documents/Orbits/From_Eric/cartwheel/ROSE_L_Cartwheel_4sat.nc")
+orbit_dataset               = Dataset("/Users/joshil/Documents/Orbits/From_Eric/helix/ROSE_L_Helical_4sat.nc")
+
 #orbit_dataset               = Dataset("/Users/joshil/Documents/Orbits/Outputs/06152023/3/orbit_output_06152023_3.nc") # "orbit_output_04052023.nc") # Read orbits data in NetCDF format
 
 global mast_plat            = 1
 flag_plat                   = 1 #descending orbit
-orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_Support.get_orbit_info_fromfile(orbit_dataset, mast_plat, flag_plat)
+orbit_time_all, orbit_pos_all, orbit_vel_all, orbit_pos_geo_all = Global_Scale_Support.get_orbit_info_fromfile(orbit_dataset,"ECI", mast_plat, flag_plat)
 
 end
 
@@ -220,6 +228,7 @@ end
         global range_slope_angle[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = NaN
         global incidence_angle[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]   = NaN
         global slope_angle[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]       = NaN
+        global altitude[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]       = NaN
 
     else
 
@@ -227,14 +236,18 @@ end
 
         # Obtain closest orbit point
         global close_val_lat_lon                                    =  Global_Scale_Support.find_close_val_lat_lon_test(Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1][end:-1:1], orbit_pos_all, orbit_pos_geo_all)
+        #global close_val_lat_lon                                    =  Global_Scale_Support.find_close_val_lat_lon(Geo_location, lat_lon_idx[i1,:], orbit_pos_all, orbit_pos_geo_all)
+
         # Obtain orbit index corresponding to closest orbit point
         global Orbit_index[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]   = close_val_lat_lon[2]
         # Compute slant range and look angle
         global slnt_range[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]    = Geometry.distance(orbit_pos_all[:,1,close_val_lat_lon[2]], Geometry.geo_to_xyz([Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1][2];Geo_location[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1][1]; Float64(DEM[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1])]))
         global lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]   = Scene.slantrange_to_lookangle(earth_radius,slnt_range[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1],orbit_pos_geo_all[:,close_val_lat_lon[2]][3],0.0)[2]
 
+        global altitude[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]   = orbit_pos_geo_all[:,close_val_lat_lon[2]][3]
+
         # Define sim parameters
-        p_mode                  = 2 # SAR mode 1: SISO, 2: SIMO
+        p_mode                  = 1 # 2: SISO, 1: SIMO
         processing_mode         = 1 # Processing configuration 1: use all platforms
         SAR_duration            = 5 # SAR duration
         fc                      = 1.25e9 # Carrier frequency
@@ -268,7 +281,7 @@ end
         global Perp_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1] = minimum(filter(!iszero,bperp)) ./ 1e3
         
         global Par_baseline_max[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = maximum(b_at) ./ 1e3
-        global Par_baseline_min[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]  = minimum(filter(!iszero,b_at)) ./ 1e3
+        global Par_baseline_min[lat_lon_idx[i1,1],la t_lon_idx[i1,2],1]  = minimum(filter(!iszero,b_at)) ./ 1e3
 
         # theoretical resolution along-n
         range_s, range_g = Scene.lookangle_to_range(lookang_all[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1], mean(Geometry.xyz_to_geo(orbit_pos[:,mast_plat,:])[3,:]), 0, earth_radius)
@@ -334,6 +347,7 @@ end
         global range_slope_angle[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]     = NaN
         global incidence_angle[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]       = NaN
         global slope_angle[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]           = NaN
+        global altitude[lat_lon_idx[i1,1],lat_lon_idx[i1,2],1]           = NaN
 
     end
 
@@ -348,14 +362,14 @@ to
 #Save the required outputs to TIF files
 
 #save_path = "/Users/joshil/Documents/Outputs/geometry/global_geometry_10km_Geogrid/Outputs/"
-save_path = "../Outputs/global_geometry_1km_new/"
+save_path = "../Outputs/global_geometry_1km_helix/"
 
 temp = GeoArray(DEM[:,:,1])
 temp.f = DEM_orig.f
 temp.crs = DEM_orig.crs
 temp = @set temp.f.linear = (temp.f.linear .* res_sim)
 temp = @set temp.f.translation = Geo_location[1,1]
-GeoArrays.write!(save_path*"DEM_10km.tif", temp)
+GeoArrays.write!(save_path*"DEM_1km.tif", temp)
 
 temp = GeoArray(Norm_baseline_max[:,:,1])
 temp.f = DEM_orig.f
@@ -476,8 +490,22 @@ temp = @set temp.f.linear = (temp.f.linear .* res_sim)
 temp = @set temp.f.translation = Geo_location[1,1]
 GeoArrays.write!(save_path*"Slope_lat_angle.tif", temp)
 
+temp = GeoArray(altitude[:,:,1])
+temp.f = DEM_orig.f
+temp.crs = DEM_orig.crs
+temp = @set temp.f.linear = (temp.f.linear .* res_sim)
+temp = @set temp.f.translation = Geo_location[1,1]
+GeoArrays.write!(save_path*"Altitude.tif", temp)
+
+temp = GeoArray(slnt_range[:,:,1])
+temp.f = DEM_orig.f
+temp.crs = DEM_orig.crs
+temp = @set temp.f.linear = (temp.f.linear .* res_sim)
+temp = @set temp.f.translation = Geo_location[1,1]
+GeoArrays.write!(save_path*"Slant_range.tif", temp)
+
 # Write variables to output file
-@save save_path*"global_geometry_1km_new_5.jld"  lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Perp_baseline_max Perp_baseline_min Par_baseline_max Par_baseline_min res_theory_n res_theory_s amb_H amb_N slnt_range local_incidence_angle range_slope_angle incidence_angle slope_angle slope_lon slope_lat to
+@save save_path*"global_geometry_1km_Helix_4plat.jld"  lookang_all Orbit_index Norm_baseline_max Norm_baseline_min Perp_baseline_max Perp_baseline_min Par_baseline_max Par_baseline_min res_theory_n res_theory_s amb_H amb_N slnt_range local_incidence_angle range_slope_angle incidence_angle slope_angle slope_lon slope_lat altitude to
 
 # Remove workers initiated for distributed processing
 [rmprocs(p) for p in workers()]

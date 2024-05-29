@@ -250,6 +250,25 @@ function groundrange_to_lookangle(ra,rg,p_h) # # target height is assumed 0 TODO
   return rs,θ_l*180/pi
 end
 
+
+"""
+Convert look angle to incidence angle
+## Inputs
+- θ_l: look angles (deg)
+- p_h: platform height (m)
+- ra: radius of spherical planet (m)
+- t_h: target heights vector (m)
+## Outputs
+- inc: incidence angles (deg)
+"""
+function lookangle_to_incangle(θ_l,p_h,t_h, ra)
+  ra=ra.+t_h
+  p_h=p_h.-t_h
+  inc=asind.(sind.(θ_l).*(ra+p_h)./ra) 
+  return inc
+end
+
+
 """
 Convert Azimuth/Elevation look angles and target heights to target xyz (spherical approximation)
 ## Arguments

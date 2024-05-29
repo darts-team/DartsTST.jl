@@ -33,7 +33,7 @@ end
 
 function computeTimePosVel(params)
     @unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n,
-    Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename, left_right_look = params
+    Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename, left_right_look, orbit_file_coords = params
 
     ## PLATFORM LOCATIONS and HEADINGS
     #if left_right_look == "left";N_dir=1;elseif left_right_look == "right";N_dir=-1;end
@@ -44,6 +44,7 @@ function computeTimePosVel(params)
         dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
         orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(ceil((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
         orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
+        if orbit_file_coords=="ECI"
         orbit_pos_ECI=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
         orbit_vel_ECI=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
         #try #does file have dcm already?
@@ -60,6 +61,13 @@ function computeTimePosVel(params)
         #end
         #orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
         orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF
+        elseif orbit_file_coords=="ECEF"
+            orbit_pos=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
+            orbit_vel=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
+        else
+            @error(raw"Unsupported orbit file coordinate system: Should be 'ECI' or 'ECEF'")
+        end
+
     elseif user_defined_orbit==2 # user defined, TCN option
         #pos_T = zeros(1,length(pos_n)) # no along-track spacings
         #pos_C =   C_dir * pos_n * cosd(look_angle)

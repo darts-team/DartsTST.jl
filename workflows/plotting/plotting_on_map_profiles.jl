@@ -5,10 +5,12 @@ using JLD2
 
 #@load "/Users/joshil/Documents/Code/global_scale_outputs/outputs_5p_profiles/output_gs_study_res_run_062023_100m_5f_513_5plat_5proc_profiles.jld"
 #@load "/Users/joshil/Documents/Code/global_scale_outputs/4p_outputs_1/output_gs_study_res_run_082023_100m_5f_203_4plat_4proc_lag_profiles.jld"
-@load "/Users/joshil/Documents/Code/global_scale_outputs/ROSEL/4p_prof/output_gs_study_res_run_122023_100m_5f_106_4plat_3proc_profiles.jld"
+#@load "/Users/joshil/Documents/Code/global_scale_outputs/ROSEL/4p_prof/output_gs_study_res_run_122023_100m_5f_106_4plat_3proc_profiles.jld"
+@load "/Users/joshil/Documents/Results/Profiles/1D/output_gs_study_res_run_122023_100m_5f_106_4plat_3proc_profiles_new2.jld"
 
 #img_path = "/Users/joshil/Documents/Code/Plots_4p/100m_5f_203_4plat_4proc_lag_profiles/"
-img_path = "/Users/joshil/Documents/Code/global_scale_outputs/ROSEL/Plots_prof/3p/"
+#img_path = "/Users/joshil/Documents/Code/global_scale_outputs/ROSEL/Plots_prof/3p/"
+img_path = "/Users/joshil/Documents/Results/Profiles/1D/Plots_test2/"
 
 @load "/Users/joshil/Documents/GEDI_Data/Outputs_L2/Output_GEDIL2_1year_2022.jld2"
 
