@@ -1,14 +1,11 @@
+.DS_Store
 
 *.png
 *.ipynb
 
 *.mat
 *.jld2
-image_responses/Coefficient study/.DS_Store
-image_responses/.DS_Store
-workflows/.DS_Store
 *.nc
 *.xlsx
-sync data/.DS_Store
 *.gif
 *.jld
