@@ -185,7 +185,8 @@ function find_min_max_range(t_xyz_grid,p_xyz)
     for i=1:size(t_xyz_grid,2)
         for j=1:size(p_xyz,2)
             for k=1:size(p_xyz,3)
-                ranges[m]=distance(t_xyz_grid[:,i],p_xyz[:,j,k])
+                #ranges[m]=distance(t_xyz_grid[:,i],p_xyz[:,j,k])
+                @views ranges[m] = distance(t_xyz_grid[:, i], p_xyz[:, j, k])
                 m=m+1;
             end
         end

@@ -3,7 +3,7 @@ if Sys.islinux()
     addprocs(24) 
     @everywhere DEPOT_PATH[1]="/u/epstein-z0/wblr/joshil/Julia/.julia" # for Epstein
 else
-    addprocs(2) 
+    addprocs(4) 
 end
 
 @everywhere include("../modules/generate_raw_data.jl")
@@ -43,14 +43,14 @@ end
 c               = 299792458
 earth_radius    = 6378.137e3 # Earth semi-major axis at equator
 
-for monte_carlo_idx = 1:1 # Just running one simulation currently
+#for monte_carlo_idx = 1:1 # Just running one simulation currently
 
     @timeit to "Overall time" begin
 
-        target_mode             = 2 #1: target fixed in center, 2: Distributed target, 3: Distributed target with 1 dominant scatterer
-        num_targ_vol            = 3 # number of targets in each voxel
-        t_loc_S_range           = 0#-80:8:72#-516:8:516 # S-grid range
-        t_loc_C_range           = -5200:4:5196 #-516:8:516 #-40000:4:39996 # C-grid range
+        target_mode             = 1 #1: target fixed in center, 2: Distributed target, 3: Distributed target with 1 dominant scatterer
+        num_targ_vol            = 1 # number of targets in each voxel
+        t_loc_S_range           = 0#-516:8:516 # S-grid range
+        t_loc_C_range           = -5200:4:5196# C-grid range
         t_loc_H_range           = 0 # H-grid range
 
         # Define targets and targets reflectivity TODO: move this code to a function
@@ -59,10 +59,9 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
         t_loc_H                 =  zeros(length(t_loc_S_range) * length(t_loc_C_range) * length(t_loc_H_range) * num_targ_vol)
         t_ref_val               =  zeros(length(t_loc_S_range) * length(t_loc_C_range) * length(t_loc_H_range) * num_targ_vol)
 
-        #temp_height = 0   
+        #temp_height = 0        
         m=1
         for i=1:length(t_loc_S_range)
-            temp_ref = 10
             #temp_height = -262
             for j= 1:length(t_loc_C_range)
                 #temp_height=temp_height+2
@@ -75,11 +74,11 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
                             global t_ref_val[m] = 1
                             m=m+1
                         elseif target_mode == 2
-                            global t_loc_S[m] = t_loc_S_range[i] + (rand(Uniform(-1,1)) .* 2)
+                            global t_loc_S[m] = t_loc_S_range[i] + (rand(Uniform(-1,1)) .* 4)
                             global t_loc_C[m] = t_loc_C_range[j] + (rand(Uniform(-1,1)) .* 2)
                             #global t_loc_H[m] = temp_height  + (rand(Uniform(-1,1)) .* 0.5)
                             global t_loc_H[m] = t_loc_H_range[k] + (rand(Uniform(-1,1)) .* 0.5)
-                            global t_ref_val[m] = 1#temp_ref
+                            global t_ref_val[m] = 1
                             m=m+1
                         elseif target_mode == 3
                             if l==1
@@ -99,9 +98,6 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
                         end
                     end
                 end
-                if mod(j,4)==0
-                    temp_ref = temp_ref + 0.072
-                end
             end
         end
 
@@ -109,16 +105,16 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
         params = UserParameters.inputParameters(
             mode                = 1, #1:SAR
             processing_mode     = 1, #1:All platforms considered for processing
-            pos_n               = [0 0.1]*1e3 , #Platform positions along n
+            pos_n               = [0 10]*1e3 , #Platform positions along n
 
-            s_loc_1             = 0,#-180:4:172, #0, #-516:8:516,
-            s_loc_2             =  -5200:4:5196,#-5200:4:5196,
+            s_loc_1             = 0,#-516:8:516,
+            s_loc_2             = -5200:4:5196,#-520:4:516,
             s_loc_3             = 0,
 
             SAR_duration        = 1.3,
             SAR_start_time      = -0.65,
 
-            look_angle          = 40,
+            look_angle          = 30,
 
             target_pos_mode     = "CR",
             t_loc_1             = t_loc_S',
@@ -183,6 +179,7 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
 
         mast_plat = 1
 
+        
         # theoretical resolution along-n
         range_s, range_g = Scene.lookangle_to_range(params.look_angle, mean(Geometry.xyz_to_geo(orbit_pos[:,mast_plat,:])[3,:]), 0, earth_radius)
         global res_theory_n = (c/params.fc)*range_s/p_mode/ (maximum(bperp) + avg_sep)
@@ -214,29 +211,44 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
             Antenna.applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, params)
         end
 
-        # Generate range spread function (matched filter output)
-        min_range, max_range    = Geometry.find_min_max_range(t_xyz_3xN, p_xyz)
-        Trx                     = 2*(max_range-min_range)/c + 2*params.pulse_length # s duration of RX window
-        Srx, MF, ft, t_rx       = RSF.ideal_RSF(Trx, params) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
-        # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(params.pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
-
-        trunc_fac   = Int(round(2*(max_range-min_range)/c/params.Δt,digits=-1))+16000
-        C,D         = findmax(Srx)
-        Srx         = Srx[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
-        #MF         = MF[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
-        #ft         = ft[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
-        t_rx        = t_rx[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
-
-        #TEST
-        #Srx2 = copy(Srx)
-        #Srx = zeros(length(Srx2))
-        #C,D = findmax(Srx2)
-        #Srx[D:D] .= C
-        #Srx[D-12:D+12] .= C
-
 
         # Generate TomoSAR raw data
-        ref_range               = Geometry.distance(mean(t_xyz_3xN, dims=2), mean(mean(p_xyz,dims=2), dims=3)) # reference range (equal to slant_range in sch?)
+        ref_range_all               = Geometry.distance(mean(t_xyz_3xN, dims=2), mean(mean(p_xyz,dims=2), dims=3)) # reference range (equal to slant_range in sch?)
+
+        ref_range = zeros(size(p_xyz,2))
+        for idx_p=1:size(p_xyz,2)
+            ref_range[idx_p]               = Geometry.distance(mean(t_xyz_3xN, dims=2), mean((p_xyz[:,idx_p,:]), dims=3)) 
+        end
+
+
+        min_range = zeros(size(p_xyz,2))
+        max_range = zeros(size(p_xyz,2))
+        Datawindow = zeros(Int64,size(p_xyz,2))
+        for idx_p=1:size(p_xyz,2)
+            min_range[idx_p], max_range[idx_p]    = Geometry.find_min_max_range(t_xyz_3xN, p_xyz[:,idx_p,:])
+            Datawindow[idx_p]   = Int(round(((2*(max_range[idx_p]-min_range[idx_p])/c) + (1*params.pulse_length))/params.Δt,digits=-1))
+            #Datawindow[idx_p]   = Int(round(2*(max_range[idx_p]-min_range[idx_p])/c/params.Δt,digits=-1))+16000
+        end
+
+        # Generate range spread function (matched filter output)
+        min_range_all, max_range_all    = Geometry.find_min_max_range(t_xyz_3xN, p_xyz)
+        Trx_all                     = 2*(max_range_all-min_range_all)/c + 2*params.pulse_length # s duration of RX window
+        Srx_all, MF_all, ft_all, t_rx_all       = RSF.ideal_RSF(Trx_all, params) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
+
+        C,D         = findmax(Srx_all)
+
+        trunc_fac   = maximum(Datawindow)
+        Srx         = Srx_all[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
+        #MF         = MF[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
+        #ft         = ft[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
+        t_rx        = t_rx_all[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
+        
+
+        trunc_fac2   = Int(round(2*(max_range_all-min_range_all)/c/params.Δt,digits=-1))+16000
+
+
+
+
         #rawdata2                 = Generate_Raw_Data.main_RSF_slowtime_perf_opt(t_xyz_3xN, p_xyz, Srx, t_rx, ref_range, targets_ref, params) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
 
         @timeit to "rawdata " begin # This takes major chunk of simulation time
@@ -260,7 +272,7 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
                     if targets_ref[j]!=0
                         range_tx=Geometry.distance(t_xyz_3xN[:,j],p_xyz[:,i,s])
                         range_rx=Geometry.distance(t_xyz_3xN[:,j],p_xyz[:,i,s])
-                            rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
+                            rel_delay=(range_tx+range_rx)/c-ref_delay[i] # relative delay wrt reference delay (positive means right-shift of RSF)
                             rel_delay_ind=Int(round(rel_delay/Δt_ft))
                             if rel_delay_ind>=0 #TODO if rel_delay_ind>=Nft Srx_shifted becomes a larger array which causes issues (also for SIMO and MIMO)
                                 circshift!(Srx_shifted, Srx, rel_delay_ind)
@@ -276,19 +288,37 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
                     rawdata[s,i,:].= temp_sum
                 end
             end
+        
+        Offset_ref_range = ref_range_all.-ref_range
+        Offset_delay_ind = Int.(round.((2*Offset_ref_range./c)./Δt_ft))
+    
+        global Nft=length(t_rx_all) # number of fast-time samples
+        rawdata_all = SharedArray(zeros(ComplexF64, Nst,Np,Nft) )
+
+        for idx_p=1:size(p_xyz,2)
+            rawdata_all[:,idx_p, D-Int(trunc_fac/2)-Offset_delay_ind[idx_p]:D+Int(trunc_fac/2)-Offset_delay_ind[idx_p]] = rawdata[:,idx_p,:]
+            #rawdata_all[:,2, D-Int(trunc_fac/2)-Offset_delay_ind[2]:D+Int(trunc_fac/2)-Offset_delay_ind[2]] = rawdata[:,2,:]
         end
 
+        end
+
+        (plot(10 .* log10.(abs.(rawdata_all[1,1, D-Int(trunc_fac2/2):D+Int(trunc_fac2/2)]))))
+        display(plot!(10 .* log10.(abs.(rawdata_all[1,2, D-Int(trunc_fac2/2):D+Int(trunc_fac2/2)]))))
+
+        (plot(t_rx_all, 10 .* log10.(abs.(rawdata_all[1,1, :]))))
+        display(plot!(t_rx_all, 10 .* log10.(abs.(rawdata_all[1,2, :]))))
+    
     
             @timeit to "processdata data" begin # This takes second major chunk of simulation time
                     # Process raw data to generate image
                     if params.processing_steps === :bp3d # 1-step processing TODO do we need this option?
-                        image_3D        = Process_Raw_Data.main_SAR_tomo_3D_new(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+                        image_3D        = Process_Raw_Data.main_SAR_tomo_3D_new(rawdata_all, s_xyz_3xN, p_xyz, t_rx_all, ref_range, params)
                     elseif params.processing_steps === :bp2d3d # 2-step processing, first SAR (along-track), then tomographic
                         if params.processing_mode == 1
-                            @timeit to "Step 1" SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+                            @timeit to "Step 1" SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata_all, s_xyz_3xN, p_xyz, t_rx_all, ref_range_all, params)
                         elseif params.processing_mode == 2
                             # for co-flyer
-                            @timeit to "Step 1" SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata[:,2:size(p_xyz)[2],:], s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+                            @timeit to "Step 1" SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata_all[:,2:size(p_xyz)[2],:], s_xyz_3xN, p_xyz, t_rx_all, ref_range, params)
                         end
                     @timeit to "Step 2" image_3D           = Process_Raw_Data.tomo_processing_afterSAR_full(SAR_images_3D)
                     end
@@ -296,7 +326,7 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
             end
 
         stat_var_all_1p = SAR_images_3D[1,:,:,1]
-        stat_var_all_2p = SAR_images_3D[2,:,:,1];
+        stat_var_all_2p = SAR_images_3D[2,:,:,1]
 
 
         #geometry computations
@@ -314,8 +344,8 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
             mean_plats_pos              = mean(p_xyz[:,oi,:], dims=2)
             for ti = 1:size(s_xyz_3xN,2)
                     slant_range_all[ti,oi]       = Geometry.distance( mean_plats_pos  , s_xyz_3xN[:,ti] )
-                    look_angle_all[ti,oi]        = Scene.slantrange_to_lookangle(earth_radius,slant_range_all[ti,oi],Geometry.xyz_to_geo(mean_plats_pos)[3],Geometry.xyz_to_geo(s_xyz_3xN[:,ti])[3])[2]
-                    incidence_angle_all[ti,oi]   = Scene.lookangle_to_incangle(look_angle_all[ti,oi],Geometry.xyz_to_geo(mean_plats_pos)[3],Geometry.xyz_to_geo(s_xyz_3xN[:,ti])[3],earth_radius)
+                    look_angle_all[ti,oi]        = Scene.slantrange_to_lookangle(earth_radius,slant_range_all[ti,oi],Geometry.xyz_to_geo(mean_plats_pos)[3],Geometry.xyz_to_geo(t_xyz_3xN[:,ti])[3])[2]
+                    incidence_angle_all[ti,oi]   = Scene.lookangle_to_incangle(look_angle_all[ti,oi],Geometry.xyz_to_geo(mean_plats_pos)[3],Geometry.xyz_to_geo(t_xyz_3xN[:,ti])[3],earth_radius)
                     Critical_baseline_all[ti,oi] = params.λ * ((2*params.bandwidth)/c) * slant_range_all[ti,oi] * tand(incidence_angle_all[ti,oi] - rng_slope) / p_mode
             end
         end
@@ -338,29 +368,21 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
             end
         end
 
-        #= TEST
-        Perp_b1 = reshape(Perp_baseline_all[:,1],length(params.s_loc_2),length(params.s_loc_1))
-        display(heatmap(Perp_b1))
+        #Perp_b1 = reshape(Perp_baseline_all[:,1],length(params.s_loc_2),length(params.s_loc_1))
+        #display(heatmap(Perp_b1))
+        #Perp_b1[end,1]-Perp_b1[1,1]
 
-        temp_dr = reshape(slant_range_all[:,1],length(params.s_loc_2),length(params.s_loc_1)) .- reshape(slant_range_all[:,2],length(params.s_loc_2),length(params.s_loc_1))
-        display(heatmap(temp_dr))
-
-        Perp_b1[end,1]-Perp_b1[1,1]
-
-        x = (4*pi)/(params.λ).* temp_dr[:,1]
-        =#
-        
-        savepath                 = "/u/epstein-z0/darts/joshil/Outputs/SC_grid/"
-        #savepath                 = "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed/temp/"
+        #savepath                 = "/u/epstein-z0/darts/joshil/Outputs/SC_grid/"
+        savepath                 = "/Users/joshil/Documents/Outputs/epstein_temp/temp/op/"
         if ~ispath(savepath)
             mkdir(savepath)
         end
         
-        @save savepath*"Output10.jld" image_3D SAR_images_3D stat_var_all_1p stat_var_all_2p rawdata params slant_range_all look_angle_all incidence_angle_all Critical_baseline_all Correlation_theo_all Perp_baseline_all Vert_wavnum_all rng_slope s_xyz_3xN p_xyz t_rx ref_range
+        @save savepath*"Output.jld" image_3D SAR_images_3D stat_var_all_1p stat_var_all_2p rawdata params slant_range_all look_angle_all incidence_angle_all Critical_baseline_all Correlation_theo_all Perp_baseline_all Vert_wavnum_all rng_slope s_xyz_3xN p_xyz t_rx ref_range
 
     end
     
-    end
+    #end
 
     [rmprocs(p) for p in workers()]
 

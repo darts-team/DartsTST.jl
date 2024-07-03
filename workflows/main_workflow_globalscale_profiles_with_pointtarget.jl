@@ -7,8 +7,6 @@ else
     addprocs(2) 
 end
 
-
-
 @everywhere include("../modules/generate_raw_data.jl")
 @everywhere include("../modules/process_raw_data.jl")
 @everywhere include("../modules/geometry.jl")

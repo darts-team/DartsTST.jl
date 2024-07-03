@@ -21,15 +21,15 @@ function plot_image(x_axis,y_axis,Data,unit_flag, savepath, savename, figure_tit
     end    
 
     if unit_flag == "log"
-        p1=(heatmap(x_axis,y_axis,10 .* log10.(abs.(Data)),xlabel="C [m]",ylabel="S [m]",title=figure_title,
+        p1=(heatmap(x_axis,y_axis,10 .* log10.(abs.(Data)),xlabel="Lon [deg]",ylabel="Lat [deg]",title=figure_title,
         topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
         savefig(p1, savepath*savename*".png")
     elseif unit_flag == "lin"
-        p1=(heatmap(x_axis,y_axis,(abs.(Data)),xlabel="C [m]",ylabel="S [m]", title=figure_title,
+        p1=(heatmap(x_axis,y_axis,(abs.(Data)),xlabel="Lon [deg]",ylabel="Lat [deg]", title=figure_title,
         topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #1200
         savefig(p1, savepath*savename*".png")
     elseif unit_flag == "phase"
-        p1=(heatmap(x_axis,y_axis,(Data),xlabel="C [m]",ylabel="S [m]", title=figure_title,
+        p1=(heatmap(x_axis,y_axis,(Data),xlabel="Lon [deg]",ylabel="Lat [deg]", title=figure_title,
         topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #1200
         savefig(p1, savepath*savename*".png")
     end
@@ -281,30 +281,14 @@ end
 #------------------------------------------------------------------------------------------
 
 #Load the output file
-#@load "/Users/joshil/Documents/Outputs/epstein_temp/temp_data/Output.jld" 
-#@load "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed/Geo_grid_1/Output52_10km_30la_testgeo2.jld" 
-
-#@load "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed/SC_grid_10kmscene_2p4kmSep_h_ref/Output24_10km.jld"
-
-@load "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed_DEM/test4/Output56_10km_30la_testgeo6.jld" 
-
+@load "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed_DEM/3t_4m4mres_brcs_schgt480m/Output58_10km_30la_testgeo8.jld" 
 
 # Mention the directory to save plots
-#savepath                 = "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed/SC_grid_10kmscene_2p4kmSep_h_ref/Plots_1/"
-
-savepath                 = "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed_DEM/test4/Plots1/"
+savepath                 = "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed_DEM/3t_4m4mres_brcs_schgt480m/Plots1/"
 
 if ~ispath(savepath)
     mkdir(savepath)
 end
-
-#t_loc_S_range       = -0.00033:0.000033:0.00033-0.000033 # -80:8:72
-#t_loc_C_range       = 3.59:0.000033:3.64 #-5200:4:5196 #3.59:0.000033:3.64#-5000:4:4996#-520:4:520 #-500:4:496 #-1000:4:9996
-#t_loc_H_range       = 0
-
-t_loc_S_range           = 34.207:3.3e-5:34.207297 #34.2070000:0.000033:34.207333-0.000033    
-t_loc_C_range           = -118.14139418432784:3.3e-5:-118.09143218432784 #-118.13:0.000033:-118.08-0.000033   
-t_loc_H_range           = 0 # H-grid range
 
 s_loc_S             = params.s_loc_1
 s_loc_C             = params.s_loc_2
@@ -342,8 +326,8 @@ plot_image(s_loc_C,s_loc_S,Pow_2./mean(Pow_2),"lin", savepath*"Power_plots/", "P
 Pow_1_rangeprofile   =  mean(Pow_1,dims=1)
 Pow_2_rangeprofile   =  mean(Pow_2,dims=1)
 
-plot_profile(s_loc_C, 10 .* log10.(Pow_1_rangeprofile[:]), "", savepath*"Power_plots/", "Pow_1_profile", "C [m]", "Power [dB] ", "", "", "")
-plot_profile(s_loc_C, 10 .* log10.(Pow_2_rangeprofile[:]), "", savepath*"Power_plots/", "Pow_2_profile", "C [m]", "Power [dB]", "", "", "")
+plot_profile(s_loc_C, 10 .* log10.(Pow_1_rangeprofile[:]), "", savepath*"Power_plots/", "Pow_1_profile", "Lon [deg]", "Power [dB] ", "", "", "")
+plot_profile(s_loc_C, 10 .* log10.(Pow_2_rangeprofile[:]), "", savepath*"Power_plots/", "Pow_2_profile", "Lon [deg]", "Power [dB]", "", "", "")
 
 
 plot_image(s_loc_C,s_loc_S,Amp_1,"log", savepath*"Amplitude_plots/", "Amp_P1_log", "")
@@ -358,8 +342,8 @@ plot_image(s_loc_C,s_loc_S,Amp_2./mean(Amp_2),"lin", savepath*"Amplitude_plots/"
 Amp_1_rangeprofile   =  mean(Amp_1,dims=1)
 Amp_2_rangeprofile   =  mean(Amp_2,dims=1)
 
-plot_profile(s_loc_C, 10 .* log10.(Amp_1_rangeprofile[:]), "", savepath*"Amplitude_plots/", "Amp_1_profile", "C [m]", "Amplitude [dB] ", "", "", "")
-plot_profile(s_loc_C, 10 .* log10.(Amp_2_rangeprofile[:]), "", savepath*"Amplitude_plots/", "Amp_2_profile", "C [m]", "Amplitude [dB]", "", "", "")
+plot_profile(s_loc_C, 10 .* log10.(Amp_1_rangeprofile[:]), "", savepath*"Amplitude_plots/", "Amp_1_profile","Lon [deg]", "Amplitude [dB] ", "", "", "")
+plot_profile(s_loc_C, 10 .* log10.(Amp_2_rangeprofile[:]), "", savepath*"Amplitude_plots/", "Amp_2_profile", "Lon [deg]", "Amplitude [dB]", "", "", "")
 
 
 
@@ -447,7 +431,7 @@ plot_image(s_loc_C,s_loc_S,Phase_12,"lin", savepath*"Int_plots/", "Int_Phase_P12
 
 Pow_12_rangeprofile   =  mean(Pow_12,dims=1)
 
-plot_profile(s_loc_C, 10 .* log10.(Pow_12_rangeprofile[:]), "", savepath*"Int_plots/", "Pow_12_profile", "C [m]", "Power [dB] ", "", "", "")
+plot_profile(s_loc_C, 10 .* log10.(Pow_12_rangeprofile[:]), "", savepath*"Int_plots/", "Pow_12_profile", "Lon [deg]", "Power [dB] ", "", "", "")
 
 
 
@@ -486,8 +470,8 @@ plot_image(s_loc_2_multilooked,s_loc_1_multilooked,Int_Phase_multilooked,"phase"
 Correlation_rangeprofile   =  mean(Int_Pow_multilooked,dims=1)
 Int_phase_rangeprofile   =  mean(Int_Phase_multilooked,dims=1)
 
-plot_profile(s_loc_2_multilooked, Correlation_rangeprofile[:], "", savepath*"Int_plots/", "Int_mag_profile", "C [m]", "Magnitude  ", "", "", "")
-plot_profile(s_loc_2_multilooked, Int_phase_rangeprofile[:], "", savepath*"Int_plots/", "Int_phase__profile", "C [m]", "Phase [rad]  ", "", "", "")
+plot_profile(s_loc_2_multilooked, Correlation_rangeprofile[:], "", savepath*"Int_plots/", "Int_mag_profile", "Lon [deg]", "Magnitude  ", "", "", "")
+plot_profile(s_loc_2_multilooked, Int_phase_rangeprofile[:], "", savepath*"Int_plots/", "Int_phase__profile", "Lon [deg]", "Phase [rad]  ", "", "", "")
 
 
 A = plot_histogram_only(Int_Pow_multilooked[:], "Magnitude ",savepath*"Int_plots/", "ML_Int_mag")
@@ -503,15 +487,15 @@ B = plot_interferogram_histogram_statistics_magnitude(Int_Pow_multilooked[:], ga
 Correlation_rangeprofile_window = movmean(Correlation_rangeprofile, 40)
 Int_phase_rangeprofile_window = movmean(Int_phase_rangeprofile, 40)
 
-plot_profile(s_loc_2_multilooked, Correlation_rangeprofile_window[:], "", savepath*"Int_plots/", "Int_mag_profile_window", "C [m]", "Magnitude  ", "", "", "")
-plot_profile(s_loc_2_multilooked, Int_phase_rangeprofile_window[:], "", savepath*"Int_plots/", "Int_phase_profile_window", "C [m]", "Phase [rad]  ", "", "", "")
+plot_profile(s_loc_2_multilooked, Correlation_rangeprofile_window[:], "", savepath*"Int_plots/", "Int_mag_profile_window", "Lon [deg]", "Magnitude  ", "", "", "")
+plot_profile(s_loc_2_multilooked, Int_phase_rangeprofile_window[:], "", savepath*"Int_plots/", "Int_phase_profile_window", "Lon [deg]", "Phase [rad]  ", "", "", "")
 
 
 CF_A, CF_B = linear_fit(s_loc_2_multilooked,Correlation_rangeprofile_window)
 
-p1=(plot(s_loc_2_multilooked, Correlation_rangeprofile_window[:],xlabel="C [m]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:black, label="",
+p1=(plot(s_loc_2_multilooked, Correlation_rangeprofile_window[:],xlabel="Lon [deg]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:black, label="",
 topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
-p1=(plot!(s_loc_2_multilooked, (s_loc_2_multilooked .* CF_B).+CF_A,xlabel="C [m]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:red, label="Linear Fit",
+p1=(plot!(s_loc_2_multilooked, (s_loc_2_multilooked .* CF_B).+CF_A,xlabel="Lon [deg]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:red, label="Linear Fit",
 topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
 savefig(p1, savepath*"Int_plots/"*"Int_mag_profile_window2"*".png")
 
@@ -522,18 +506,41 @@ p2 = (plot(s_loc_C, Correlation_theo_P1_rangeprofile[:], label="Theory"))
 p2 = (plot!(s_loc_2_multilooked, (s_loc_2_multilooked .* CF_B).+CF_A, label="Sim"))
 
 AASR = 10 ^(-26/10)
-p2 = (plot!(s_loc_2_multilooked, ((s_loc_2_multilooked .* CF_B).+CF_A) * (1/1+(AASR)), label="Sim - AASR -26 dB", legend=:topleft, xlabel="C [m]", ylabel="Correlation",
+p2 = (plot!(s_loc_2_multilooked, ((s_loc_2_multilooked .* CF_B).+CF_A) * (1/1+(AASR)), label="Sim - AASR -26 dB", legend=:topleft, xlabel="Lon [deg]", ylabel="Correlation",
 topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
 savefig(p2, savepath*"Int_plots/"*"Correlation_comparison_1"*".png")
 
 AASR = 10 ^(-21.9/10)
-p2 = (plot!(s_loc_2_multilooked, ((s_loc_2_multilooked .* CF_B).+CF_A) * (1/1+(AASR)), label="Sim - AASR -22 dB", legend=:topleft, xlabel="C [m]", ylabel="Correlation",
+p2 = (plot!(s_loc_2_multilooked, ((s_loc_2_multilooked .* CF_B).+CF_A) * (1/1+(AASR)), label="Sim - AASR -22 dB", legend=:topleft, xlabel="Lon [deg]", ylabel="Correlation",
 topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
 savefig(p2, savepath*"Int_plots/"*"Correlation_comparison_2"*".png")
 =#
 
 
 ## Geometry plots
+
+#DEM
+DEM_region_rangeprofile    =  mean(DEM_region,dims=1)
+plot_image(s_loc_C,s_loc_S,DEM_region,"lin", savepath*"Geom_plots/", "DEM", "")
+plot_profile(s_loc_C, DEM_region_rangeprofile[:], "", savepath*"Geom_plots/", "DEM_profile", "Lon [deg]", "DEM height [m]","", "", "", )
+
+
+#slopes
+slope_lon_region_rangeprofile    =  mean(slope_lon_region,dims=1)
+plot_image(s_loc_C,s_loc_S,atand.(slope_lon_region),"lin", savepath*"Geom_plots/", "Slope_lon", "")
+plot_profile(s_loc_C, atand.(slope_lon_region_rangeprofile[:]), "", savepath*"Geom_plots/", "Slope_lon_profile", "Lon [deg]", "Slope [deg]","", "", "", )
+slope_lat_region_rangeprofile    =  mean(slope_lat_region,dims=1)
+plot_image(s_loc_C,s_loc_S,atand.(slope_lat_region),"lin", savepath*"Geom_plots/", "Slope_lat", "")
+plot_profile(s_loc_C, atand.(slope_lat_region_rangeprofile[:]), "", savepath*"Geom_plots/", "Slope_lat_profile", "Lon [deg]", "Slope [deg]","", "", "", )
+
+#BRCS
+targets_ref_corr_3d = reshape(targets_ref_corr[:,1],3,length(s_loc_C),length(s_loc_S))
+targets_ref_corr_2d = targets_ref_corr_3d[1,:,:]'
+targets_ref_corr_2d_rangeprofile    =  mean(targets_ref_corr_2d,dims=1)
+plot_image(s_loc_C,s_loc_S,targets_ref_corr_2d,"lin", savepath*"Geom_plots/", "RCS", "")
+plot_profile(s_loc_C, targets_ref_corr_2d_rangeprofile[:], "", savepath*"Geom_plots/", "RCS_profile", "Lon [deg]", "Reflectivity from RCS","", "", "", )
+
+
 
 #Look angle
 Lookangle_P1                = reshape(look_angle_all[:,1],length(s_loc_C),length(s_loc_S))'
@@ -548,8 +555,8 @@ plot_image(s_loc_C,s_loc_S,Lookangle_P1,"lin", savepath*"Geom_plots/", "Lookangl
 plot_image(s_loc_C,s_loc_S,Lookangle_P2,"lin", savepath*"Geom_plots/", "Lookangle_P2", "")
 plot_image(s_loc_C,s_loc_S,Lookangle_Diff,"lin", savepath*"Geom_plots/", "Lookangle_Diff", "")
 
-plot_profile(s_loc_C, Lookangle_P1_rangeprofile[:], Lookangle_P2_rangeprofile[:], savepath*"Geom_plots/", "Lookangle_profile1", "C [m]", "Look Angle [deg]", "", "Platform 1", "Platform 2")
-plot_profile(s_loc_C, Lookangle_Diff_rangeprofile[:], "", savepath*"Geom_plots/", "Lookangle_profile2", "C [m]", "Look Angle Diff [deg]", "", "Difference", "")
+plot_profile(s_loc_C, Lookangle_P1_rangeprofile[:], Lookangle_P2_rangeprofile[:], savepath*"Geom_plots/", "Lookangle_profile1", "Lon [deg]", "Look Angle [deg]", "", "Platform 1", "Platform 2")
+plot_profile(s_loc_C, Lookangle_Diff_rangeprofile[:], "", savepath*"Geom_plots/", "Lookangle_profile2", "Lon [deg]", "Look Angle Diff [deg]", "", "Difference", "")
 
 #Incidence angle
 Incangle_P1                 = reshape(incidence_angle_all[:,1],length(s_loc_C),length(s_loc_S))'
@@ -564,8 +571,23 @@ plot_image(s_loc_C,s_loc_S,Incangle_P1,"lin", savepath*"Geom_plots/", "Incangle_
 plot_image(s_loc_C,s_loc_S,Incangle_P2,"lin", savepath*"Geom_plots/", "Incangle_P2", "")
 plot_image(s_loc_C,s_loc_S,Incangle_Diff,"lin", savepath*"Geom_plots/", "Incangle_Diff", "")
 
-plot_profile(s_loc_C, Incangle_P1_rangeprofile[:], Incangle_P2_rangeprofile[:], savepath*"Geom_plots/", "Incangle_profile1", "C [m]", "Incidence Angle [deg]", "", "Platform 1", "Platform 2")
-plot_profile(s_loc_C, Incangle_Diff_rangeprofile[:], "", savepath*"Geom_plots/", "Incangle_profile2", "C [m]", "Incidence Angle Diff [deg]", "", "Difference", "")
+plot_profile(s_loc_C, Incangle_P1_rangeprofile[:], Incangle_P2_rangeprofile[:], savepath*"Geom_plots/", "Incangle_profile1", "Lon [deg]", "Incidence Angle [deg]", "", "Platform 1", "Platform 2")
+plot_profile(s_loc_C, Incangle_Diff_rangeprofile[:], "", savepath*"Geom_plots/", "Incangle_profile2", "Lon [deg]", "Incidence Angle Diff [deg]", "", "Difference", "")
+
+#Local Incidence angle
+LocalIncangle_P1                 = reshape(local_incidence_angle[:,1],length(s_loc_C),length(s_loc_S))'
+LocalIncangle_P1_rangeprofile    =  mean(LocalIncangle_P1,dims=1)
+plot_image(s_loc_C,s_loc_S,LocalIncangle_P1,"lin", savepath*"Geom_plots/", "LocalIncangle", "")
+plot_profile(s_loc_C, LocalIncangle_P1_rangeprofile[:], "", savepath*"Geom_plots/", "LocalIncangle_profile", "Lon [deg]", "Local incidence Angle [deg]","", "", "", )
+
+
+#Range slope angle
+range_slope_P1                 = reshape(range_slope_angle[:,1],length(s_loc_C),length(s_loc_S))'
+range_slope_P1_rangeprofile    =  mean(range_slope_P1,dims=1)
+plot_image(s_loc_C,s_loc_S,range_slope_P1,"lin", savepath*"Geom_plots/", "RangeSlopeangle", "")
+plot_profile(s_loc_C, range_slope_P1_rangeprofile[:], "", savepath*"Geom_plots/", "RangeSlopeangle_profile", "Lon [deg]", "Range Slope Angle [deg]","", "", "", )
+
+
 
 #Slant range
 Slantrange_P1 = reshape(slant_range_all[:,1],length(s_loc_C),length(s_loc_S))'
@@ -580,34 +602,34 @@ plot_image(s_loc_C,s_loc_S,Slantrange_P1./1e3,"lin", savepath*"Geom_plots/", "Sl
 plot_image(s_loc_C,s_loc_S,Slantrange_P2./1e3,"lin", savepath*"Geom_plots/", "Slantrange_P2", "")
 plot_image(s_loc_C,s_loc_S,Slantrange_Diff,"phase", savepath*"Geom_plots/", "Slantrange_Diff", "")
 
-plot_profile(s_loc_C, Slantrange_P1_rangeprofile[:], Slantrange_P2_rangeprofile[:], savepath*"Geom_plots/", "Slantrange_profile1", "C [m]", "Slant range [m]", "", "Platform 1", "Platform 2")
-plot_profile(s_loc_C, Slantrange_Diff_rangeprofile[:], "", savepath*"Geom_plots/", "Slantrange_profile2", "C [m]", "Slant range [m]", "", "Difference", "")
+plot_profile(s_loc_C, Slantrange_P1_rangeprofile[:], Slantrange_P2_rangeprofile[:], savepath*"Geom_plots/", "Slantrange_profile1", "Lon [deg]", "Slant range [m]", "", "Platform 1", "Platform 2")
+plot_profile(s_loc_C, Slantrange_Diff_rangeprofile[:], "", savepath*"Geom_plots/", "Slantrange_profile2", "Lon [deg]", "Slant range [m]", "", "Difference", "")
 
 
 Critical_baseline_P1                = reshape(Critical_baseline_all[:,1],length(s_loc_C),length(s_loc_S))'
 Critical_baseline_P1_rangeprofile   =  mean(Critical_baseline_P1,dims=1)
 
 plot_image(s_loc_C,s_loc_S,Critical_baseline_P1,"lin", savepath*"Geom_plots/", "Critical_baseline_P1", "")
-plot_profile(s_loc_C, Critical_baseline_P1_rangeprofile[:], "", savepath*"Geom_plots/", "Critical_baseline_profile2", "C [m]", "Critical baseline  [m]", "", "", "")
+plot_profile(s_loc_C, Critical_baseline_P1_rangeprofile[:], "", savepath*"Geom_plots/", "Critical_baseline_profile2", "Lon [deg]", "Critical baseline  [m]", "", "", "")
 
 
 Perp_baseline_P1                = reshape(Perp_baseline_all[:,1],length(s_loc_C),length(s_loc_S))'
 Perp_baseline_P1_rangeprofile   =  mean(Perp_baseline_P1,dims=1)
 
 plot_image(s_loc_C,s_loc_S,Perp_baseline_P1,"lin", savepath*"Geom_plots/", "Perp_baseline_P1", "")
-plot_profile(s_loc_C, Perp_baseline_P1_rangeprofile[:], "", savepath*"Geom_plots/", "Perp_baseline_profile2", "C [m]", "Perp baseline  [m]", "", "", "")
+plot_profile(s_loc_C, Perp_baseline_P1_rangeprofile[:], "", savepath*"Geom_plots/", "Perp_baseline_profile2","Lon [deg]", "Perp baseline  [m]", "", "", "")
 
 Vert_wavnum_P1                = reshape(Vert_wavnum_all[:,1],length(s_loc_C),length(s_loc_S))'
 Vert_wavnum_P1_rangeprofile   =  mean(Vert_wavnum_P1,dims=1)
 
 plot_image(s_loc_C,s_loc_S,Vert_wavnum_P1,"lin", savepath*"Geom_plots/", "Vert_wavnum_P1", "")
-plot_profile(s_loc_C, Vert_wavnum_P1_rangeprofile[:], "", savepath*"Geom_plots/", "Vert_wavnum_profile2", "C [m]", "Vert wave num  ", "", "", "")
+plot_profile(s_loc_C, Vert_wavnum_P1_rangeprofile[:], "", savepath*"Geom_plots/", "Vert_wavnum_profile2", "Lon [deg]", "Vert wave num  ", "", "", "")
 
 Correlation_theo_P1                = reshape(Correlation_theo_all[:,1],length(s_loc_C),length(s_loc_S))'
 Correlation_theo_P1_rangeprofile   =  mean(Correlation_theo_P1,dims=1)
 
 plot_image(s_loc_C,s_loc_S,Correlation_theo_P1,"lin", savepath*"Geom_plots/", "Correlation_theo_P1", "")
-plot_profile(s_loc_C, Correlation_theo_P1_rangeprofile[:], "", savepath*"Geom_plots/", "Correlation_theo_profile2", "C [m]", "Correlation theory  ", "", "", "")
+plot_profile(s_loc_C, Correlation_theo_P1_rangeprofile[:], "", savepath*"Geom_plots/", "Correlation_theo_profile2", "Lon [deg]", "Correlation theory  ", "", "", "")
 
 
 #Synthetic fringes
@@ -618,8 +640,11 @@ plot_image(s_loc_C,s_loc_S,Unwrapped_data,"phase", savepath*"Geom_plots/", "Slan
 plot_image(s_loc_C,s_loc_S,Wrapped_data,"phase", savepath*"Geom_plots/", "Slantrange_Diff_wrapped", "")
 
 Wrapped_data_rangeprofile =  mean(Wrapped_data,dims=1)
-plot_profile(s_loc_C, Wrapped_data_rangeprofile[:], "", savepath*"Geom_plots/", "Slantrange_profile_wrapped", "C [m]", "", "", "", "")
-#plot_profile(s_loc_C[1000:1150], Wrapped_data_rangeprofile[1,1000:1150], "", savepath*"Geom_plots/", "Slantrange_profile_wrapped2", "C [m]", "", "", "", "")
+plot_profile(s_loc_C, Wrapped_data_rangeprofile[:], "", savepath*"Geom_plots/", "Slantrange_profile_wrapped", "Lon [deg]", "", "", "", "")
+#plot_profile(s_loc_C[1000:1150], Wrapped_data_rangeprofile[1,1000:1150], "", savepath*"Geom_plots/", "Slantrange_profile_wrapped2", "Lon [deg]", "", "", "", "")
+
+
+
 
 
 
@@ -681,8 +706,8 @@ plot_image(s_loc_2_multilooked,s_loc_1_multilooked,Int_Phase_multilooked,"phase"
 Correlation_rangeprofile   =  mean(Int_Pow_multilooked,dims=1)
 Int_phase_rangeprofile   =  mean(Int_Phase_multilooked,dims=1)
 
-plot_profile(s_loc_2_multilooked, Correlation_rangeprofile[:], "", savepath*"Int_plots/", "2Int_mag_profile", "C [m]", "Magnitude  ", "", "", "")
-plot_profile(s_loc_2_multilooked, Int_phase_rangeprofile[:], "", savepath*"Int_plots/", "2Int_phase__profile", "C [m]", "Phase [rad]  ", "", "", "")
+plot_profile(s_loc_2_multilooked, Correlation_rangeprofile[:], "", savepath*"Int_plots/", "2Int_mag_profile", "Lon [deg]", "Magnitude  ", "", "", "")
+plot_profile(s_loc_2_multilooked, Int_phase_rangeprofile[:], "", savepath*"Int_plots/", "2Int_phase__profile", "Lon [deg]", "Phase [rad]  ", "", "", "")
 
 
 A = plot_histogram_only(Int_Pow_multilooked[:], "Magnitude ",savepath*"Int_plots/", "2ML_Int_mag")
@@ -692,15 +717,15 @@ A = plot_histogram_only(Int_Phase_multilooked[:], "Phase",savepath*"Int_plots/",
 Correlation_rangeprofile_window = movmean(Correlation_rangeprofile, 40)
 Int_phase_rangeprofile_window = movmean(Int_phase_rangeprofile, 40)
 
-plot_profile(s_loc_2_multilooked, Correlation_rangeprofile_window[:], "", savepath*"Int_plots/", "2Int_mag_profile_window", "C [m]", "Magnitude  ", "", "", "")
-plot_profile(s_loc_2_multilooked, Int_phase_rangeprofile_window[:], "", savepath*"Int_plots/", "2Int_phase_profile_window", "C [m]", "Phase [rad]  ", "", "", "")
+plot_profile(s_loc_2_multilooked, Correlation_rangeprofile_window[:], "", savepath*"Int_plots/", "2Int_mag_profile_window", "Lon [deg]", "Magnitude  ", "", "", "")
+plot_profile(s_loc_2_multilooked, Int_phase_rangeprofile_window[:], "", savepath*"Int_plots/", "2Int_phase_profile_window", "Lon [deg]", "Phase [rad]  ", "", "", "")
 
 
 CF_A, CF_B = linear_fit(s_loc_2_multilooked,Correlation_rangeprofile_window)
 
-p1=(plot(s_loc_2_multilooked, Correlation_rangeprofile_window[:],xlabel="C [m]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:black, label="",
+p1=(plot(s_loc_2_multilooked, Correlation_rangeprofile_window[:],xlabel="Lon [deg]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:black, label="",
 topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
-p1=(plot!(s_loc_2_multilooked, (s_loc_2_multilooked .* CF_B).+CF_A,xlabel="C [m]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:red, label="Linear Fit",
+p1=(plot!(s_loc_2_multilooked, (s_loc_2_multilooked .* CF_B).+CF_A,xlabel="Lon [deg]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:red, label="Linear Fit",
 topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
 savefig(p1, savepath*"Int_plots/"*"2Int_mag_profile_window2"*".png")
 

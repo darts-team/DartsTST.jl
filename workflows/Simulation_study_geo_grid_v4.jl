@@ -1,6 +1,6 @@
 using Distributed
 if Sys.islinux()
-    addprocs(24) 
+    addprocs(4) 
     @everywhere DEPOT_PATH[1]="/u/epstein-z0/wblr/joshil/Julia/.julia" # for Epstein
 else
     addprocs(2) 
@@ -37,6 +37,11 @@ end
 @everywhere using GeoDatasets
 @everywhere using Distributions
 @everywhere using Measures
+@everywhere using ArchGDAL
+@everywhere using GeoArrays
+
+@everywhere import ArchGDAL as AG
+
 
 @everywhere  to = TimerOutput()
 
@@ -47,10 +52,32 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
 
     @timeit to "Overall time" begin
 
+        # Read Copernicus 30m resolution DEM
+        dataset         = AG.read("/home/mlavalle/dat/nisar-dem-copernicus/EPSG4326.vrt")
+
+        DEM_orig        = AG.getband(dataset,1)
+
+        gt              = AG.getgeotransform(dataset)
+        ulx, uly        = gt[1], gt[4]
+        x_pixel_size, y_pixel_size = gt[2], gt[6]
+        num_cols        = AG.width(DEM_orig)
+        num_rows        = AG.height(DEM_orig)
+
+        Lat_vals_full        = zeros(num_rows,1);
+        Lon_vals_full        = zeros(num_cols,1);
+
+        for i=1:num_rows
+            Lat_vals_full[i] = uly + i * y_pixel_size;
+        end
+
+        for i=1:num_cols
+            Lon_vals_full[i] = ulx + i * x_pixel_size;
+        end
+
         target_mode             = 2 #1: target fixed in center, 2: Distributed target, 3: Distributed target with 1 dominant scatterer
         num_targ_vol            = 3 # number of targets in each voxel
-        t_loc_S_range           = 0#-80:8:72#-516:8:516 # S-grid range
-        t_loc_C_range           = -5200:4:5196 #-516:8:516 #-40000:4:39996 # C-grid range
+        t_loc_S_range           = 0#-0.00033:0.000033:0.00033-0.000033    #-80:8:72 #-516:8:516 #-780:8:772 #-516:8:516 #-516:8:516 # S-grid range
+        t_loc_C_range           = 3.59:0.000033:3.64   #-5200:4:5196 #-520:4:516 #-10400:4:10396 #-5200:4:5196 #-520:4:516 # C-grid range
         t_loc_H_range           = 0 # H-grid range
 
         # Define targets and targets reflectivity TODO: move this code to a function
@@ -59,11 +86,11 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
         t_loc_H                 =  zeros(length(t_loc_S_range) * length(t_loc_C_range) * length(t_loc_H_range) * num_targ_vol)
         t_ref_val               =  zeros(length(t_loc_S_range) * length(t_loc_C_range) * length(t_loc_H_range) * num_targ_vol)
 
-        #temp_height = 0   
+        #temp_height = 0       
         m=1
         for i=1:length(t_loc_S_range)
-            temp_ref = 10
-            #temp_height = -262
+            temp_ref = 3.16
+	    #temp_height = -262
             for j= 1:length(t_loc_C_range)
                 #temp_height=temp_height+2
                 for k=1:length(t_loc_H_range)
@@ -75,11 +102,14 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
                             global t_ref_val[m] = 1
                             m=m+1
                         elseif target_mode == 2
-                            global t_loc_S[m] = t_loc_S_range[i] + (rand(Uniform(-1,1)) .* 2)
-                            global t_loc_C[m] = t_loc_C_range[j] + (rand(Uniform(-1,1)) .* 2)
+                            global t_loc_S[m] = t_loc_S_range[i] + (rand(Uniform(-1,1)) .* (0.000033/2))
+                            global t_loc_C[m] = t_loc_C_range[j] + (rand(Uniform(-1,1)) .* (0.000033/2))
                             #global t_loc_H[m] = temp_height  + (rand(Uniform(-1,1)) .* 0.5)
-                            global t_loc_H[m] = t_loc_H_range[k] + (rand(Uniform(-1,1)) .* 0.5)
-                            global t_ref_val[m] = 1#temp_ref
+                            A, B =  findmin(abs.(t_loc_S[m].-Lat_vals_full))
+                            C, D =  findmin(abs.(t_loc_C[m].-Lon_vals_full))
+                            global t_loc_H[m] = DEM_orig[D[1],B[1]] + (rand(Uniform(-1,1)) .* 0.5)
+			    #global t_loc_H[m] = t_loc_H_range[k] + (rand(Uniform(-1,1)) .* 0.5)
+                            global t_ref_val[m] = 1 #temp_ref #1
                             m=m+1
                         elseif target_mode == 3
                             if l==1
@@ -92,7 +122,10 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
                                 global t_loc_S[m] = t_loc_S_range[i] + (rand(Uniform(-1,1)) .* 4)
                                 global t_loc_C[m] = t_loc_C_range[j] + (rand(Uniform(-1,1)) .* 2)
                                 #global t_loc_H[m] = temp_height  + (rand(Uniform(-1,1)) .* 0.5)
-                                global t_loc_H[m] = t_loc_H_range[k] + (rand(Uniform(-1,1)) .* 0.5)
+                                A, B =  findmin(abs.(t_loc_S[m].-Lat_vals_full))
+                                C, D =  findmin(abs.(t_loc_C[m].-Lon_vals_full))
+                                global t_loc_H[m] = DEM_orig[D[1],B[1]] + (rand(Uniform(-1,1)) .* 0.5)
+                                #global t_loc_H[m] = t_loc_H_range[k] + (rand(Uniform(-1,1)) .* 0.5)
                                 global t_ref_val[m] = 1
                                 m=m+1
                             end
@@ -100,7 +133,7 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
                     end
                 end
                 if mod(j,4)==0
-                    temp_ref = temp_ref + 0.072
+                    temp_ref = temp_ref + 0.011 #0.072
                 end
             end
         end
@@ -109,22 +142,23 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
         params = UserParameters.inputParameters(
             mode                = 1, #1:SAR
             processing_mode     = 1, #1:All platforms considered for processing
-            pos_n               = [0 0.1]*1e3 , #Platform positions along n
+            pos_n               = [0 2.4]*1e3 , #Platform positions along n
 
-            s_loc_1             = 0,#-180:4:172, #0, #-516:8:516,
-            s_loc_2             =  -5200:4:5196,#-5200:4:5196,
+            s_loc_1             = -0.00033:0.000033:0.00033-0.000033, #-80:8:72, #-516:8:516, #-780:8:772, #-516:8:516, #-516:8:516,
+            s_loc_2             = 3.59:0.000033:3.64, #-5200:4:5196, #-10000:4:9996, #-5000:4:4996, #-10000:4:9996, #-520:4:516, #-10400:4:10396, #-5200:4:5196, #-520:4:516,
             s_loc_3             = 0,
 
             SAR_duration        = 1.3,
             SAR_start_time      = -0.65,
 
-            look_angle          = 40,
+            look_angle          = 30,
 
             target_pos_mode     = "CR",
             t_loc_1             = t_loc_S',
             t_loc_2             = t_loc_C',
             t_loc_3             = t_loc_H',
             t_ref               = t_ref_val',
+	    ts_coord_sys        = "LLH",
 
             #ROSE-L parameters
             fp                  = 1550,
@@ -227,14 +261,6 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
         #ft         = ft[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
         t_rx        = t_rx[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
 
-        #TEST
-        #Srx2 = copy(Srx)
-        #Srx = zeros(length(Srx2))
-        #C,D = findmax(Srx2)
-        #Srx[D:D] .= C
-        #Srx[D-12:D+12] .= C
-
-
         # Generate TomoSAR raw data
         ref_range               = Geometry.distance(mean(t_xyz_3xN, dims=2), mean(mean(p_xyz,dims=2), dims=3)) # reference range (equal to slant_range in sch?)
         #rawdata2                 = Generate_Raw_Data.main_RSF_slowtime_perf_opt(t_xyz_3xN, p_xyz, Srx, t_rx, ref_range, targets_ref, params) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
@@ -296,7 +322,7 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
             end
 
         stat_var_all_1p = SAR_images_3D[1,:,:,1]
-        stat_var_all_2p = SAR_images_3D[2,:,:,1];
+        stat_var_all_2p = SAR_images_3D[2,:,:,1]
 
 
         #geometry computations
@@ -314,8 +340,8 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
             mean_plats_pos              = mean(p_xyz[:,oi,:], dims=2)
             for ti = 1:size(s_xyz_3xN,2)
                     slant_range_all[ti,oi]       = Geometry.distance( mean_plats_pos  , s_xyz_3xN[:,ti] )
-                    look_angle_all[ti,oi]        = Scene.slantrange_to_lookangle(earth_radius,slant_range_all[ti,oi],Geometry.xyz_to_geo(mean_plats_pos)[3],Geometry.xyz_to_geo(s_xyz_3xN[:,ti])[3])[2]
-                    incidence_angle_all[ti,oi]   = Scene.lookangle_to_incangle(look_angle_all[ti,oi],Geometry.xyz_to_geo(mean_plats_pos)[3],Geometry.xyz_to_geo(s_xyz_3xN[:,ti])[3],earth_radius)
+                    look_angle_all[ti,oi]        = Scene.slantrange_to_lookangle(earth_radius,slant_range_all[ti,oi],Geometry.xyz_to_geo(mean_plats_pos)[3],Geometry.xyz_to_geo(t_xyz_3xN[:,ti])[3])[2]
+                    incidence_angle_all[ti,oi]   = Scene.lookangle_to_incangle(look_angle_all[ti,oi],Geometry.xyz_to_geo(mean_plats_pos)[3],Geometry.xyz_to_geo(t_xyz_3xN[:,ti])[3],earth_radius)
                     Critical_baseline_all[ti,oi] = params.λ * ((2*params.bandwidth)/c) * slant_range_all[ti,oi] * tand(incidence_angle_all[ti,oi] - rng_slope) / p_mode
             end
         end
@@ -338,25 +364,12 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
             end
         end
 
-        #= TEST
-        Perp_b1 = reshape(Perp_baseline_all[:,1],length(params.s_loc_2),length(params.s_loc_1))
-        display(heatmap(Perp_b1))
-
-        temp_dr = reshape(slant_range_all[:,1],length(params.s_loc_2),length(params.s_loc_1)) .- reshape(slant_range_all[:,2],length(params.s_loc_2),length(params.s_loc_1))
-        display(heatmap(temp_dr))
-
-        Perp_b1[end,1]-Perp_b1[1,1]
-
-        x = (4*pi)/(params.λ).* temp_dr[:,1]
-        =#
-        
         savepath                 = "/u/epstein-z0/darts/joshil/Outputs/SC_grid/"
-        #savepath                 = "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed/temp/"
         if ~ispath(savepath)
             mkdir(savepath)
         end
         
-        @save savepath*"Output10.jld" image_3D SAR_images_3D stat_var_all_1p stat_var_all_2p rawdata params slant_range_all look_angle_all incidence_angle_all Critical_baseline_all Correlation_theo_all Perp_baseline_all Vert_wavnum_all rng_slope s_xyz_3xN p_xyz t_rx ref_range
+        @save savepath*"Output58_10km_30la_testgeo2.jld" image_3D SAR_images_3D stat_var_all_1p stat_var_all_2p rawdata params slant_range_all look_angle_all incidence_angle_all Critical_baseline_all Correlation_theo_all Perp_baseline_all Vert_wavnum_all rng_slope s_xyz_3xN p_xyz t_rx ref_range t_loc_H t_xyz_3xN
 
     end
     
@@ -366,3 +379,4 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
 
 println(to)
             
+

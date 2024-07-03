@@ -6,12 +6,14 @@ include("../modules/geometry.jl")
 """
 Calculate surface BRCS
 # Usage
-    - brcs = get_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
+    - brcs = get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
+
 # Arguments
     - `params::Parameters`: input parameters struct
     - `tx_ecef::3x1-element Array`: Transmitter position in ECEF (m)
     - `rx_ecef::3x1-element Array`: Receiver position in ECEF (m)
     - `tgt_ecef::3x1-element Array`: Target position in ECEF (m)
+
 # Return
 - `brcs_complex::ComplexF64`: BRCS value (linear magnitude, unitless)
 """
@@ -30,7 +32,7 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
     # check constraints to determine SPM or KA usage
     # determine brcs value from selected value. Report in linear units?
     # allow for profile of reflectivity. profile should be in a magnitude - phase format so that phase values can be altered by some phasing function to set based on profile data
-    patch_area = 1 #(s_loc_1[2]-s_loc_1[1]) * (s_loc_2[2]-s_loc_2[1])
+    patch_area = (s_loc_1[2]-s_loc_1[1]) * (s_loc_2[2]-s_loc_2[1])
     
     
     #determine scattering geometry given Rx/tx/target locations
@@ -64,7 +66,7 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
         monostatic = false
     end
 
-    ulaby_terrain_switch = 0
+
     # ulaby_terrain_switch will calculate the backscatter RCS value at the incident angle
     if ulaby_terrain_switch == 1       
         if monostatic == false
@@ -176,7 +178,7 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
         # seeing if elevation is directly up for tx and rx
         if (abs(90.0 - tx_incidence) < tol) & (abs(90.0 - rx_incidence) < tol)
             brcs_coh = RCS_coherent(σ,θᵥ,λ,tx_incidence,ϕ,rx_incidence,ϕₛ)
-            brcs = brcs + brcs_coh
+            brcs = brcs .+ brcs_coh[polarization]
         end
     end
 
@@ -191,12 +193,14 @@ end#function
 Calculate surface BRCS
 # Usage
     - brcs = get_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
+
 # Arguments
     - `params::Parameters`: input parameters struct
     - `tx_ecef::3x1-element Array`: Transmitter position in ECEF (m)
     - `rx_ecef::3x1-element Array`: Receiver position in ECEF (m)
     - `tgt_ecef::3x1-element Array`: Target position in ECEF (m)
     - `patch_area::Float32`: Area of surface patch (m^2)
+
 # Return
 - `brcs_complex::ComplexF64`: BRCS value (linear magnitude, unitless)
 """
@@ -300,7 +304,7 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
     # seeing if elevation is directly up for tx and rx
     if abs(90 - tx_incidence) < tol & abs(90 - rx_incidence) < tol
         brcs_coh = RCS_coherent(σ,θᵥ,λ,tx_incidence,ϕ,rx_incidence,ϕₛ)
-        brcs = brcs + brcs_coh
+        brcs = brcs + brcs_coh[polarization]
     end
 
     phase = 0 # keep a fixed phase value
@@ -310,6 +314,193 @@ function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
 
     return brcs_complex
 end#function
+
+"""
+Calculate surface BRCS
+# Usage
+    - brcs = get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef,patch_area)
+
+# Arguments
+    - `params::Parameters`: input parameters struct
+    - `tx_ecef::3x1-element Array`: Transmitter position in ECEF (m)
+    - `rx_ecef::3x1-element Array`: Receiver position in ECEF (m)
+    - `tgt_ecef::3x1-element Array`: Target position in ECEF (m)
+
+# Return
+- `brcs_complex::ComplexF64`: BRCS value (linear magnitude, unitless)
+"""
+function get_surface_brcs(params,tx_ecef,rx_ecef,tgt_ecef)
+    @unpack λ, polarization, s_loc_1, s_loc_2, σ, l, θᵥ, fc = params
+
+    # this function should probably be called from scene.jl to calculate the brcs for a given target:
+    # in there, geometry of Tx to Tgt and Tgt to Rx needs be solved to find inc angles and scattering angles
+    # generate raw data has to be modified to use target reflectivites that are based on the brcs, and unfortunately there are 
+    # changing values/sizes for all modes (with MIMO having different matrix size).
+
+
+    # ------in this function-----
+    # determine geometry to select backscatter codes or bistatic codes (backscattering faster)
+    # - for geometry: calculate position of tx and rx in ENU frame local to the target position
+    # check constraints to determine SPM or KA usage
+    # determine brcs value from selected value. Report in linear units?
+    # allow for profile of reflectivity. profile should be in a magnitude - phase format so that phase values can be altered by some phasing function to set based on profile data
+    patch_area = (s_loc_1[2]-s_loc_1[1]) * (s_loc_2[2]-s_loc_2[1])
+    
+    
+    #determine scattering geometry given Rx/tx/target locations
+    tx_llh = Geometry.xyz_to_geo(tx_ecef)
+    rx_llh = Geometry.xyz_to_geo(rx_ecef)
+    tgt_llh = Geometry.xyz_to_geo(tgt_ecef)
+
+    #next 3 lines for testing geometry
+    # tx_llh = [0; 0; 500e3]; rx_llh = [0;20; 500e3]; tgt_llh = [0;10;0] # bistatic - specular
+    # tx_llh = [0; 0; 500e3]; rx_llh = [0; 0; 500e3]; tgt_llh = [0;10;0] # monostatic
+    # tx_llh = [0; 0; 500e3]; rx_llh = [.1; 0; 500e3]; tgt_llh = [0;10;0] # quasi-monostatic (?)
+
+    tx_enu = Geometry.llh_to_enu_new_org(tx_llh[1], tx_llh[2], tx_llh[3], tgt_llh)
+    rx_enu = Geometry.llh_to_enu_new_org(rx_llh[1], rx_llh[2], rx_llh[3], tgt_llh)
+    tx_sph = Geometry.enu_to_sph(tx_enu[1], tx_enu[2], tx_enu[3])
+    rx_sph = Geometry.enu_to_sph(rx_enu[1], rx_enu[2], rx_enu[3])
+    #correct transmitter azimuth for change of origin direction (origin calculated as target location)
+    tx_sph[3] = tx_sph[3] + 180; tx_sph[3] = tx_sph[3]%360 # add 180 degrees and mod360 to enure 0 < azimuth < 360
+
+    # change elevation angles to incidence angles
+    tx_incidence = 90 - tx_sph[2]
+    rx_incidence = 90 - rx_sph[2]
+    
+    # check for "monostatic" bounds -- TODO: How to define what we approximate as monostatic? 
+    # i.e. what scattering error tolerance is acceptable --> angular difference from direct backscatter that meets tolerance
+    #for now we'll say 2 degrees in both azimuth and incidence...
+    tol = 2.0
+    if (abs(tx_incidence - rx_incidence) < tol) & ( abs(  tx_sph[3] - rx_sph[3] + 180 ) < tol)
+        monostatic = true
+    else
+        monostatic = false
+    end
+
+
+    # ulaby_terrain_switch will calculate the backscatter RCS value at the incident angle
+    if ulaby_terrain_switch == 1       
+        if monostatic == false
+            @warn raw"Suggest only to use Ulaby Terrain for monostatic-like geometries."
+        end
+        σᵘ_vh,  σᵘ_hv,  σᵘ_vv,  σᵘ_hh = Ulaby_book_terrain_backscatter_values(rx_incidence,fc,terrain)
+        rx_unit = rx_enu/norm(rx_enu)
+        
+        patch_normal = [0; 0; 1] # using this a placeholder; future work might include a DEM, in which the surface normal may be tilted
+        patch_area_eff = patch_area * dot(patch_normal,rx_unit) # take dot product between surface normal [0 0 1] in ENU and unit vector to receiver
+        brcs = σʳ*patch_area_eff
+    
+    #TODO fix this version where the values are scaled to Ulaby at nadir. But how? Would need to calculate at a level above and fit an RCS curve that fits through the Ulaby value. This only calculates at this level
+    
+        # elseif ulaby_terrain_switch == 1 # this will use the standard scattering calculations but scale to the nearest Ulaby terrain value
+        
+    #     σᵘ_vh,  σᵘ_hv,  σᵘ_vv,  σᵘ_hh = Ulaby_book_terrain_backscatter_values(rx_incidence,fc,terrain)
+
+    #     if monostatic #monostatic geometry
+    #         # Auto-select surface scattering mechanism based on surface properties
+    #         m = 2 * σ / l
+    #         if λ*σ < l^2/2.76
+    #             #use GO
+    #             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA_backscatter(tx_incidence,σ,l,θᵥ)
+                
+    #         elseif σ < λ/21 & m < 0.3
+    #             #use SPM
+    #             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_backscatter(λ,tx_incidence,l,σ,θᵥ)
+    #         else
+    #             error(raw"Scattering surface not supported")
+    #         end
+    #     else # generalized bistatic geometry
+    #         # Auto-select surface scattering mechanism based on surface properties
+    #         m = 2 * σ / l
+    #         if λ*σ < l^2/2.76
+    #             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA(λ,tx_incidence,tx_sph[3],rx_incidence,rx_sph[3],σ,l,θᵥ)
+                
+    #         elseif (σ < λ/21) & (m < 0.3)
+    #             #use SPM
+    #             σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_tsang(λ,tx_incidence,tx_sph[3],rx_incidence,rx_sph[3],l,σ,θᵥ)
+    #         else
+    #             error(raw"Scattering surface not supported")
+    #         end
+    #     end#if monostatic
+
+    #     rx_unit = rx_enu/norm(rx_enu)
+    #     patch_normal = [0; 0; 1] # using this a placeholder; future work might include a DEM, in which the surface normal may be tilted
+    #     patch_area_eff = patch_area * dot(patch_normal,rx_unit) # take dot product between surface normal [0 0 1] in ENU and unit vector to receiver
+    #     #select polarization for BRCS calc #sadly theres no "switch:case" statement in Julia
+    #     if polarization == 1 #vh
+    #         brcs = σʳ_vh * patch_area_eff
+    #     elseif polarization == 2 # hv
+    #         brcs = σʳ_hv * patch_area_eff
+    #     elseif polarization == 3 # vv
+    #         brcs = σʳ_vv * patch_area_eff
+    #     elseif polarization == 4 # hh
+    #         brcs = σʳ_hh * patch_area_eff
+    #     end    
+
+
+    else # use standard scattering calculations
+        if monostatic #monostatic geometry
+            # Auto-select surface scattering mechanism based on surface properties
+            m = 2 * σ / l
+            if λ*σ < l^2/2.76
+                #use GO
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA_backscatter(tx_incidence,σ,l,θᵥ)
+                
+            elseif σ < λ/21 & m < 0.3
+                #use SPM
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_backscatter(λ,tx_incidence,l,σ,θᵥ)
+            else
+                error(raw"Scattering surface not supported")
+            end
+        else # generalized bistatic geometry
+            # Auto-select surface scattering mechanism based on surface properties
+            m = 2 * σ / l
+            if λ*σ < l^2/2.76
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA(λ,tx_incidence,tx_sph[3],rx_incidence,rx_sph[3],σ,l,θᵥ)
+                
+            elseif (σ < λ/21) & (m < 0.3)
+                #use SPM
+                σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_tsang(λ,tx_incidence,tx_sph[3],rx_incidence,rx_sph[3],l,σ,θᵥ)
+            else
+                error(raw"Scattering surface not supported")
+            end
+        end#if monostatic
+
+        rx_unit = rx_enu/norm(rx_enu)
+        
+        patch_normal = [0; 0; 1] # using this a placeholder; future work might include a DEM, in which the surface normal may be tilted
+        patch_area_eff = patch_area * dot(patch_normal,rx_unit) # take dot product between surface normal [0 0 1] in ENU and unit vector to receiver
+        # deciding not to take dot product of transmitter and surface normal; thought experiment is that for monostatic case, you don't have cos^2(θ) effect 
+
+        
+        #select polarization for BRCS calc #sadly theres no "switch:case" statement in Julia
+        if polarization == 1 #vh
+            brcs = σʳ_vh * patch_area_eff
+        elseif polarization == 2 # hv
+            brcs = σʳ_hv * patch_area_eff
+        elseif polarization == 3 # vv
+            brcs = σʳ_vv * patch_area_eff
+        elseif polarization == 4 # hh
+            brcs = σʳ_hh * patch_area_eff
+        end    
+
+
+        # check for nadir-like geometry and calculate nadir specular component. use same tolerance as backscatter for area around nadir
+        # seeing if elevation is directly up for tx and rx
+        if (abs(90.0 - tx_incidence) < tol) & (abs(90.0 - rx_incidence) < tol)
+            brcs_coh = RCS_coherent(σ,θᵥ,λ,tx_incidence,ϕ,rx_incidence,ϕₛ)
+            brcs = brcs + brcs_coh[polarization]
+        end
+    end
+
+    phase = 0 # keep a fixed phase value
+    brcs_complex = brcs*cos(phase)+ (1im*brcs*sin(phase))
+
+    #TODO return a scattering matrix instead. We're already calculating all 4 components
+    return brcs_complex
+end#function
+
 # KA-GO brcs calculation from eq. 12.43 in Microwave Remote Sensing Vol. 2, by Ulaby, Moore, Fung   (page 935)
 # assumptions: stationary phase approximation- derived from Kirchhoff approximation (tangent-plane). Rough surface scattering where local diffraction,
 # shadowing, multiple scattering is ignored.
@@ -335,6 +526,7 @@ end#function
 
 """
 # this function calculates the normalized bistatic radar crossection (nbrcs) of a rough surface using KA-GO for vh,hv,vv,hh polatizations based on incident and scattering angles, and surface rougness
+
 # Arguments
 - `λ::Float64`: slow time vector
 - `θ::Float64: incidence angle of incident wave (deg)
@@ -344,6 +536,7 @@ end#function
 - `σ::Float64`: standard deviation of surface heights (m)
 - `l::Float64`: surface correlation length (m)
 - `θᵥ::Float64: soil moisture volume fraction [0,1]
+
 """
 function BRCS_KA(λ,θ,ϕ,θₛ,ϕₛ,σ,l,θᵥ)
     # TODO Replace surface input values with input_parameters struct?
@@ -402,6 +595,7 @@ end#function
 """
 # this function calculates the normalized bistatic radar crossection (nbrcs) of a rough surface using KA-GO for vh,hv,vv,hh polatizations based on incident and scattering angles, and surface rougness
 # overloaded function call with mean slope instead of std of heights and correlation length
+
 # Arguments
 - `λ::Float64`: wavelength
 - `θ::Float64: incidence angle of incident wave (deg)
@@ -410,6 +604,7 @@ end#function
 - `ϕₛ::Float64`: azimuth angle of scattering direction (deg)
 - `s::Float64`: mean slope (m), is square root of mss (mean squared slope)
 - `θᵥ::Float64: soil moisture volume fraction [0,1]
+
 """
 function BRCS_KA(λ,θ,ϕ,θₛ,ϕₛ,s,θᵥ)
     # TODO Replace surface input values with input_parameters struct?
@@ -442,12 +637,14 @@ end#function
 
 """
 # this function calculates the normalized bistatic radar crossection (nbrcs) of a rough surface using KA-GO for vh,hv,vv,hh polatizations in backscattering direction only
+
 # Arguments
 - `λ::Float64`: wavelength
 - `θ::Float64: incidence angle of incident wave (deg)
 - `σ::Float64`: standard deviation of surface heights (m)
 - `l::Float64`: surface correlation length (m)
 - `θᵥ::Float64: soil moisture volume fraction [0,1]
+
 """
 function BRCS_KA_backscatter(θ,σ,l,θᵥ)
     # TODO Replace surface input values with input_parameters struct?
@@ -468,12 +665,14 @@ end
 
 """
 # this function calculates the normalized bistatic radar crossection (nbrcs) of a the coherent component in the nadir direction
+
 # Arguments
 - `λ::Float64`: wavelength
 - `θ::Float64: incidence angle of incident wave (deg)
 - `θᵥ::Float64: soil moisture volume fraction [0,1]
 - `σ::Float64`: standard deviation of surface heights (m)
 - `patch_area::Float64: resolution cell area (m^2)
+
 """
 # function RCS_coherent(σ,θ,θᵥ,λ,patch_area) 
 #     #going to assume a homogeneous infinite surface approximation for coherent reflection component. Only exists in angular area around specular direction, 
@@ -492,6 +691,7 @@ end
 
 """
 # this function calculates the  bistatic radar crossection (brcs) of a the coherent component in the forward direction
+
 # Arguments
 - `σ::Float64`: standard deviation of surface heights (m)
 - `θᵥ::Float64: soil moisture volume fraction [0,1]
@@ -500,6 +700,7 @@ end
 - `ϕ::Float64: azimuth angle of incident wave (deg)
 - `θₛ::Float64: incidence angle of scattered wave (deg)
 - `ϕₛ::Float64: azimuth angle of scattered wave (deg)
+
 """
 
 function RCS_coherent(σ,θᵥ,λ,θ,ϕ,θₛ,ϕₛ) #Incidence angle dependent version here
@@ -559,6 +760,7 @@ end
 
 """
 # this function calculates the polarization factors U_pq for pq = {vh hv vv hh}
+
 # Arguments
 - `ϵ₂::Float64`: permeability of medium 2 (ground)
 - `μ₂::Float64:  permittivity of medium 2 (ground)
@@ -566,6 +768,7 @@ end
 - `f::Float64`:  frequency
 - `Z_x::Float64`: slope in x-direction
 - `Z_y::Float64`: slope in y-direction
+
 """
 function get_pol_factors_U_pq(ϵ₂,μ₂,θ,θₛ,ϕ,ϕₛ,f,Z_x,Z_y)
     R_pll0, R_pll1, R_prp0, R_prp1 = get_Fresnel_coeffs(ϵ₂,μ₂,θ,f)
@@ -599,9 +802,11 @@ end#function
 
 """
 # this function calculates dielectric of soil for a given water content
+
 # Arguments
 - `θᵥ::Float64`: soil water content [0,1]
 - `f::Float64`: frequency
+
 """
 function soil_dielectric(θᵥ)
     #using the Topp 1980 model modified with Wang, Schmugge, Williams 1978
@@ -634,6 +839,7 @@ end#function
 
 """
 # this function calculates bistatic radar crossection using Small Perturbation Method 
+
 # Arguments
 - `λ::Float64`: wavelength
 - `θᵢ::Float64: incidence angle of incident wave (deg)
@@ -643,8 +849,11 @@ end#function
 - `l::Float64`: correlation length
 - `σ::Float64`: stdev of surface heights (m)
 - `θᵥ::Float64: soil moisture volume fraction [0,1]
+
 """
 function BRCS_SPM_tsang(λ,θᵢ,ϕᵢ,θₛ,ϕₛ,l,σ,θᵥ)
+
+    ϕₛ = ϕₛ-180#testing flipped axis
 
     k = 2*pi / λ
     f = 299792458 / λ  # approx center freq derived from free space λ
@@ -712,10 +921,12 @@ end#function
 
 """
 # this function calculates the emperically-derived backscatter values from the Ulaby-Dobson book "Handbook of Radar Scattering Statistics for Terrain"
+
 # Arguments
 - `θ::Float64: incidence angle (deg)
 - `band::String`: frequency band 
 - `terrain::String`: terrain type (from set of available)
+
 # Output
 - `σ ::Float64: Backscatter RCS for HH, HV, or VV (dB). Book gives HV = VH
 """
@@ -730,6 +941,7 @@ function Ulaby_book_terrain_backscatter_values(θ,fc,terrain)
         error(raw"Frequency out of bounds")
     end
 
+    θ_rad = pi/180 .* θ # convert to radians
 
     if terrain == "soil"   
         if band == "L" # HH, HV, VV coeffs in tables
@@ -873,21 +1085,21 @@ function Ulaby_book_terrain_backscatter_values(θ,fc,terrain)
             P₅ = [0.421 2.431 0.535]
             P₆ = [0.74 3.142 1.994]
         end#band
+    else
+        @error(raw"Terrain type not supported")
     end#terrain
     
-    σᵘ_hh = P₁[1] .+ P₂[1] .* exp.(-P₃[1].*θ) .+ P₄[1] .* cosd.(P₅[1] .* θ .+ P₆[1])
-    σᵘ_hv = P₁[2] .+ P₂[2] .* exp.(-P₃[2].*θ) .+ P₄[2] .* cosd.(P₅[2] .* θ .+ P₆[2])
-    σᵘ_vv = P₁[3] .+ P₂[3] .* exp.(-P₃[3].*θ) .+ P₄[3] .* cosd.(P₅[3] .* θ .+ P₆[3])
-    σᵘ_vh = σᵘ_hv #book only gives vh results, assuming vh is similar
-
-    # if polarization ==4
-    #     return σ_hh
-    # elseif polarization ==1 || polarization ==2
-    #     return σ_hv
-    # elseif polarization ==3
-    #     return σ_vv
-    # end
+    σᵘ_hh = P₁[1] .+ P₂[1] .* exp.(-P₃[1].*θ_rad) .+ P₄[1] .* cos.(P₅[1] .* θ_rad .+ P₆[1])
+    σᵘ_hv = P₁[2] .+ P₂[2] .* exp.(-P₃[2].*θ_rad) .+ P₄[2] .* cos.(P₅[2] .* θ_rad .+ P₆[2])
+    σᵘ_vv = P₁[3] .+ P₂[3] .* exp.(-P₃[3].*θ_rad) .+ P₄[3] .* cos.(P₅[3] .* θ_rad .+ P₆[3])
+    σᵘ_vh = σᵘ_hv #book only gives vh results, assuming hv is similar
     
+    # convert from dB to linear units - use real component, something funky with Ulaby coefficients and equation. Checked to ensure db->linear->dB conversion correct here
+    σᵘ_hh = 10 .^(real.(σᵘ_hh) ./10)
+    σᵘ_hv = 10 .^(real.(σᵘ_hv) ./10)
+    σᵘ_vv = 10 .^(real.(σᵘ_vv) ./10)
+    σᵘ_vh = 10 .^(real.(σᵘ_vh) ./10)
+
     return  σᵘ_vh,  σᵘ_hv,  σᵘ_vv,  σᵘ_hh
 end#function
 
