@@ -1,6 +1,6 @@
 using Distributed
 if Sys.islinux()
-    addprocs(4) 
+    addprocs(24) 
     @everywhere DEPOT_PATH[1]="/u/epstein-z0/wblr/joshil/Julia/.julia" # for Epstein
 else
     addprocs(2) 
@@ -12,85 +12,117 @@ end
 @everywhere include("../modules/scene.jl")
 @everywhere include("../modules/range_spread_function.jl") # as RSF
 @everywhere include("../modules/orbits.jl")
-@everywhere include("../modules/sync.jl")
-@everywhere include("../modules/error_sources.jl")
-@everywhere include("../modules/performance_metrics.jl")
 @everywhere include("../modules/antenna.jl")
 @everywhere include("../modules/simsetup.jl")
 @everywhere include("../modules/user_parameters.jl")
-@everywhere include("../modules/global_scale_support.jl")
-@everywhere include("../modules/data_processing.jl")
-@everywhere include("../modules/data_plotting.jl")
+@everywhere include("../modules/scattering.jl")
+@everywhere include("../modules/interferometry.jl")
+@everywhere include("../modules/dem.jl")
 
-@everywhere using NCDatasets
 @everywhere using Statistics
 @everywhere using Parameters
-@everywhere using Dates
-@everywhere using StaticArrays
 @everywhere using .UserParameters
-@everywhere using SharedArrays
-@everywhere using Interpolations
-@everywhere using Plots
-@everywhere using Peaks
 @everywhere using TimerOutputs
 @everywhere using JLD2
-@everywhere using GeoDatasets
 @everywhere using Distributions
-@everywhere using Measures
-@everywhere using ArchGDAL
-@everywhere using GeoArrays
-
-@everywhere import ArchGDAL as AG
-
+@everywhere using SharedArrays
 
 @everywhere  to = TimerOutput()
 
 c               = 299792458
 earth_radius    = 6378.137e3 # Earth semi-major axis at equator
 
-for monte_carlo_idx = 1:1 # Just running one simulation currently
+function segment_simulation_grid(trg_ref_lat, trg_ref_lon, lat_extent, lon_extent, NB_lat, NB_lon)
 
-    @timeit to "Overall time" begin
+    B_lat_extent = lat_extent / NB_lat
+    B_lon_extent = lon_extent / NB_lon
 
-        # Read Copernicus 30m resolution DEM
-        dataset         = AG.read("/home/mlavalle/dat/nisar-dem-copernicus/EPSG4326.vrt")
+    Add_B_lat_extent = 0 #B_lat_extent*0.1
+    Add_B_lon_extent = B_lon_extent*0.1
 
-        DEM_orig        = AG.getband(dataset,1)
 
-        gt              = AG.getgeotransform(dataset)
-        ulx, uly        = gt[1], gt[4]
-        x_pixel_size, y_pixel_size = gt[2], gt[6]
-        num_cols        = AG.width(DEM_orig)
-        num_rows        = AG.height(DEM_orig)
+    trg_ref_lat_list = zeros(NB_lat * NB_lon)
+    trg_ref_lon_list = zeros(NB_lat * NB_lon)
 
-        Lat_vals_full        = zeros(num_rows,1);
-        Lon_vals_full        = zeros(num_cols,1);
+    k = 1
+    for i=1:NB_lat
+        for j=1:NB_lon
+            trg_ref_lat_list[k] = (trg_ref_lat - Add_B_lat_extent) + ((i-1) * (B_lat_extent  + Add_B_lat_extent))
+            trg_ref_lon_list[k] = (trg_ref_lon - Add_B_lon_extent) + ((j-1) * (B_lon_extent  + Add_B_lon_extent))
+            k=k+1
+        end
+    end
 
-        for i=1:num_rows
-            Lat_vals_full[i] = uly + i * y_pixel_size;
+    return trg_ref_lat_list, trg_ref_lon_list, B_lat_extent+(2*Add_B_lat_extent), B_lon_extent+(2*Add_B_lon_extent)
+
+end
+
+
+@timeit to "Overall time" begin
+
+#platform_ref_point      = [34.2071;-121.83;697.5e3]
+platform_ref_point      = [34.8043;-117.8153;697.5e3]
+platform_heading_ip     = 0.0
+look_angle_ip 		    = 30.0  
+lat_res                	= 0.000033
+lon_res                 = 0.000033
+lat_extent              = 0.0108 #0.0108 #0.000333
+lon_extent              = 0.02261*1 #0.05
+NB_lat                  = 1
+NB_lon                  = 1
+target_mode             = 2     # 1: target fixed in center, 2: Distributed target, 3: Distributed target with 1 dominant scatterer
+num_targ_vol            = 3     # number of targets in each voxel
+
+ground_range_ini        = Scene.lookangle_to_range(look_angle_ip,platform_ref_point[3],0.0, earth_radius)[2]
+displacement_N          = ground_range_ini .* cosd(platform_heading_ip + 90) 
+displacement_E          = ground_range_ini .* sind(platform_heading_ip + 90)
+trg_ref_lat             = platform_ref_point[1] + (displacement_N/earth_radius*180/pi)
+trg_ref_lon             = platform_ref_point[2] + (displacement_E/(earth_radius+cosd(platform_ref_point[1]))*180/pi) 
+
+trg_ref_lat_list, trg_ref_lon_list, B_lat_extent, B_lon_extent = segment_simulation_grid(trg_ref_lat, trg_ref_lon, lat_extent, lon_extent, NB_lat, NB_lon)
+
+
+for B_idx = 1:length(trg_ref_lat_list)  
+        
+        @timeit to "Block time " begin
+        
+        DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.read_interp_DEM_from_source("/home/mlavalle/dat/nisar-dem-copernicus/EPSG4326.vrt", trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res)
+
+        if iseven(size(DEM_full)[2]) || iseven(size(DEM_full)[1])
+            B_lat_extent_new = B_lat_extent
+            B_lon_extent_new = B_lon_extent
+            if iseven(size(DEM_full)[2])
+                B_lat_extent_new = B_lat_extent + lat_res
+            end
+            if iseven(size(DEM_full)[1])
+                B_lon_extent_new = B_lon_extent + lon_res
+            end
+            DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.read_interp_DEM_from_source("/home/mlavalle/dat/nisar-dem-copernicus/EPSG4326.vrt", trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent_new, B_lon_extent_new, lat_res, lon_res)
         end
 
-        for i=1:num_cols
-            Lon_vals_full[i] = ulx + i * x_pixel_size;
-        end
+        #DEM_region_o            = repeat(0:0.1:0.1*(size(DEM_full)[1]-1),1,size(DEM_full)[2]) # This line for testing
+        DEM_region              = DEM_full[2:end-1,2:end-1]'
 
-        target_mode             = 2 #1: target fixed in center, 2: Distributed target, 3: Distributed target with 1 dominant scatterer
-        num_targ_vol            = 3 # number of targets in each voxel
-        t_loc_S_range           = 0#-0.00033:0.000033:0.00033-0.000033    #-80:8:72 #-516:8:516 #-780:8:772 #-516:8:516 #-516:8:516 # S-grid range
-        t_loc_C_range           = 3.59:0.000033:3.64   #-5200:4:5196 #-520:4:516 #-10400:4:10396 #-5200:4:5196 #-520:4:516 # C-grid range
-        t_loc_H_range           = 0 # H-grid range
+        slope_lat, slope_lon    = DEM.get_slopes_from_DEM(DEM_full, Geo_location_lon, Geo_location_lat)
 
+        slope_lat_region 	    = slope_lat[2:end-1,2:end-1]' 
+        slope_lon_region  	    = slope_lon[2:end-1,2:end-1]'
+
+        N_all                   = DEM.get_terrain_norm(DEM_region, slope_lat_region, slope_lon_region)
+
+
+        t_loc_S_range           = Geo_location_lat[1,2:end-1] #trg_ref_lat:lat_res:(trg_ref_lat+lat_extent)-lat_res	# S-grid range
+        t_loc_C_range           = Geo_location_lon[2:end-1,1] #trg_ref_lon:lon_res:(trg_ref_lon+lon_extent)-lon_res	# C-grid range
+        t_loc_H_range           = 0.0 	# H-grid range
         # Define targets and targets reflectivity TODO: move this code to a function
         t_loc_S                 =  zeros(length(t_loc_S_range) * length(t_loc_C_range) * length(t_loc_H_range) * num_targ_vol)
         t_loc_C                 =  zeros(length(t_loc_S_range) * length(t_loc_C_range) * length(t_loc_H_range) * num_targ_vol)
         t_loc_H                 =  zeros(length(t_loc_S_range) * length(t_loc_C_range) * length(t_loc_H_range) * num_targ_vol)
         t_ref_val               =  zeros(length(t_loc_S_range) * length(t_loc_C_range) * length(t_loc_H_range) * num_targ_vol)
 
-        #temp_height = 0       
-        m=1
+        
+         m=1
         for i=1:length(t_loc_S_range)
-            temp_ref = 3.16
-	    #temp_height = -262
             for j= 1:length(t_loc_C_range)
                 #temp_height=temp_height+2
                 for k=1:length(t_loc_H_range)
@@ -102,14 +134,11 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
                             global t_ref_val[m] = 1
                             m=m+1
                         elseif target_mode == 2
-                            global t_loc_S[m] = t_loc_S_range[i] + (rand(Uniform(-1,1)) .* (0.000033/2))
-                            global t_loc_C[m] = t_loc_C_range[j] + (rand(Uniform(-1,1)) .* (0.000033/2))
-                            #global t_loc_H[m] = temp_height  + (rand(Uniform(-1,1)) .* 0.5)
-                            A, B =  findmin(abs.(t_loc_S[m].-Lat_vals_full))
-                            C, D =  findmin(abs.(t_loc_C[m].-Lon_vals_full))
-                            global t_loc_H[m] = DEM_orig[D[1],B[1]] + (rand(Uniform(-1,1)) .* 0.5)
+                            global t_loc_S[m] = t_loc_S_range[i] + (rand(Uniform(-1,1)) .* (lat_res/2))
+                            global t_loc_C[m] = t_loc_C_range[j] + (rand(Uniform(-1,1)) .* (lon_res/2))
+                            global t_loc_H[m] = DEM_region[i,j] + (rand(Uniform(-1,1)) .* 0.5)
 			    #global t_loc_H[m] = t_loc_H_range[k] + (rand(Uniform(-1,1)) .* 0.5)
-                            global t_ref_val[m] = 1 #temp_ref #1
+                            global t_ref_val[m] = 1 
                             m=m+1
                         elseif target_mode == 3
                             if l==1
@@ -119,21 +148,15 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
                                 global t_ref_val[m] = 1
                                 m=m+1
                             else
-                                global t_loc_S[m] = t_loc_S_range[i] + (rand(Uniform(-1,1)) .* 4)
-                                global t_loc_C[m] = t_loc_C_range[j] + (rand(Uniform(-1,1)) .* 2)
-                                #global t_loc_H[m] = temp_height  + (rand(Uniform(-1,1)) .* 0.5)
-                                A, B =  findmin(abs.(t_loc_S[m].-Lat_vals_full))
-                                C, D =  findmin(abs.(t_loc_C[m].-Lon_vals_full))
-                                global t_loc_H[m] = DEM_orig[D[1],B[1]] + (rand(Uniform(-1,1)) .* 0.5)
+                                global t_loc_S[m] = t_loc_S_range[i] + (rand(Uniform(-1,1)) .* (lat_res/2))
+                                global t_loc_C[m] = t_loc_C_range[j] + (rand(Uniform(-1,1)) .* (lon_res/2))
+                                global t_loc_H[m] = DEM_region[i,j]  + (rand(Uniform(-1,1)) .* 0.5)
                                 #global t_loc_H[m] = t_loc_H_range[k] + (rand(Uniform(-1,1)) .* 0.5)
                                 global t_ref_val[m] = 1
                                 m=m+1
                             end
                         end
                     end
-                end
-                if mod(j,4)==0
-                    temp_ref = temp_ref + 0.011 #0.072
                 end
             end
         end
@@ -144,25 +167,26 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
             processing_mode     = 1, #1:All platforms considered for processing
             pos_n               = [0 2.4]*1e3 , #Platform positions along n
 
-            s_loc_1             = -0.00033:0.000033:0.00033-0.000033, #-80:8:72, #-516:8:516, #-780:8:772, #-516:8:516, #-516:8:516,
-            s_loc_2             = 3.59:0.000033:3.64, #-5200:4:5196, #-10000:4:9996, #-5000:4:4996, #-10000:4:9996, #-520:4:516, #-10400:4:10396, #-5200:4:5196, #-520:4:516,
-            s_loc_3             = 0,
+            s_loc_1             = t_loc_S_range, #trg_ref_lat:lat_res:(trg_ref_lat+lat_extent)-lat_res, 
+            s_loc_2             = t_loc_C_range, #trg_ref_lon:lon_res:(trg_ref_lon+lon_extent)-lon_res,
+            s_loc_3             = t_loc_H_range, #0.0,
 
             SAR_duration        = 1.3,
             SAR_start_time      = -0.65,
 
-            look_angle          = 30,
+            look_angle          = look_angle_ip,
+            p_heading           = platform_heading_ip, 
 
             target_pos_mode     = "CR",
             t_loc_1             = t_loc_S',
             t_loc_2             = t_loc_C',
             t_loc_3             = t_loc_H',
             t_ref               = t_ref_val',
-	    ts_coord_sys        = "LLH",
+	        ts_coord_sys        = "LLH",
 
             #ROSE-L parameters
-            fp                  = 1550,
-            p_t0_LLH            = [0.0;0.0;697.5e3],
+            fp                  = 200, #1550,
+            p_t0_LLH            = platform_ref_point,
             pulse_length        = 40e-6,
             dt_orbits           = 0.05,
             bandwidth           = 54e6,
@@ -203,18 +227,6 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
             ref_plat = 2 #incicate the reference platform
         end
 
-        global Norm_baseline_max    = maximum(bnorm) ./ 1e3
-        global Norm_baseline_min     = minimum(filter(!iszero,bnorm)) ./ 1e3
-        global Norm_baseline_mean    = mean(filter(!iszero,bnorm)) ./ 1e3
-
-        global Perp_baseline_max   = maximum(bperp) ./ 1e3
-        global Perp_baseline_min     = minimum(filter(!iszero,bperp)) ./ 1e3
-        global Perp_baseline_mean    = mean(filter(!iszero,bperp)) ./ 1e3
-
-        global Par_baseline_max    = maximum(b_at) ./ 1e3
-        global Par_baseline_min      = minimum(filter(!iszero,b_at)) ./ 1e3
-        global Par_baseline_mean    = mean(filter(!iszero,b_at)) ./ 1e3
-
         mast_plat = 1
 
         # theoretical resolution along-n
@@ -243,6 +255,41 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
         # Target location based only on the reference platform
         t_xyz_3xN, s_xyz_3xN, avg_peg = Scene.convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, reshape(orbit_pos[:,ref_plat,:],(size(orbit_pos)[1],1,size(orbit_pos)[3])), params) ## calculate avg heading from platform positions
 
+
+        #geometry computations based on scene
+        slant_range_all                 = zeros(size(s_xyz_3xN,2),size(p_xyz,2))
+        look_angle_all                  = zeros(size(s_xyz_3xN,2),size(p_xyz,2))
+        incidence_angle_all             = zeros(size(s_xyz_3xN,2),size(p_xyz,2))
+        Critical_baseline_all           = zeros(size(s_xyz_3xN,2),1)
+        Correlation_theo_all            = zeros(size(s_xyz_3xN,2),1)
+        Perp_baseline_all               = zeros(size(s_xyz_3xN,2),1)
+        Vert_wavnum_all                 = zeros(size(s_xyz_3xN,2),1)
+        local_incidence_angle           = zeros(size(s_xyz_3xN,2),1)
+        range_slope_angle               = zeros(size(s_xyz_3xN,2),1)
+
+        slant_range_all[:,1], look_angle_all[:,1], incidence_angle_all[:,1], slant_range_all[:,2], look_angle_all[:,2], incidence_angle_all[:,2], Perp_baseline_all, Vert_wavnum_all, local_incidence_angle, range_slope_angle, Critical_baseline_all, Correlation_theo_all = Interferometry.get_scene_geometry_values(p_xyz, v_xyz, s_xyz_3xN, N_all, 1, 2, p_mode, params, "Scene", 3)
+
+        #geometry computations based on targets
+        trg_slant_range_all             = zeros(size(t_xyz_3xN,2),size(p_xyz,2))
+        trg_look_angle_all              = zeros(size(t_xyz_3xN,2),size(p_xyz,2))
+        trg_incidence_angle_all         = zeros(size(t_xyz_3xN,2),size(p_xyz,2))
+        trg_Critical_baseline_all       = zeros(size(t_xyz_3xN,2),1)
+        trg_Correlation_theo_all        = zeros(size(t_xyz_3xN,2),1)
+        trg_Perp_baseline_all           = zeros(size(t_xyz_3xN,2),1)
+        trg_Vert_wavnum_all             = zeros(size(t_xyz_3xN,2),1)
+        trg_local_incidence_angle       = zeros(size(t_xyz_3xN,2),1)
+        trg_range_slope_angle           = zeros(size(t_xyz_3xN,2),1)
+
+        trg_slant_range_all[:,1], trg_look_angle_all[:,1], trg_incidence_angle_all[:,1], trg_slant_range_all[:,2], trg_look_angle_all[:,2], trg_incidence_angle_all[:,2], trg_Perp_baseline_all, trg_Vert_wavnum_all, trg_local_incidence_angle, trg_range_slope_angle, trg_Critical_baseline_all, trg_Correlation_theo_all = Interferometry.get_scene_geometry_values(p_xyz, v_xyz, t_xyz_3xN, N_all, 1, 2, p_mode, params, "Target", 3)
+
+        # Get target reflectivities
+        trg_targets_ref_corr            = zeros(size(t_xyz_3xN,2),1)
+        pixel_area                      = (lat_res*pi/180*earth_radius) * (lon_res*pi/180*(earth_radius+cosd(params.p_heading)))
+
+        for ti=1:size(t_xyz_3xN,2)
+            trg_targets_ref_corr[ti]            = (pixel_area/num_targ_vol) .*  Scattering.TST_surface_brcs(2,params.λ,trg_local_incidence_angle[ti],0.0,trg_local_incidence_angle[ti],180.0-0.0,3,1.0)
+        end
+
         # Apply antenna pattern
         if params.include_antenna # calculate look angle (average over platforms and slow-time positions)
             Antenna.applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, params)
@@ -254,7 +301,7 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
         Srx, MF, ft, t_rx       = RSF.ideal_RSF(Trx, params) # Srx: RX window with MF centered, MF: ideal matched filter output (range spread function, RSF) for LFM pulse, ft: fast-time axis for MF, t_rx: RX window
         # Srx,MF,ft,t_rx=RSF.non_ideal_RSF(params.pulse_length,Δt,bandwidth,Trx,SFR,window_type) # TODO non-ideal RSF for LFM pulse with system complex frequency response (SFR) and fast-time windowing
 
-        trunc_fac   = Int(round(2*(max_range-min_range)/c/params.Δt,digits=-1))+16000
+        trunc_fac   = Int(round(2*(max_range-min_range)/c/params.Δt,digits=-1))+26000
         C,D         = findmax(Srx)
         Srx         = Srx[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
         #MF         = MF[D-Int(trunc_fac/2):D+Int(trunc_fac/2)]
@@ -283,7 +330,7 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
                 for i=1:Np # RX platform
                     temp_sum.=0.0;
                 for j=1:Nt # targets
-                    if targets_ref[j]!=0
+                    if trg_targets_ref_corr[j]!=0
                         range_tx=Geometry.distance(t_xyz_3xN[:,j],p_xyz[:,i,s])
                         range_rx=Geometry.distance(t_xyz_3xN[:,j],p_xyz[:,i,s])
                             rel_delay=(range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
@@ -295,7 +342,7 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
                                 circshift!(Srx_shifted, Srx, rel_delay_ind)
                                 Srx_shifted[Nft-abs(rel_delay_ind)+1:end] .= zeros(abs(rel_delay_ind))
                             end
-                            temp_sum .= temp_sum .+  (targets_ref[j].*exp(-im*2*pi/(0.23793052222222222)*(range_tx+range_rx)).*Srx_shifted)
+                            temp_sum .= temp_sum .+  (trg_targets_ref_corr[j].*exp(-im*2*pi/(0.23793052222222222)*(range_tx+range_rx)).*Srx_shifted)
     
                     end
                 end
@@ -305,78 +352,36 @@ for monte_carlo_idx = 1:1 # Just running one simulation currently
         end
 
     
-            @timeit to "processdata data" begin # This takes second major chunk of simulation time
-                    # Process raw data to generate image
-                    if params.processing_steps === :bp3d # 1-step processing TODO do we need this option?
-                        image_3D        = Process_Raw_Data.main_SAR_tomo_3D_new(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
-                    elseif params.processing_steps === :bp2d3d # 2-step processing, first SAR (along-track), then tomographic
-                        if params.processing_mode == 1
-                            @timeit to "Step 1" SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
-                        elseif params.processing_mode == 2
-                            # for co-flyer
-                            @timeit to "Step 1" SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata[:,2:size(p_xyz)[2],:], s_xyz_3xN, p_xyz, t_rx, ref_range, params)
-                        end
-                    @timeit to "Step 2" image_3D           = Process_Raw_Data.tomo_processing_afterSAR_full(SAR_images_3D)
-                    end
-    
-            end
-
+        @timeit to "processdata data" begin # This takes second major chunk of simulation time
+            SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
+        end
         stat_var_all_1p = SAR_images_3D[1,:,:,1]
         stat_var_all_2p = SAR_images_3D[2,:,:,1]
 
+        t_xyz_3xN_2 = reshape(t_xyz_3xN,3,num_targ_vol,length(params.s_loc_2),length(params.s_loc_1))[:,1,:,:]
+        t_xyz_3xN_3 = reshape(t_xyz_3xN_2,3,length(params.s_loc_2)*length(params.s_loc_1))
 
-        #geometry computations
-        rng_slope                   = 0
-        slant_range_all             = zeros(size(s_xyz_3xN,2),size(p_xyz,2))
-        look_angle_all              = zeros(size(s_xyz_3xN,2),size(p_xyz,2))
-        incidence_angle_all         = zeros(size(s_xyz_3xN,2),size(p_xyz,2))
-        Critical_baseline_all       = zeros(size(s_xyz_3xN,2),size(p_xyz,2))
-        Correlation_theo_all        = zeros(size(s_xyz_3xN,2),size(p_xyz,2))
-        Perp_baseline_all           = zeros(size(s_xyz_3xN,2),size(p_xyz,2))
-        Vert_wavnum_all             = zeros(size(s_xyz_3xN,2),size(p_xyz,2))
-
-
-        for oi = 1:size(p_xyz,2)
-            mean_plats_pos              = mean(p_xyz[:,oi,:], dims=2)
-            for ti = 1:size(s_xyz_3xN,2)
-                    slant_range_all[ti,oi]       = Geometry.distance( mean_plats_pos  , s_xyz_3xN[:,ti] )
-                    look_angle_all[ti,oi]        = Scene.slantrange_to_lookangle(earth_radius,slant_range_all[ti,oi],Geometry.xyz_to_geo(mean_plats_pos)[3],Geometry.xyz_to_geo(t_xyz_3xN[:,ti])[3])[2]
-                    incidence_angle_all[ti,oi]   = Scene.lookangle_to_incangle(look_angle_all[ti,oi],Geometry.xyz_to_geo(mean_plats_pos)[3],Geometry.xyz_to_geo(t_xyz_3xN[:,ti])[3],earth_radius)
-                    Critical_baseline_all[ti,oi] = params.λ * ((2*params.bandwidth)/c) * slant_range_all[ti,oi] * tand(incidence_angle_all[ti,oi] - rng_slope) / p_mode
-            end
+        @timeit to "processdata data2" begin # This takes second major chunk of simulation time
+            trg_SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, t_xyz_3xN_3, p_xyz, t_rx, ref_range, params)
         end
-      
-        for ti=1:size(s_xyz_3xN,2)
-            bs_perp2, bs_at2, bs_norm2          = Orbits.get_perp_baselines_new(mean(p_xyz[:,:,:],dims=3), mean(v_xyz[:,:,:],dims=3), look_angle_all[ti,1], 0.0, params.left_right_look, 1)
+        trg_stat_var_all_1p = trg_SAR_images_3D[1,:,:,1]
+        trg_stat_var_all_2p = trg_SAR_images_3D[2,:,:,1]
 
-            Perp_baseline_all[ti]               = bs_perp2[1,2,1]
-            Correlation_theo_all[ti]            = 1 - (Perp_baseline_all[ti] ./ (Critical_baseline_all[ti,1]))
-
-            Va                                  = mean(p_xyz[:, 1, :], dims=2) - s_xyz_3xN[:, ti]
-            Vb                                  = mean(p_xyz[:, 2, :], dims=2) - s_xyz_3xN[:, ti]
-                                    
-            angle_ip                            = Data_Processing.angle_2vec(Va, Vb) * 1
-     
-            if params.mode == 1
-                Vert_wavnum_all[ti]            = (4 * pi * (angle_ip * pi / 180) ) / (params.λ * sind(look_angle_all[ti,1]))
-            elseif params.mode == 2
-                Vert_wavnum_all[ti]            = (2 * pi * (angle_ip * pi / 180) ) / (params.λ * sind(look_angle_all[ti,1]))
-            end
-        end
-
-        savepath                 = "/u/epstein-z0/darts/joshil/Outputs/SC_grid/"
+        savepath                 = "/u/epstein-z0/darts/joshil/Outputs/SC_grid_la/"
         if ~ispath(savepath)
             mkdir(savepath)
         end
-        
-        @save savepath*"Output58_10km_30la_testgeo2.jld" image_3D SAR_images_3D stat_var_all_1p stat_var_all_2p rawdata params slant_range_all look_angle_all incidence_angle_all Critical_baseline_all Correlation_theo_all Perp_baseline_all Vert_wavnum_all rng_slope s_xyz_3xN p_xyz t_rx ref_range t_loc_H t_xyz_3xN
 
-    end
+        @save savepath*"Output5_10km_30la_geo_la5_"*string(B_idx)*".jld" SAR_images_3D stat_var_all_1p stat_var_all_2p rawdata params slant_range_all look_angle_all incidence_angle_all Critical_baseline_all Correlation_theo_all Perp_baseline_all Vert_wavnum_all local_incidence_angle range_slope_angle trg_slant_range_all trg_look_angle_all trg_incidence_angle_all trg_Critical_baseline_all trg_Correlation_theo_all trg_Perp_baseline_all trg_Vert_wavnum_all trg_local_incidence_angle trg_range_slope_angle trg_targets_ref_corr s_xyz_3xN t_xyz_3xN p_xyz DEM_region N_all t_rx ref_range trg_SAR_images_3D trg_stat_var_all_1p trg_stat_var_all_2p 
+         
+        end #timeit
+
+end 
+
+end #timeit
     
-    end
-
-    [rmprocs(p) for p in workers()]
+[rmprocs(p) for p in workers()]
 
 println(to)
             
-
+# END

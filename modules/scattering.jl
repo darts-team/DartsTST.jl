@@ -1104,4 +1104,68 @@ function Ulaby_book_terrain_backscatter_values(θ,fc,terrain)
 end#function
 
 
+
+#TODO add separate roughness parameters for within swath and outside swath
+function TST_surface_brcs(surface_case,λ,tx_incidence,tx_azimuth,rx_incidence,rx_azimuth,polarization::Int64=3,patch_area_eff::Float64 = 1.0)
+    k = 2*pi/λ
+    θᵥ = 0.2
+    if surface_case == 1 #high roughness
+        # σ = λ*10
+        # l = 1
+        m = 0.5   # this is about 7.5 lambda
+        l = 5
+        σ = m *l / sqrt(2)
+        σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA.(λ,tx_incidence,tx_azimuth,rx_incidence,rx_azimuth,σ,l,θᵥ)
+    elseif surface_case == 2 #moderate roughness
+        m = 0.25
+        l = 1
+        σ = m *l / sqrt(2)
+        # σ = λ
+        # l = 1
+        σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_KA.(λ,tx_incidence,tx_azimuth,rx_incidence,rx_azimuth,σ,l,θᵥ)
+    elseif surface_case == 3 #low roughness
+        # kσ = 0.1
+        # kl = 1
+        kσ = 0.3
+        kl = 3
+        
+        l = kl /k
+        σ = kσ /k
+        σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = BRCS_SPM_tsang.(λ,tx_incidence,tx_azimuth,rx_incidence,rx_azimuth,l,σ,θᵥ)
+        #
+        if abs(tx_incidence) < 1.0 # if near nadir
+            sigma_coherent = RCS_coherent.(σ,θᵥ,λ,tx_incidence,tx_azimuth,rx_incidence,rx_azimuth)
+            # tx_range = height
+            # rx_range = height# currently assuming all platforms at same height. TODO fix assumption based on inputs
+            # fresnel_minor_axis = sqrt.(λ*tx_range.*rx_range./(tx_range.+rx_range))
+            # fresnel_major_axis = fresnel_minor_axis./cosd.(rx_incidence)
+            # fresnel_area = fresnel_minor_axis .* fresnel_major_axis .* π
+            fresnel_area = 1;
+            σʳ_vh = σʳ_vh + sigma_coherent[1] ./ fresnel_area
+            σʳ_hv = σʳ_hv + sigma_coherent[2] ./ fresnel_area
+            σʳ_vv = σʳ_vv + sigma_coherent[3] ./ fresnel_area
+            σʳ_hh = σʳ_hh + sigma_coherent[4] ./ fresnel_area
+        end
+    elseif surface_case == 4 #use Ulaby values - note, is backscatter direction only. used for comparions with monostatic codes
+        fc = c/λ
+        
+        terrain = "soil" #fixed for now
+        σʳ_vh,  σʳ_hv,  σʳ_vv,  σʳ_hh = Ulaby_book_terrain_backscatter_values(rx_incidence,fc,terrain)
+    
+    end#if case
+
+    if polarization == 1 #vh
+        brcs = σʳ_vh .* patch_area_eff
+    elseif polarization == 2 # hv
+        brcs = σʳ_hv .* patch_area_eff
+    elseif polarization == 3 # vv
+        brcs = σʳ_vv .* patch_area_eff
+    elseif polarization == 4 # hh
+        brcs = σʳ_hh .* patch_area_eff
+    end    
+
+    return brcs #using the effective patch area = 1 (the default) returns the nbrcs
+
+end#function
+
 end#module
