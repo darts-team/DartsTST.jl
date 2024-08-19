@@ -5,6 +5,7 @@ using ReferenceFrameRotations
 using LinearAlgebra
 using Parameters
 using Statistics
+using Distributions
 
 #local packages
 using ..Geometry
@@ -231,5 +232,88 @@ function applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, t_xyz_3xN, params)
         if Nt_3>1 && Nt_1>1;display(heatmap(t_loc_3,t_loc_1, 20*log10.(projected_pattern_3D[:,1,:]),ylabel=coords_txt[1],xlabel=coords_txt[3],title = "Antenna Pattern Projected on Targets (V-copol)", fill=false,size=(1600,900)));end #, clim=(-80,40),aspect_ratio=:equal
     end
  end
+
+
+function segment_simulation_grid(trg_ref_lat, trg_ref_lon, lat_extent, lon_extent, NB_lat, NB_lon)
+
+    B_lat_extent = lat_extent / NB_lat
+    B_lon_extent = lon_extent / NB_lon
+
+    Add_B_lat_extent = 0 #B_lat_extent*0.1 
+    Add_B_lon_extent = B_lon_extent*0.1 #10% additional region added 
+
+
+    trg_ref_lat_list = zeros(NB_lat * NB_lon)
+    trg_ref_lon_list = zeros(NB_lat * NB_lon)
+
+    k = 1
+    for i=1:NB_lat
+        for j=1:NB_lon
+            trg_ref_lat_list[k] = (trg_ref_lat - Add_B_lat_extent) + ((i-1) * (B_lat_extent  + Add_B_lat_extent))
+            trg_ref_lon_list[k] = (trg_ref_lon - Add_B_lon_extent) + ((j-1) * (B_lon_extent  + Add_B_lon_extent))
+            k=k+1
+        end
+    end
+
+    return trg_ref_lat_list, trg_ref_lon_list, B_lat_extent+(2*Add_B_lat_extent), B_lon_extent+(2*Add_B_lon_extent)
+
+end
+
+
+function define_target_pixels(t_loc_1_range, t_loc_2_range, t_loc_3_range, num_targ_vol, target_mode, var_1, var_2, var_3, DEM_region, DEM_flag)
+    t_loc_1                 =  zeros(length(t_loc_1_range) * length(t_loc_2_range) * length(t_loc_3_range) * num_targ_vol)
+    t_loc_2                 =  zeros(length(t_loc_1_range) * length(t_loc_2_range) * length(t_loc_3_range) * num_targ_vol)
+    t_loc_3                 =  zeros(length(t_loc_1_range) * length(t_loc_2_range) * length(t_loc_3_range) * num_targ_vol)
+    
+    m=1
+    for i=1:length(t_loc_1_range)
+        for j= 1:length(t_loc_2_range)
+            for k=1:length(t_loc_3_range)
+                for l=1:num_targ_vol
+                    if target_mode == 1
+                        t_loc_1[m] = t_loc_1_range[i]
+                        t_loc_2[m] = t_loc_2_range[j]
+                        if DEM_flag == 1
+                            t_loc_3[m] = DEM_region[i,j]
+                        else
+                            t_loc_3[m] = t_loc_3_range[k]
+                        end
+                        m=m+1
+                    elseif target_mode == 2
+                        t_loc_1[m] = t_loc_1_range[i] + (rand(Uniform(-1,1)) .* var_1)
+                        t_loc_2[m] = t_loc_2_range[j] + (rand(Uniform(-1,1)) .* var_2)
+                        if DEM_flag == 1
+                            t_loc_3[m] = DEM_region[i,j] + (rand(Uniform(-1,1)) .* var_3)
+                        else
+			                t_loc_3[m] = t_loc_3_range[k] + (rand(Uniform(-1,1)) .* var_3)
+                        end
+                        m=m+1
+                    elseif target_mode == 3
+                        if l==1
+                            t_loc_1[m] = t_loc_1_range[i]
+                            t_loc_2[m] = t_loc_2_range[j]
+                            t_loc_3[m] = t_loc_3_range[k]
+                            m=m+1
+                        else
+                            t_loc_1[m] = t_loc_1_range[i] + (rand(Uniform(-1,1)) .* var_1)
+                            t_loc_2[m] = t_loc_2_range[j] + (rand(Uniform(-1,1)) .* var_2)
+                            if DEM_flag == 1
+                                t_loc_3[m] = DEM_region[i,j]  + (rand(Uniform(-1,1)) .* var_3)
+                            else
+                                t_loc_3[m] = t_loc_3_range[k] + (rand(Uniform(-1,1)) .* var_3)
+                            end
+                            m=m+1
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    t_ref_val               =  ones(length(t_loc_1_range) * length(t_loc_2_range) * length(t_loc_3_range) * num_targ_vol)
+
+    return t_loc_1, t_loc_2, t_loc_3, t_ref_val
+
+end
  
 end #end module
