@@ -139,7 +139,7 @@ function convert_target_scene_coord_to_XYZ(s_loc_3xN, targets_loc, orbit_pos, pa
       targets_loc_sch[2,:]=targets_loc_sch[2,:].+C_dir*ground_range # note: this also changes targets_loc!
       t_xyz_3xN=Geometry.sch_to_xyz(targets_loc_sch,avg_peg)
       scene_loc_sch=s_loc_3xN
-      scene_loc_sch[2,:]=scene_loc_sch[2,:].+C_dir*ground_range # note: this also changes s_loc_3xN 
+      scene_loc_sch[2,:]=scene_loc_sch[2,:].+C_dir*ground_range # note: this also changes s_loc_3xN
       s_xyz_3xN=Geometry.sch_to_xyz(scene_loc_sch,avg_peg)
   elseif ts_coord_sys=="XYZ" # no conversion needed
       t_xyz_3xN=targets_loc

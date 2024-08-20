@@ -100,8 +100,8 @@ end
     phase_offset_flag::Bool       = false  # if flag == true, then we assume that the oscillators are in phase at the beginning of the aperture, ignored if "delay_since_sync" > 0
     delay_since_sync::Float64     = 0 # a time delay since last synchronization for evaluating synthetic apertures which begin at arbitrary time after most recent sync event. If !=0, phase_offset_flag is ignored, as it assumes the phases are aligned at t=0 before delay
     # sync_fmin::Float64 = 0.1 # minimum frequency > 0 in Hz to window PSD
-    sync_fmin = 0.001 #1/(delay_since_sync+SAR_duration) # minimum frequency > 0 in Hz to window PS
-
+    sync_fmin = 0.001 #1/(delay_since_sync+SAR_duration) # minimum frequency > 0 in Hz to window PSD
+    
     # positioning parameters
 
     # surface scattering parameters

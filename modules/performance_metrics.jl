@@ -61,6 +61,7 @@ function PSF_metrics(image_1D_1, image_1D_2, image_1D_3, target_location, scene_
     return resolutions,PSLRs,ISLRs,loc_errors
 end
 
+#TODO change upsampling to FFT, zero pad
 function upsample_PSFcut(image_1D,scene_res,k_up)
     itp=interpolate(image_1D,BSpline(Cubic(Free(OnGrid())))) #TODO can make grating lobes higher than mainlobe if grating lobes are at the edge of the scene which messes up resolution finding
     scene_res_itp=scene_res/k_up
@@ -89,7 +90,8 @@ function resolution_1D(image_1D,scene_res,res_dB) # image1D in linear scale (not
     N=length(image_1D)
     image_1D=20*log10.(abs.(image_1D)/maximum(abs.(image_1D)))
     max_ind=findall(image_1D[round(Int64,N/2-N/4):round(Int64,N/2+N/4)] .==maximum(image_1D[round(Int64,N/2-N/4):round(Int64,N/2+N/4)]))
-    max_ind=max_ind[1]+round(Int64,N/2-N/4)-1
+    # max_ind=findall(image_1D[round(Int64,N/2-N/4):round(Int64,N/2+N/4)] .==maximum(image_1D[round(Int64,N/2-N/4):round(Int64,N/2+N/4)])) #TODO: look across whole scene for main lobe
+    max_ind=max_ind[1]+round(Int64,N/2-N/4)-1 #TODO: look across whole scene for main lobe
     res_ind_2=findfirst(image_1D[max_ind].-image_1D[max_ind:end] .>=res_dB)+max_ind-1 #TODO warn if scene extent is smaller than resolution
     res_ind_1=findlast(image_1D[max_ind].-image_1D[1:max_ind] .>=res_dB)
     if isempty(res_ind_1) & isempty(res_ind_2);println("Scene is smaller than resolution on both sides! Can't calculate resolution.");res=NaN

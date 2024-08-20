@@ -1,5 +1,5 @@
 # plot results of Sync PRI Monte Carlo Study
-using JLD2, Plots, SharedArrays, StatsPlots, PyCall, Statistics
+using JLD2, Plots, SharedArrays, StatsPlots, PyCall, Statistics, MAT
 np = pyimport("numpy")
 # define a couple functions to filter NaNs and make plots
 function filterNaNs2D(vals)
@@ -16,7 +16,7 @@ function filterNaNs2D(vals)
   return valsF
 end#function
 
-function makeBoxPlot(coeff1s,vals,titleString::String,saveFilename::String)
+function makeBoxPlot(coeff4s,vals,titleString::String,saveFilename::String)
   len = size(vals,1)
 
   boxplot(osc_coeff_sweep[1].*ones(len),vals[1], title = titleString,
@@ -36,11 +36,11 @@ end#function
 
 # run the rest of the code, calling an input .jld2 file with the monte carlo data stored
 begin
-  filename = "sync data/syncModule_MonteCarlo_mode_2_coeff_number1_sync_osc_sweep_wSync.jld2"
+  filename = "sync data/Lband/syncModule_MonteCarlo_mode_3_coeff_number1_sync_osc_sweep_wSync.jld2"
   @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors osc_coeff_sweep
   gr()
 
-  #matrices are either (numcoeff1 x numTrials) or (3 x numcoeff1 x numTrials)
+  #matrices are either (numcoeff x numTrials) or (3 x numcoeff x numTrials)
 
   coeff_plot = osc_coeff_sweep.*ones(size(peaks,2))
 
@@ -50,8 +50,8 @@ begin
   peakvals = ideal_peak_dB .- (20 .* log10.(peaks))
   display(boxplot(coeff_plot, peakvals', title = "Peak Power Loss Oscillator Coefficient #1", ylabel = "Power Loss (dB)",
     xlabel = "PSD Coefficient Value (dB)", legend = false))
-  # savefig("SIMO_coeff1_sweep_no_phase_ramp_peak_loss.png")
-  savefig("SIMO_coeff1_sweep_peak_loss.png")
+  # savefig("MIMO_coeff1_sweep_no_phase_ramp_peak_loss.png")
+  savefig("MIMO_coeff1_sweep_peak_loss.png")
 
   # ---- PSLR ----
   vals1 = filterNaNs2D(PSLRs[1,:,:] .- ideal_PSLR[1])
@@ -59,76 +59,94 @@ begin
   vals3 = filterNaNs2D(PSLRs[3,:,:] .- ideal_PSLR[3])
 
 
-  makeBoxPlot(osc_coeff_sweep,vals1,"PSLR Change Along-Track (dB)","SIMO_coeff1_sweep_no_phase_ramp_pslr_change_AT.png")
-  makeBoxPlot(osc_coeff_sweep,vals2,"PSLR Change Cross-Track (dB)","SIMO_coeff1_sweep_no_phase_ramp_pslr_change_CT.png")
-  makeBoxPlot(osc_coeff_sweep,vals3,"PSLR Change Height (dB)","SIMO_coeff1_sweep_no_phase_ramp_pslr_change_hgt.png")
+  makeBoxPlot(osc_coeff_sweep,vals1,"PSLR Change Along-Track (dB)","MIMO_coeff1_sweep_no_phase_ramp_pslr_change_AT.png")
+  makeBoxPlot(osc_coeff_sweep,vals2,"PSLR Change Cross-Track (dB)","MIMO_coeff1_sweep_no_phase_ramp_pslr_change_CT.png")
+  makeBoxPlot(osc_coeff_sweep,vals3,"PSLR Change Height (dB)","MIMO_coeff1_sweep_no_phase_ramp_pslr_change_hgt.png")
 
   # makeStdevMeanPlot(osc_coeff_sweep, vals1,"PSLR Change Cross-Track (dB)", true)
   # display(boxplot(osc_coeff_sweep,vals1',title = "PSLR Change Cross-Track (dB)",
   #  xlabel = "Sync Repetition Interval (s)", legend = false))
-  # savefig("SIMO_coeff1_sweep_no_phase_ramp_pslr_change_CT.png")
+  # savefig("MIMO_coeff1_sweep_no_phase_ramp_pslr_change_CT.png")
   # display(boxplot(osc_coeff_sweep,vals2',title = "PSLR Change Along-Track (dB)",
   #  xlabel = "Sync Repetition Interval (s)", legend = false))
-  # savefig("SIMO_coeff1_sweep_no_phase_ramp_pslr_change_AT.png")
+  # savefig("MIMO_coeff1_sweep_no_phase_ramp_pslr_change_AT.png")
   # display(boxplot(osc_coeff_sweep,vals3',title = "PSLR Change Height (dB)",
   #  xlabel = "Sync Repetition Interval (s)", legend = false))
-  # savefig("SIMO_coeff1_sweep_no_phase_ramp_pslr_change_hgt.png")
+  # savefig("MIMO_coeff1_sweep_no_phase_ramp_pslr_change_hgt.png")
 
 
   # ---- ISLR ------
   vals1 = filterNaNs2D(ISLRs[1,:,:] .- ideal_ISLR[1])
   vals2 = filterNaNs2D(ISLRs[2,:,:] .- ideal_ISLR[2])
   vals3 = filterNaNs2D(ISLRs[3,:,:] .- ideal_ISLR[3])
-  makeBoxPlot(osc_coeff_sweep,vals1,"ISLR Change Along-Track (dB)","SIMO_coeff1_sweep_no_phase_ramp_islr_change_AT.png")
-  makeBoxPlot(osc_coeff_sweep,vals2,"ISLR Change Cross-Track (dB)","SIMO_coeff1_sweep_no_phase_ramp_islr_change_CT.png")
-  makeBoxPlot(osc_coeff_sweep,vals3,"ISLR Change Height (dB)","SIMO_coeff1_sweep_no_phase_ramp_islr_change_hgt.png")
+  makeBoxPlot(osc_coeff_sweep,vals1,"ISLR Change Along-Track (dB)","MIMO_coeff1_sweep_no_phase_ramp_islr_change_AT.png")
+  makeBoxPlot(osc_coeff_sweep,vals2,"ISLR Change Cross-Track (dB)","MIMO_coeff1_sweep_no_phase_ramp_islr_change_CT.png")
+  makeBoxPlot(osc_coeff_sweep,vals3,"ISLR Change Height (dB)","MIMO_coeff1_sweep_no_phase_ramp_islr_change_hgt.png")
 
   # display(boxplot(osc_coeff_sweep,vals1',title = "ISLR Change Cross-Track (dB)",
   #  xlabel = "Sync Repetition Interval (s)", legend = false))
-  # savefig("SIMO_coeff1_sweep_no_phase_ramp_islr_change_CT.png")
+  # savefig("MIMO_coeff1_sweep_no_phase_ramp_islr_change_CT.png")
   # display(boxplot(osc_coeff_sweep,vals2',title = "ISLR Change Along-Track (dB)",
   #  xlabel = "Sync Repetition Interval (s)", legend = false))
-  # savefig("SIMO_coeff1_sweep_no_phase_ramp_islr_change_AT.png")
+  # savefig("MIMO_coeff1_sweep_no_phase_ramp_islr_change_AT.png")
   # display(boxplot(osc_coeff_sweep,vals3',title = "ISLR Change Height (dB)",
   #  xlabel = "Sync Repetition Interval (s)", legend = false))
-  # savefig("SIMO_coeff1_sweep_no_phase_ramp_islr_change_hgt.png")
+  # savefig("MIMO_coeff1_sweep_no_phase_ramp_islr_change_hgt.png")
 
   # ---- Resolution ------
   vals1 = filterNaNs2D(resolutions[1,:,:] .- ideal_res[1])
   vals2 = filterNaNs2D(resolutions[2,:,:] .- ideal_res[2])
   vals3 = filterNaNs2D(resolutions[3,:,:] .- ideal_res[3])
 
-  makeBoxPlot(osc_coeff_sweep,vals1,"Resolution Change Along-Track (m)","SIMO_coeff1_sweep_no_phase_ramp_resolution_change_AT.png")
-  makeBoxPlot(osc_coeff_sweep,vals2,"Resolution Change Cross-Track (m)","SIMO_coeff1_sweep_no_phase_ramp_resolution_change_CT.png")
-  makeBoxPlot(osc_coeff_sweep,vals3,"Resolution Change Height (m)","SIMO_coeff1_sweep_no_phase_ramp_resolution_change_hgt.png")
+  makeBoxPlot(osc_coeff_sweep,vals1,"Resolution Change Along-Track (m)","MIMO_coeff1_sweep_no_phase_ramp_resolution_change_AT.png")
+  makeBoxPlot(osc_coeff_sweep,vals2,"Resolution Change Cross-Track (m)","MIMO_coeff1_sweep_no_phase_ramp_resolution_change_CT.png")
+  makeBoxPlot(osc_coeff_sweep,vals3,"Resolution Change Height (m)","MIMO_coeff1_sweep_no_phase_ramp_resolution_change_hgt.png")
 
 
   # display(boxplot(osc_coeff_sweep,vals1',title = "Resolution Change Cross-Track",
   #  xlabel = "Sync Repetition Interval (s)", legend = false))
-  # savefig("SIMO_coeff1_sweep_no_phase_ramp_resolution_change_CT.png")
+  # savefig("MIMO_coeff1_sweep_no_phase_ramp_resolution_change_CT.png")
   # display(boxplot(osc_coeff_sweep,vals2',title = "Resolution Change Along-Track (m)",
   #  xlabel = "Sync Repetition Interval (s)", legend = false))
-  # savefig("SIMO_coeff1_sweep_no_phase_ramp_resolution_change_AT.png")
+  # savefig("MIMO_coeff1_sweep_no_phase_ramp_resolution_change_AT.png")
   # display(boxplot(osc_coeff_sweep,vals3',title = "Resolution Change Height (m)",
   #  xlabel = "Sync Repetition Interval (s)", legend = false))
-  # savefig("SIMO_coeff1_sweep_no_phase_ramp_resolution_change_hgt.png")
+  # savefig("MIMO_coeff1_sweep_no_phase_ramp_resolution_change_hgt.png")
 
   # ---- Peak location error ------
   vals1 = filterNaNs2D(loc_errors[1,:,:])
   vals2 = filterNaNs2D(loc_errors[2,:,:])
   vals3 = filterNaNs2D(loc_errors[3,:,:])
-  makeBoxPlot(osc_coeff_sweep,vals1,"Peak Location Error Along-Track (m)","SIMO_coeff1_sweep_no_phase_ramp_peak_loc_AT.png")
-  makeBoxPlot(osc_coeff_sweep,vals2,"Peak Location Error Cross-Track (m)","SIMO_coeff1_sweep_no_phase_ramp_peak_loc_CT.png")
-  makeBoxPlot(osc_coeff_sweep,vals3,"Peak Location Error Height (m)","SIMO_coeff1_sweep_no_phase_ramp_peak_loc_hgt.png")
+  makeBoxPlot(osc_coeff_sweep,vals1,"Peak Location Error Along-Track (m)","MIMO_coeff1_sweep_no_phase_ramp_peak_loc_AT.png")
+  makeBoxPlot(osc_coeff_sweep,vals2,"Peak Location Error Cross-Track (m)","MIMO_coeff1_sweep_no_phase_ramp_peak_loc_CT.png")
+  makeBoxPlot(osc_coeff_sweep,vals3,"Peak Location Error Height (m)","MIMO_coeff1_sweep_no_phase_ramp_peak_loc_hgt.png")
 
   # display(boxplot(coeff_plot, vals1', title = "Peak Location Error Cross-Track (m)",
   #  xlabel = "Sync Repetition Interval (s)", legend = false))
-  #  savefig("SIMO_coeff1_sweep_no_phase_ramp_peak_loc_lat.png")
+  #  savefig("MIMO_coeff1_sweep_no_phase_ramp_peak_loc_lat.png")
   # display(boxplot(coeff_plot, vals2', title = "Peak Location Error Along-Track (m)",
   #   xlabel = "Sync Repetition Interval (s)", legend = false))
-  #   savefig("SIMO_coeff1_sweep_no_phase_ramp_peak_loc_lon.png")
+  #   savefig("MIMO_coeff1_sweep_no_phase_ramp_peak_loc_lon.png")
   # display(boxplot(coeff_plot, vals3', title = "Peak Location Error Height (m)",
   #    xlabel = "Sync Repetition Interval (s)", legend = false))
-  # savefig("SIMO_coeff1_sweep_no_phase_ramp_peak_loc_hgt.png")
+  # savefig("MIMO_coeff1_sweep_no_phase_ramp_peak_loc_hgt.png")
 
 end#begin
+
+
+
+
+# filename = "sync data/Lband/syncModule_MonteCarlo_mode_2_coeff_number1_sync_osc_sweep_wSync.jld2"
+# @load filename peaks resolutions PSLRs ISLRs ideal_res ideal_PSLR ideal_ISLR ideal_peak loc_errors osc_coeff_sweep
+# file = matopen("syncModule_MonteCarlo_mode_2_coeff_number1_sync_osc_sweep_wSync.mat","w")
+# write(file, "peaks", collect(peaks))
+# write(file, "resolutions", collect(resolutions))
+# write(file, "PSLRs", collect(PSLRs))
+# write(file, "ISLRs", collect(ISLRs))
+# write(file, "ideal_res", collect(ideal_res))
+# write(file, "ideal_PSLR", collect(ideal_PSLR))
+# write(file, "ideal_ISLR", collect(ideal_ISLR))
+# write(file, "ideal_peak", collect(ideal_peak))
+# write(file, "loc_errors", collect(loc_errors))
+# write(file, "osc_coeff_sweep", collect(osc_coeff_sweep))
+# close(file)

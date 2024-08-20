@@ -633,11 +633,13 @@ end #function
 #--end--function-------------------------------------------------------------------------------------------
 """
 Use measured one-sided PSD of the clock phase error and convert to a 2-sided PSD for later use in sync module. Interpolates to required frequency vector
+
 # Arguments
 - `fs::Integer`: max PSD frequency [sample rate of clock phase error process]
 - `N::Integer`: number of PSD sample points
 - `f_psd_meas::1 x N_psd Array`: frequency vector of measured PSD
 - `osc_psd_meas::1 x N_psd Array`: measured PSD amplitudes (1-sided)
+
 """
 #-start-function--------------------------------------------------------------------------------------------
 function osc_psd_measured(fs::Float64, N::Float64, f_psd_meas::Vector{Float64}, osc_psd_meas::Vector{Float64})
@@ -673,6 +675,7 @@ generates realizations of phase error given a two-sided oscillator PSD
 - `a_coeff_db:: 1x5 Array`: coefficients of the noise characteristic asymptotes
 - `no_sync_flag:: Bool`: Flag if sync is not used: Phase error resets to 0 at sync event if flag = 0
 - `delay_since_sync:: Bool`:
+
 """
 function osc_timeseries_from_psd_twosided(Sphi::Array{Float64,1},fs::Float64,phase_offset_flag::Bool,delay_since_sync::Float64)
 #   Generate time series from two sided PSD of clock phase error.
@@ -1174,6 +1177,7 @@ end#function
 #-start-function-------------------------------------------------------------------------------------------
 """
 This function reads measured PSD data in from an excel or jld2 file, returns frequency vector and PSD amplitude
+
 # Arguments
 - `filename::String`: filename of PSD data, in dBc/Hz scale
 """
@@ -1214,12 +1218,14 @@ end #function
 #-start-function-------------------------------------------------------------------------------------------
 """
 This function takes the position of the platforms and the radar pulse TDMA schedule to estimate TOF delays for received oscillator times
+
 # Arguments
 - `pos::3 x N_plat x N_time Array`: vector of platform positions
 - `t_xyz_3xN::3 x Ntarget Array`: 3D ECEF position(s) of target(s)
 - `tdma_radar::1 x Npulses Vector`: time slots for the tdma schedule of pulses
 - `tx_map::1 x Npulses Vector`: tdma schedule of who is transmitting
 - `params::Parameters`: user parameters with radar mode and master node
+
 # Output
 - `taus:: Ntimes x  N_plat x N_plat(if MIMO) Array`: Array of path length delays in seconds, calculated from Tx -> first target in scene -> Rx
 """
