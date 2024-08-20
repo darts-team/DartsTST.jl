@@ -19,29 +19,29 @@ end
 # or add parameter=value pairs directly in the workflow when creating the inputParameter object.
 @with_kw struct inputParameters
 
-    mode::Int  = 1 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
+    mode::Int  = 2 #1: SAR (ping-pong), 2:SIMO, 3:MIMO
     tx_el::Int = 1 # which element transmits for SIMO (max value N)
-    processing_steps =  :bp2d3d  # :bp3d --> 1-step, :bp2d3d --> 2-step for SAR and tomographic processing
+    processing_steps =  :bp3d  # :bp3d --> 1-step, :bp2d3d --> 2-step for SAR and tomographic processing
     processing_mode = 1  #1: All-platforms for processing, 2: Platforms 2-end (Except master) for processing 
 
     # radar parameters
-    fc::Float64  = 1.26e9 # center frequency (Hz) L-band; fc=3.2e9 # center frequency (Hz) S-band; fc=6e9 # center frequency (Hz) C-band
+    fc::Float64  = 1.25e9 # center frequency (Hz) L-band; fc=3.2e9 # center frequency (Hz) S-band; fc=6e9 # center frequency (Hz) C-band
     fp::Float64  = 10 # pulse repetition frequency (Hz)
     SNR::Float64 = 50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
     SAR_duration::Float64   = 5 #3 # synthetic aperture duration (s)
-    SAR_start_time::Float64 = -2.5 #-1.5#0 # SAR imaging start time (s)
+    SAR_start_time::Float64 = 0 #-1.5#0 # SAR imaging start time (s)
 
     # platform locations in xyz (including slow-time locations)
     user_defined_orbit::Int = 2 # 1: use orbits file; 2: user defined orbits in TCN
-    left_right_look::String = "left" # left or right looking geometry
-    orbit_filename::String =  "ROSE_L_Cartwheel_4sat.nc" #"orbit_output_08272023_1.nc" #"NISAR_orbit_coflier_lag3_theta_15_new.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
+    left_right_look::String = "right" # left or right looking geometry
+    orbit_filename::String =  "orbit_output_062021.nc" #"ROSE_L_Cartwheel_4sat.nc" #"orbit_output_08272023_1.nc" #"NISAR_orbit_coflier_lag3_theta_15_new.nc" # position in km, time in sec; "orbitOutput_082020.nc" --> TODO: convert to :file, :sch, :tcn
     orbit_file_coords = "ECI"
     # User defined orbits in TCN, used only if user_defined_orbit=2
     p_t0_LLH::Array{Float64,1} = [0;0;750e3] # initial lat/lon (deg) and altitude (m) of reference platform (altitude is assumed constant over slow-time if SCH option)
     Torbit::Float64    = 10*60 # orbital duration (s) (should be larger than 2 x (SAR_start_time+SAR_duration) )
     dt_orbits::Float64 = 0.5 # orbit time resolution (s)
     p_heading::Float64 = 0 # heading (deg), all platforms assumed to have the same heading, 0 deg is north
-    pos_n   = [-15 -10 -5 0 5 10 15]*1e3 # relative position of each platform along n (m), 0 is the reference location
+    pos_n   = [-7.5 -5 -2 0 3.7 5.5 6.5]*1e3# relative position of each platform along n (m), 0 is the reference location
 
     # target locations and reflectvities
     target_pos_mode::String="CR" #  targets are defined as three 1D arrays forming either a volumetric grid ("layered-grid" or "shaped-grid") or a 3xN array ("CR" for corner reflectors)
@@ -55,9 +55,9 @@ end
     polarization = 4# select polarization for scattering: 1 = VH, 2 = HV, 3 = VV, 4 = HH
 
     # image/scene pixel coordinates
-    s_loc_1 =  -5:1:5#-20:0.2:20 #-20:0.25:20#-40:1:40 # deg latitude if LLH, along-track if SCH, X if XYZ
-    s_loc_2 = -60:1:10 # -40:0.2:40 #-60:1:10 #-20:1:20 #-60:0.25:60 #-60:1:10 #-60:1:60 #-20:0.5:20 #-60:0.5:10 #-100:0.5:100 #-60:1:10 # deg longitude if LLH, cross-track if SCH, Y if XYZ
-    s_loc_3 = -5:1:50# -40:0.2:40 #-5:1:50 #-20:1:20 #-60:0.25:60 #-5:1:50 #-60:1:60 #-20:0.5:20 #-5:0.5:50 #-100:0.5:100 #-5:1:50 # m  heights if LLH or SCH, Z if XYZ
+    s_loc_1 =  0#-20:0.2:20 #-20:0.25:20#-40:1:40 # deg latitude if LLH, along-track if SCH, X if XYZ
+    s_loc_2 = -40:1:40 # -40:0.2:40 #-60:1:10 #-20:1:20 #-60:0.25:60 #-60:1:10 #-60:1:60 #-20:0.5:20 #-60:0.5:10 #-100:0.5:100 #-60:1:10 # deg longitude if LLH, cross-track if SCH, Y if XYZ
+    s_loc_3 = -40:1:40# -40:0.2:40 #-5:1:50 #-20:1:20 #-60:0.25:60 #-5:1:50 #-60:1:60 #-20:0.5:20 #-5:0.5:50 #-100:0.5:100 #-5:1:50 # m  heights if LLH or SCH, Z if XYZ
 
     # range spread function (RSF) parameters
     pulse_length::Float64 = 10e-6 # s pulse length
@@ -115,7 +115,7 @@ end
     # simulation options
     enable_thermal_noise::Bool    = false # whether to enable or disable random additive noise (e.g. thermal noise)
     display_geometry::Bool        = false # whether to display geometry plots
-    display_1D_cuts::Bool         = false # whether to 1D cuts from Scene module
+    display_1D_cuts::Bool         = true # whether to 1D cuts from Scene module
     display_custom_orbit::Bool    = false # whether to show custom orbit on Earth sphere (for a duration of Torbit)
     display_RSF_rawdata::Bool     = false # whether to display RSF and rawdata plots
     display_tomograms::Int        = 1 # how to display tomograms, 0: do not display, 1: display only 3 slices at the reference point, 2: display all slices in each dimension, 3: display as 3D scatter plot

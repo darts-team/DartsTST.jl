@@ -415,8 +415,8 @@ function make_orbit_new(pos, hdg, baseline_pos, tvec, theta, phi=0.0, left_right
     platf_vel           = repeat(platf_vel, 1, size(baseline_pos,2), length(tvec));
 
     for jj=1:length(tvec)  
-        #platf_pos[:,:,jj] = ( pos .+ ( bhat .* baseline_pos) ) .+ (platf_vel[:,:,jj]*tvec[jj]);
-        platf_pos[:,:,jj] = ( pos .+ ( nhat .* baseline_pos) ) .+ (platf_vel[:,:,jj]*tvec[jj]); # for platform spacing along vertical axis
+        platf_pos[:,:,jj] = ( pos .+ ( bhat .* baseline_pos) ) .+ (platf_vel[:,:,jj]*tvec[jj]);
+        #platf_pos[:,:,jj] = ( pos .+ ( nhat .* baseline_pos) ) .+ (platf_vel[:,:,jj]*tvec[jj]); # for platform spacing along vertical axis
 
     end
 
