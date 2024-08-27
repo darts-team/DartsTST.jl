@@ -22,15 +22,15 @@ function plot_image(x_axis,y_axis,Data,unit_flag, savepath, savename, figure_tit
 
     if unit_flag == "log"
         p1=(heatmap(x_axis,y_axis,10 .* log10.(abs.(Data)),xlabel="Lon [deg]",ylabel="Lat [deg]",title=figure_title,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(500,360) )) #500,360
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #500,360
         savefig(p1, savepath*savename*".png")
     elseif unit_flag == "lin"
         p1=(heatmap(x_axis,y_axis,(abs.(Data)),xlabel="Lon [deg]",ylabel="Lat [deg]", title=figure_title,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(500,360) )) #1200
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #1200
         savefig(p1, savepath*savename*".png")
     elseif unit_flag == "phase"
         p1=(heatmap(x_axis,y_axis,(Data),xlabel="Lon [deg]",ylabel="Lat [deg]", title=figure_title,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(500,360) )) #1200
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #1200
         savefig(p1, savepath*savename*".png")
     end
 end
@@ -43,15 +43,15 @@ function plot_image2(x_axis,y_axis,Data,unit_flag, savepath, savename, figure_ti
 
     if unit_flag == "log"
         p1=(heatmap(x_axis,y_axis,10 .* log10.(abs.(Data)),xlabel="Lon [deg]",ylabel="Lat [deg]",title=figure_title,c=colorbar,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(500,360) )) #500,360
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #500,360
         savefig(p1, savepath*savename*".png")
     elseif unit_flag == "lin"
         p1=(heatmap(x_axis,y_axis,(abs.(Data)),xlabel="Lon [deg]",ylabel="Lat [deg]", title=figure_title,c=colorbar,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(500,360) )) #1200
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #1200
         savefig(p1, savepath*savename*".png")
     elseif unit_flag == "phase"
         p1=(heatmap(x_axis,y_axis,(Data),xlabel="Lon [deg]",ylabel="Lat [deg]", title=figure_title, #c=:twilight,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(500,360) )) #1200
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #1200
         savefig(p1, savepath*savename*".png")
     end
 end
@@ -60,13 +60,13 @@ function plot_profile(x_axis, Data1, Data2, savepath, savename, xlabel, ylabel, 
 
     if Data2==""
         p1=(plot(x_axis, Data1,xlabel=xlabel,ylabel=ylabel,title=figure_title,legend=:topleft, lc=:black, label=label1,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(500,360) )) #500,360
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #500,360
         savefig(p1, savepath*savename*".png")
     else
         p1=(plot(x_axis, Data1,xlabel=xlabel,ylabel=ylabel,title=figure_title, legend=:topleft, lc=:black, label=label1,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(500,360) )) #500,360
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #500,360
         p1=(plot!(x_axis, Data2,xlabel=xlabel,ylabel=ylabel,title=figure_title, legend=:topleft,lc=:blue,label=label2,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(500,360) )) #500,360
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #500,360
         savefig(p1, savepath*savename*".png")
     end
 
@@ -302,10 +302,10 @@ end
 #------------------------------------------------------------------------------------------
 
 #Load the output file
-@load "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed_DEM/test_la2/Output81_10km_30la_geo994.jld" 
+@load "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed_DEM/test_la_41/Output12_10km_30la_geo_la12_1.jld" 
 
 # Mention the directory to save plots
-savepath                 = "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed_DEM/test_la2/Plots1/"
+savepath                 = "/Users/joshil/Documents/Outputs/InSAR Outputs/3t_distributed_DEM/test_la_41/Plots1_2/"
 
 if ~ispath(savepath)
     mkdir(savepath)

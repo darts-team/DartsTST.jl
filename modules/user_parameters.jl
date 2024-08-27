@@ -150,6 +150,14 @@ function validateInputParams(params)
 
     @assert params.target_pos_mode in ["CR", "layered-grid", "layered-grid-GEDIL2", "shaped-grid", "grid"]  "Target position mode is not valid"
 
+    SR                  = params.p_t0_LLH[3]/sind(params.look_angle)
+    Vel                 = 7500
+    if (params.ts_coord_sys == "SCH") || (params.ts_coord_sys == "XYZ")
+        Scene_len_AT    = params.s_loc_3[end]-params.s_loc_3[1]
+    else
+        Scene_len_AT    = (params.s_loc_3[end]-params.s_loc_3[1]) * 100e3
+    end
+    @assert params.fp >= ( (4*Vel/params.λ)*sind(atand(Scene_len_AT/SR)) )
     # Add more @assert's here
 
     return true

@@ -15,6 +15,7 @@ using ColorSchemes
 using GeoArrays
 using ArchGDAL
 using DelimitedFiles
+using DSP
 
 function plot_image(x_axis,y_axis,Data,unit_flag, savepath, savename, figure_title)
 
@@ -300,17 +301,29 @@ function plot_interferogram_histogram_statistics_magnitude(plot_var_hist, gamma_
 
 end
 
-function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, maxind_val_lat, savepath)
+function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, maxind_val_lat, profile_flag, savepath)
+
+
+    #profile_flag = 1, mean of profiles along-track
+    #profile_flag = 0, 1st sample along-track
 
     #DEM
     DEM_data                            = ref_data[:,:,14]
-    DEM_region_rangeprofile             = DEM_data[1:maxind_val_lon,1]
+    if profile_flag == 1
+        DEM_region_rangeprofile         = mean(DEM_data[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        DEM_region_rangeprofile         = DEM_data[1:maxind_val_lon,1]
+    end
     plot_image(Lon_vals,Lat_vals,DEM_data[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "DEM", "")
     plot_profile(Lon_vals, DEM_region_rangeprofile[:], "", savepath, "DEM_profile", "Lon [deg]", "DEM height [m]","", "", "", )
 
     #BRCS
     targets_ref_data                    = ref_data[:,:,13]
-    targets_ref_corr_rangeprofile       = targets_ref_data[1:maxind_val_lon,1]
+    if profile_flag == 1
+        targets_ref_corr_rangeprofile   = mean(targets_ref_data[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        targets_ref_corr_rangeprofile   = targets_ref_data[1:maxind_val_lon,1]
+    end
     plot_image(Lon_vals,Lat_vals,targets_ref_data[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "RCS", "")
     plot_profile(Lon_vals, targets_ref_corr_rangeprofile[:], "", savepath, "RCS_profile", "Lon [deg]", "Reflectivity from RCS","", "", "", )
 
@@ -319,9 +332,15 @@ function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, m
     Lookangle_P2                        = ref_data[:,:,4]
     Lookangle_Diff                      = Lookangle_P1 - Lookangle_P2
 
-    Lookangle_P1_rangeprofile           =  Lookangle_P1[1:maxind_val_lon,1] 
-    Lookangle_P2_rangeprofile           =  Lookangle_P2[1:maxind_val_lon,1]
-    Lookangle_Diff_rangeprofile         =  Lookangle_Diff[1:maxind_val_lon,1]
+    if profile_flag == 1
+        Lookangle_P1_rangeprofile       = mean(Lookangle_P1[1:maxind_val_lon,:],dims=2)
+        Lookangle_P2_rangeprofile       = mean(Lookangle_P2[1:maxind_val_lon,:],dims=2)
+        Lookangle_Diff_rangeprofile     = mean(Lookangle_Diff[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        Lookangle_P1_rangeprofile       =  Lookangle_P1[1:maxind_val_lon,1] 
+        Lookangle_P2_rangeprofile       =  Lookangle_P2[1:maxind_val_lon,1]
+        Lookangle_Diff_rangeprofile     =  Lookangle_Diff[1:maxind_val_lon,1]
+    end
 
     plot_image(Lon_vals,Lat_vals,Lookangle_P1[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Lookangle_P1", "")
     plot_image(Lon_vals,Lat_vals,Lookangle_P2[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Lookangle_P2", "")
@@ -335,9 +354,15 @@ function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, m
     Incangle_P2                         = ref_data[:,:,6]
     Incangle_Diff                       = Incangle_P1 - Incangle_P2
 
-    Incangle_P1_rangeprofile            =  Incangle_P1[1:maxind_val_lon,1]
-    Incangle_P2_rangeprofile            =  Incangle_P2[1:maxind_val_lon,1] 
-    Incangle_Diff_rangeprofile          =  Incangle_Diff[1:maxind_val_lon,1] 
+    if profile_flag == 1
+        Incangle_P1_rangeprofile        = mean(Incangle_P1[1:maxind_val_lon,:],dims=2)
+        Incangle_P2_rangeprofile        = mean(Incangle_P2[1:maxind_val_lon,:],dims=2)
+        Incangle_Diff_rangeprofile      = mean(Incangle_Diff[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        Incangle_P1_rangeprofile        =  Incangle_P1[1:maxind_val_lon,1]
+        Incangle_P2_rangeprofile        =  Incangle_P2[1:maxind_val_lon,1] 
+        Incangle_Diff_rangeprofile      =  Incangle_Diff[1:maxind_val_lon,1] 
+    end
 
     plot_image(Lon_vals,Lat_vals,Incangle_P1[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Incangle_P1", "")
     plot_image(Lon_vals,Lat_vals,Incangle_P2[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Incangle_P2", "")
@@ -348,13 +373,21 @@ function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, m
 
     #Local Incidence angle
     LocalIncangle                       = ref_data[:,:,9]
-    LocalIncangle_rangeprofile          =  LocalIncangle[1:maxind_val_lon,1] 
+    if profile_flag == 1
+        LocalIncangle_rangeprofile      = mean(LocalIncangle[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        LocalIncangle_rangeprofile      =  LocalIncangle[1:maxind_val_lon,1] 
+    end
     plot_image(Lon_vals,Lat_vals,LocalIncangle[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "LocalIncangle", "")
     plot_profile(Lon_vals, LocalIncangle_rangeprofile[:], "", savepath, "LocalIncangle_profile", "Lon [deg]", "Local incidence Angle [deg]","", "", "", )
 
     #Range slope angle
     range_slope                         = ref_data[:,:,10]
-    range_slope_rangeprofile            =  range_slope[1:maxind_val_lon,1] 
+    if profile_flag == 1
+        range_slope_rangeprofile        = mean(range_slope[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        range_slope_rangeprofile        =  range_slope[1:maxind_val_lon,1]
+    end
     plot_image(Lon_vals,Lat_vals,range_slope[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "RangeSlopeangle", "")
     plot_profile(Lon_vals, range_slope_rangeprofile[:], "", savepath, "RangeSlopeangle_profile", "Lon [deg]", "Range Slope Angle [deg]","", "", "", )
 
@@ -363,9 +396,15 @@ function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, m
     Slantrange_P2                       = ref_data[:,:,2]
     Slantrange_Diff                     = Slantrange_P1 - Slantrange_P2
 
-    Slantrange_P1_rangeprofile          =  Slantrange_P1[1:maxind_val_lon,1] 
-    Slantrange_P2_rangeprofile          =  Slantrange_P2[1:maxind_val_lon,1] 
-    Slantrange_Diff_rangeprofile        =  Slantrange_Diff[1:maxind_val_lon,1] 
+    if profile_flag == 1
+        Slantrange_P1_rangeprofile      = mean(Slantrange_P1[1:maxind_val_lon,:],dims=2)
+        Slantrange_P2_rangeprofile      = mean(Slantrange_P2[1:maxind_val_lon,:],dims=2)
+        Slantrange_Diff_rangeprofile    = mean(Slantrange_Diff[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        Slantrange_P1_rangeprofile      =  Slantrange_P1[1:maxind_val_lon,1] 
+        Slantrange_P2_rangeprofile      =  Slantrange_P2[1:maxind_val_lon,1] 
+        Slantrange_Diff_rangeprofile    =  Slantrange_Diff[1:maxind_val_lon,1] 
+    end
 
     plot_image(Lon_vals,Lat_vals,Slantrange_P1[1:maxind_val_lon,1:maxind_val_lat]'./1e3,"lin", savepath, "Slantrange_P1", "")
     plot_image(Lon_vals,Lat_vals,Slantrange_P2[1:maxind_val_lon,1:maxind_val_lat]'./1e3,"lin", savepath, "Slantrange_P2", "")
@@ -381,33 +420,53 @@ function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, m
     plot_image(Lon_vals,Lat_vals,Unwrapped_data',"phase", savepath, "Slantrange_Diff_unwrapped", "")
     plot_image(Lon_vals,Lat_vals,Wrapped_data',"phase", savepath, "Slantrange_Diff_wrapped", "")
 
-    Wrapped_data_rangeprofile           =  Wrapped_data[1:maxind_val_lon,1] 
+    if profile_flag == 1
+        Wrapped_data_rangeprofile       = mean(Wrapped_data[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        Wrapped_data_rangeprofile       =  Wrapped_data[1:maxind_val_lon,1] 
+    end
     plot_profile(Lon_vals, Wrapped_data_rangeprofile[:], "", savepath, "Slantrange_profile_wrapped", "Lon [deg]", "", "", "", "")
 
     # Critical baseline
     Critical_baseline                   = ref_data[:,:,11]
-    Critical_baseline_rangeprofile      =  Critical_baseline[1:maxind_val_lon,1] 
+    if profile_flag == 1
+        Critical_baseline_rangeprofile  = mean(Critical_baseline[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        Critical_baseline_rangeprofile  =  Critical_baseline[1:maxind_val_lon,1] 
+    end
 
     plot_image(Lon_vals,Lat_vals,Critical_baseline[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Critical_baseline_P1", "")
     plot_profile(Lon_vals, Critical_baseline_rangeprofile[:], "", savepath, "Critical_baseline_profile", "Lon [deg]", "Critical baseline  [m]", "", "", "")
 
     # Perp baseline
     Perp_baseline                       = ref_data[:,:,7]
-    Perp_baseline_rangeprofile          =  Perp_baseline[1:maxind_val_lon,1]  
+    if profile_flag == 1
+        Perp_baseline_rangeprofile      = mean(Perp_baseline[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        Perp_baseline_rangeprofile      =  Perp_baseline[1:maxind_val_lon,1]   
+    end
 
     plot_image(Lon_vals,Lat_vals,Perp_baseline[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Perp_baseline_P1", "")
     plot_profile(Lon_vals, Perp_baseline_rangeprofile[:], "", savepath, "Perp_baseline_profile","Lon [deg]", "Perp baseline  [m]", "", "", "")
 
     # vertical wavenumber
     Vert_wavnum                         = ref_data[:,:,8]
-    Vert_wavnum_rangeprofile            =  Vert_wavnum[1:maxind_val_lon,1]  
+    if profile_flag == 1
+        Vert_wavnum_rangeprofile        = mean(Vert_wavnum[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        Vert_wavnum_rangeprofile        =  Vert_wavnum[1:maxind_val_lon,1] 
+    end
 
     plot_image(Lon_vals,Lat_vals,Vert_wavnum[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Vert_wavnum_P1", "")
     plot_profile(Lon_vals, Vert_wavnum_rangeprofile[:], "", savepath, "Vert_wavnum_profile", "Lon [deg]", "Vert wave num  ", "", "", "")
 
     # Theoretical correlation 
     Correlation_theo                    =  ref_data[:,:,12]
-    Correlation_theo_rangeprofile       =  Correlation_theo[1:maxind_val_lon,1] 
+    if profile_flag == 1
+        Correlation_theo_rangeprofile   = mean(Correlation_theo[1:maxind_val_lon,:],dims=2)
+    elseif profile_flag == 0
+        Correlation_theo_rangeprofile   =  Correlation_theo[1:maxind_val_lon,1] 
+    end
 
     plot_image(Lon_vals,Lat_vals,Correlation_theo[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Correlation_theo_P1", "")
     plot_profile(Lon_vals, Correlation_theo_rangeprofile[:], "", savepath, "Correlation_theo_profile", "Lon [deg]", "Correlation theory  ", "", "", "")
@@ -424,121 +483,178 @@ function get_max_ind_vec(data_len,looks)
     end
     return 0
 end
+#------------------------------------------------------------------------------------------
 
+#Load the output file
+s_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/13/13_scene_geometry_1.tif" 
+t_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/13/13_target_geometry_1.tif" 
 
-function combine_tif_files(file_list_path, file_list_name)
+opdata_filepath_s       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/13/13_sim_output_main_1.tif" 
+opdata_filepath_t       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/13/13_sim_output_main_1.tif" 
 
-    file_list_path = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/11/s_all/"
-    file_list_name = "s_all_list.txt"
-    
-    list =  readdlm(file_list_path*file_list_name)
+savepath                = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/13/"
 
-    display(heatmap())
-    for i=1:size(list)[1]
+process_plot_output_flag      = "T"
 
-        
-        file_t1 = file_list_path*list[i]
+profile_flag            = 1
 
-        s_geom_data             = GeoArrays.read(file_t1)
-        
-        coords_op               = collect(GeoArrays.coords(s_geom_data))
-        
-        Lon_vals_all            = [x[1] for x in coords_op]
-        Lon_vals                = Lon_vals_all[:,1]
-        
-        Lat_vals_all            = [x[2] for x in coords_op]
-        Lat_vals                = Lat_vals_all[1,:]
+Looks_along_Lat         = 2#2
+Looks_along_Lon         = 10 #15
 
-        p1=(heatmap!(Lon_vals,Lat_vals,s_geom_data[:,:,3],xlabel="Lon [deg]",ylabel="Lat [deg]", title="",
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #1200
-    end
-    savefig(p1, file_list_path*"LA.png")
+if process_plot_output_flag == "S"
 
+    savepath                 = savepath*"Plots_s/"
+    if ~ispath(savepath)
+        mkdir(savepath)
+    end    
 
+    s_geom_data                     = GeoArrays.read(s_geom_filepath)
+    t_geom_data                     = GeoArrays.read(t_geom_filepath)
+
+    coords_op                       = collect(GeoArrays.coords(s_geom_data))
+
+    Lon_vals_all                    = [x[1] for x in coords_op]
+    Lon_vals                        = Lon_vals_all[:,1]
+
+    Lat_vals_all                    = [x[2] for x in coords_op]
+    Lat_vals                        = (Lat_vals_all[1,:])
+
+    maxind_val_lon                  = get_max_ind_vec(length(Lon_vals),Looks_along_Lon)
+    maxind_val_lat                  = get_max_ind_vec(length(Lat_vals),Looks_along_Lat)
+
+    Lon_vals                        = Lon_vals[1:maxind_val_lon]
+    Lat_vals                        = Lat_vals[1:maxind_val_lat]
+
+    geom_savepath                   = savepath*"Geom_plots_s/"
+    plot_geometry_variables(s_geom_data, Lon_vals, Lat_vals, maxind_val_lon, maxind_val_lat, profile_flag, geom_savepath)
+
+    data_op                         = ArchGDAL.read(opdata_filepath_s)
+
+elseif process_plot_output_flag == "T"
+
+    savepath                 = savepath*"Plots_t/"
+    if ~ispath(savepath)
+        mkdir(savepath)
+    end  
+
+    t_geom_data                     = GeoArrays.read(t_geom_filepath)
+
+    coords_op                       = collect(GeoArrays.coords(t_geom_data))
+
+    Lon_vals_all                    = [x[1] for x in coords_op]
+    Lon_vals                        = Lon_vals_all[:,1]
+
+    Lat_vals_all                    = [x[2] for x in coords_op]
+    Lat_vals                        = (Lat_vals_all[1,:])
+
+    maxind_val_lon                  = get_max_ind_vec(length(Lon_vals),Looks_along_Lon)
+    maxind_val_lat                  = get_max_ind_vec(length(Lat_vals),Looks_along_Lat)
+
+    Lon_vals                        = Lon_vals[1:maxind_val_lon]
+    Lat_vals                        = Lat_vals[1:maxind_val_lat]
+
+    geom_savepath                   = savepath*"Geom_plots_t/"
+    plot_geometry_variables(t_geom_data, Lon_vals, Lat_vals, maxind_val_lon, maxind_val_lat, profile_flag, geom_savepath)
+
+    data_op                         = ArchGDAL.read(opdata_filepath_t)
 
 end
 
 
-#------------------------------------------------------------------------------------------
+Data_1                          = ArchGDAL.getband(data_op, 3)
+Data_2                          = ArchGDAL.getband(data_op, 4)
 
-#Load the output file
-
-
-s_file_list_path = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/11/s_all/"
-s_file_list_name = "s_all_list.txt"
-
-s_list =  readdlm(s_file_list_path*s_file_list_name)
+Data_1                          = Data_1[1:maxind_val_lon,1:maxind_val_lat]
+Data_2                          = Data_2[1:maxind_val_lon,1:maxind_val_lat]
 
 
+# Amplitude, phase and power plots and statistics
+Amp_1                           = abs.(Data_1)
+Amp_2                           = abs.(Data_2)
 
-file_list_path = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/11/sim_all/"
-file_list_name = "sim_all_list.txt"
+Pow_1                           = abs.(Amp_1 .* conj(Amp_1))
+Pow_2                           = abs.(Amp_2 .* conj(Amp_2))
 
-list =  readdlm(file_list_path*file_list_name)
+Phase_1                         = angle.(Data_1)
+Phase_2                         = angle.(Data_2)
 
-display(heatmap())
-for i=1:size(list)[1]
+gr()
 
+plot_image(Lon_vals,Lat_vals,Pow_1',"log", savepath*"Power_plots/", "Power_P1_log", "")
+plot_image(Lon_vals,Lat_vals,Pow_2',"log", savepath*"Power_plots/", "Power_P2_log", "")
 
-    s_geom_data             = GeoArrays.read(s_file_list_path*s_list[i])
+plot_image(Lon_vals,Lat_vals,Pow_1',"lin", savepath*"Power_plots/", "Power_P1_lin", "")
+plot_image(Lon_vals,Lat_vals,Pow_2',"lin", savepath*"Power_plots/", "Power_P2_lin", "")
 
-    coords_op               = collect(GeoArrays.coords(s_geom_data))
-    
-    Lon_vals_all            = [x[1] for x in coords_op]
-    Lon_vals                = Lon_vals_all[:,1]
-    
-    Lat_vals_all            = [x[2] for x in coords_op]
-    Lat_vals                = (Lat_vals_all[1,:])
-    
+plot_image(Lon_vals,Lat_vals,(Pow_1./mean(Pow_1))',"lin", savepath*"Power_plots/", "Power_P1_lin_norm", "")
+plot_image(Lon_vals,Lat_vals,(Pow_2./mean(Pow_2))',"lin", savepath*"Power_plots/", "Power_P2_lin_norm", "")
 
+if profile_flag == 1
+    Pow_1_rangeprofile          = mean(Pow_1[1:maxind_val_lon,:],dims=2)
+    Pow_2_rangeprofile          = mean(Pow_2[1:maxind_val_lon,:],dims=2)
+elseif profile_flag == 0
+    Pow_1_rangeprofile          =  Pow_1[:,1] 
+    Pow_2_rangeprofile          =  Pow_2[:,1] 
+end 
 
-    println(i)
-file_t1 = file_list_path*list[i]
-
-Looks_along_Lat         = 4#2
-Looks_along_Lon         = 12 #15
-
-maxind_val_lon          = get_max_ind_vec(length(Lon_vals),Looks_along_Lon)
-maxind_val_lat          = get_max_ind_vec(length(Lat_vals),Looks_along_Lat)
-
-Lon_vals                = Lon_vals[1:maxind_val_lon]
-Lat_vals                = Lat_vals[1:maxind_val_lat]
+plot_profile(Lon_vals, 10 .* log10.(Pow_1_rangeprofile[:]), "", savepath*"Power_plots/", "Pow_1_profile", "Lon [deg]", "Power [dB] ", "", "", "")
+plot_profile(Lon_vals, 10 .* log10.(Pow_2_rangeprofile[:]), "", savepath*"Power_plots/", "Pow_2_profile", "Lon [deg]", "Power [dB]", "", "", "")
 
 
-data_op                 = ArchGDAL.read(file_t1)
+plot_image(Lon_vals,Lat_vals,Amp_1',"log", savepath*"Amplitude_plots/", "Amp_P1_log", "")
+plot_image(Lon_vals,Lat_vals,Amp_2',"log", savepath*"Amplitude_plots/", "Amp_P2_log", "")
 
-Data_1                  = ArchGDAL.getband(data_op, 3)
-Data_2                  = ArchGDAL.getband(data_op, 4)
+plot_image(Lon_vals,Lat_vals,Amp_1',"lin", savepath*"Amplitude_plots/", "Amp_P1_lin", "")
+plot_image(Lon_vals,Lat_vals,Amp_2',"lin", savepath*"Amplitude_plots/", "Amp_P2_lin", "")
 
-Data_1                  = Data_1[1:maxind_val_lon,1:maxind_val_lat]
-Data_2                  = Data_2[1:maxind_val_lon,1:maxind_val_lat]
+plot_image(Lon_vals,Lat_vals,(Amp_1./mean(Amp_1))',"lin", savepath*"Amplitude_plots/", "Amp_P1_lin_norm", "")
+plot_image(Lon_vals,Lat_vals,(Amp_2./mean(Amp_2))',"lin", savepath*"Amplitude_plots/", "Amp_P2_lin_norm", "")
 
-Amp_1                   = abs.(Data_1)
-Amp_2                   = abs.(Data_2)
+if profile_flag == 1
+    Amp_1_rangeprofile          = mean(Amp_1[1:maxind_val_lon,:],dims=2)
+    Amp_2_rangeprofile          = mean(Amp_2[1:maxind_val_lon,:],dims=2)
+elseif profile_flag == 0
+    Amp_1_rangeprofile          =  Amp_1[:,1]
+    Amp_2_rangeprofile          =  Amp_2[:,1]
+end
+
+plot_profile(Lon_vals, 10 .* log10.(Amp_1_rangeprofile[:]), "", savepath*"Amplitude_plots/", "Amp_1_profile","Lon [deg]", "Amplitude [dB] ", "", "", "")
+plot_profile(Lon_vals, 10 .* log10.(Amp_2_rangeprofile[:]), "", savepath*"Amplitude_plots/", "Amp_2_profile", "Lon [deg]", "Amplitude [dB]", "", "", "")
+
+plot_image(Lon_vals,Lat_vals,Phase_1',"phase", savepath*"Phase_plots/", "Phase_P1_lin", "")
+plot_image(Lon_vals,Lat_vals,Phase_2',"phase", savepath*"Phase_plots/", "Phase_P2_lin", "")
+
+# Amplitude statistics plots 
+plot_var                        = Amp_1[:]
+A = plot_histogram_statistics_amplitude(plot_var[:], savepath*"Amplitude_plots/", "P1_amp")
+plot_var                        = Amp_2[:]
+A = plot_histogram_statistics_amplitude(plot_var[:], savepath*"Amplitude_plots/", "P2_amp")
+
+# Power statistics plots 
+plot_var                        = Pow_1[:]
+A = plot_histogram_statistics_power(plot_var[:], savepath*"Power_plots/", "P1_pow")
+plot_var                        = Pow_2[:]
+A = plot_histogram_statistics_power(plot_var[:], savepath*"Power_plots/", "P2_pow")
+
+# Phase statistics plots 
+plot_var                        = Phase_1[:]
+A = plot_histogram_statistics_phase(plot_var[:], savepath*"Phase_plots/", "P1_phase")
+plot_var                        = Phase_2[:]
+A = plot_histogram_statistics_phase(plot_var[:], savepath*"Phase_plots/", "P2_phase")
 
 
-Pow_1                   = abs.(Amp_1 .* conj(Amp_1))
-Pow_2                   = abs.(Amp_2 .* conj(Amp_2))
+# Multi looking power stat and plot
+Lat_length_ml                   = Int(maxind_val_lat/Looks_along_Lat)
+Lon_length_ml                   = Int(maxind_val_lon/Looks_along_Lon)
 
-#Interferometry
-Data_12 		        = Data_1 .* conj(Data_2)
+Pow_1_multilooked               = zeros(Lon_length_ml,Lat_length_ml)
+Pow_2_multilooked               = zeros(Lon_length_ml,Lat_length_ml)
 
-Pow_12                  = abs.(Data_12)
-Phase_12                = angle.(Data_12)
+Lat_vals_multilooked            = zeros(Lat_length_ml)
+Lon_vals_multilooked            = zeros(Lon_length_ml)
 
-
-Lat_length_ml           = Int(maxind_val_lat/Looks_along_Lat)
-Lon_length_ml           = Int(maxind_val_lon/Looks_along_Lon)
-
-
-Pow_1_multilooked       = zeros(Lon_length_ml,Lat_length_ml)
-Pow_2_multilooked       = zeros(Lon_length_ml,Lat_length_ml)
-
-Lat_vals_multilooked    = zeros(Lat_length_ml)
-Lon_vals_multilooked    = zeros(Lon_length_ml)
-
-norm_mean_pow1 = maximum(Pow_1)
-norm_mean_pow2 = maximum(Pow_1)
+norm_mean_pow1                  = maximum(Pow_1)
+norm_mean_pow2                  = maximum(Pow_1)
 
 k=1
 for i=1:Lat_length_ml
@@ -553,12 +669,48 @@ for i=1:Lat_length_ml
     k=k+Looks_along_Lat
 end
 
-Int_Pow_multilooked         = zeros(Lon_length_ml,Lat_length_ml)
-Int_Phase_multilooked       = zeros(Lon_length_ml,Lat_length_ml)
-Correlation                 = zeros(Lon_length_ml,Lat_length_ml)
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Pow_1_multilooked',"log", savepath*"Power_plots/", "ML_Power_P1_log", "")
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Pow_2_multilooked',"log", savepath*"Power_plots/", "ML_Power_P2_log", "")
+        
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Pow_1_multilooked',"lin", savepath*"Power_plots/", "ML_Power_P1_lin", "")
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Pow_2_multilooked',"lin", savepath*"Power_plots/", "ML_Power_P2_lin", "")
 
-Lat_vals_multilooked        = zeros(Lat_length_ml)
-Lon_vals_multilooked        = zeros(Lon_length_ml)
+# Power statistics plots 
+plot_var                        = Pow_1_multilooked[:]
+A = plot_histogram_only(plot_var[:],"Power", savepath*"Power_plots/", "ML_P1_pow")
+plot_var                        = Pow_2_multilooked[:]
+A = plot_histogram_only(plot_var[:],"Power", savepath*"Power_plots/", "ML_P2_pow")
+
+
+
+#Interferometry
+Data_12 		                = Data_1 .* conj(Data_2)
+
+Pow_12                          = abs.(Data_12)
+Phase_12                        = angle.(Data_12)
+
+plot_image(Lon_vals,Lat_vals,Pow_12',"log", savepath*"Int_plots/", "Int_Power_P12_log", "")
+plot_image(Lon_vals,Lat_vals,Pow_12',"lin", savepath*"Int_plots/", "Int_Power_P12_lin", "")
+
+plot_image(Lon_vals,Lat_vals,(Pow_12 ./ ((Pow_1.*Pow_2).^0.5))',"log", savepath*"Int_plots/", "Int_Coh_Power_P12_log", "")
+plot_image(Lon_vals,Lat_vals,(Pow_12 ./ ((Pow_1.*Pow_2).^0.5))',"lin", savepath*"Int_plots/", "Int_Coh_Power_P12_lin", "")
+
+plot_image(Lon_vals,Lat_vals,Phase_12',"lin", savepath*"Int_plots/", "Int_Phase_P12_lin", "")
+
+if profile_flag == 1
+    Pow_12_rangeprofile         =  mean(Pow_12,dims=2)
+elseif profile_flag == 0
+    Pow_12_rangeprofile         =  Pow_12[:,1]
+end
+plot_profile(Lon_vals, 10 .* log10.(Pow_12_rangeprofile[:]), "", savepath*"Int_plots/", "Pow_12_profile", "Lon [deg]", "Power [dB] ", "", "", "")
+
+
+Int_Pow_multilooked             = zeros(Lon_length_ml,Lat_length_ml)
+Int_Phase_multilooked           = zeros(Lon_length_ml,Lat_length_ml)
+Correlation                     = zeros(Lon_length_ml,Lat_length_ml)
+
+Lat_vals_multilooked            = zeros(Lat_length_ml)
+Lon_vals_multilooked            = zeros(Lon_length_ml)
 
 k=1
 for i=1:Int((length(Lat_vals))/Looks_along_Lat)
@@ -574,18 +726,103 @@ for i=1:Int((length(Lat_vals))/Looks_along_Lat)
     end
     k=k+Looks_along_Lat
 end
+
+
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Int_Pow_multilooked',"log", savepath*"Int_plots/", "ML_Power_P12_log", "")
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Int_Pow_multilooked',"lin", savepath*"Int_plots/", "ML_Power_P12_lin", "")
         
+plot_image2(Lon_vals_multilooked,Lat_vals_multilooked,Int_Phase_multilooked',"phase", savepath*"Int_plots/", "ML_Phase_P12_lin", "",":twilight")
+#plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Correlation,"lin", savepath*"Int_plots/", "ML_Correlation_lin", "")
 
-global p1=(heatmap!(Lon_vals_multilooked,(Lat_vals_multilooked),Int_Phase_multilooked',xlabel="Lon [deg]",ylabel="Lat [deg]", title="",
-topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #1200
-
-global p2=(plot!(Lon_vals_multilooked,Int_Phase_multilooked[:,1][:],xlabel="Lon [deg]",ylabel="", title="", ylim=(-0.25,0.25), legend=:false,
-topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #1200
-
-
+if profile_flag == 1
+    Correlation_rangeprofile    =  mean(Int_Pow_multilooked,dims=2)
+    Int_phase_rangeprofile      =  mean(Int_Phase_multilooked,dims=2)
+elseif profile_flag == 0
+    Correlation_rangeprofile    = Int_Pow_multilooked[:,1] 
+    Int_phase_rangeprofile      = Int_Phase_multilooked[:,1] 
 end
-savefig(p1, file_list_path*"Ph1.png")
-savefig(p2, file_list_path*"Ph2.png")
+
+plot_profile(Lon_vals_multilooked, Correlation_rangeprofile[:], "", savepath*"Int_plots/", "Int_mag_profile", "Lon [deg]", "Magnitude  ", "", "", "")
+plot_profile(Lon_vals_multilooked, Int_phase_rangeprofile[:], "", savepath*"Int_plots/", "Int_phase__profile", "Lon [deg]", "Phase [rad]  ", "", "", "")
+
+A = plot_histogram_only(Int_Pow_multilooked[:], "Magnitude ",savepath*"Int_plots/", "ML_Int_mag")
+A = plot_histogram_only(Int_Phase_multilooked[:], "Phase",savepath*"Int_plots/", "ML_Int_ph")
+
+#gamma_ip = mean(Int_Pow_multilooked[:])
+gamma_ip = mean(s_geom_data[:,:,12])
+
+oversampling_factor_looks = 1# 2.58*2.18
+
+A = plot_interferogram_histogram_statistics_phase(Int_Phase_multilooked[:], gamma_ip, (Looks_along_Lat*Looks_along_Lon)/oversampling_factor_looks,0.0, (-0.5,0.5), savepath*"Int_plots/", "PDF_Phase_Han1")
+A = plot_interferogram_histogram_statistics_phase_han1(Int_Phase_multilooked[:], gamma_ip, (Looks_along_Lat*Looks_along_Lon)/oversampling_factor_looks, 0.0, (-0.5,0.5), savepath*"Int_plots/", "PDF_Phase_Han2")
+B = plot_interferogram_histogram_statistics_magnitude(Int_Pow_multilooked[:], gamma_ip, (Looks_along_Lat*Looks_along_Lon)/oversampling_factor_looks, (0.5,1), savepath*"Int_plots/", "PDF_Mag_Han1")
+
+Correlation_rangeprofile_window = movmean(Correlation_rangeprofile, 20)
+Int_phase_rangeprofile_window   = movmean(Int_phase_rangeprofile, 20)
+
+plot_profile(Lon_vals_multilooked, Correlation_rangeprofile_window[:], "", savepath*"Int_plots/", "Int_mag_profile_window", "Lon [deg]", "Magnitude  ", "", "", "")
+plot_profile(Lon_vals_multilooked, Int_phase_rangeprofile_window[:], "", savepath*"Int_plots/", "Int_phase_profile_window", "Lon [deg]", "Phase [rad]  ", "", "", "")
+
+
+CF_A, CF_B = linear_fit(Lon_vals_multilooked,Correlation_rangeprofile_window)
+
+p1=(plot(Lon_vals_multilooked, Correlation_rangeprofile_window[:],xlabel="Lon [deg]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:black, label="",
+topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
+p1=(plot!(Lon_vals_multilooked, (Lon_vals_multilooked .* CF_B).+CF_A,xlabel="Lon [deg]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:red, label="Linear Fit",
+topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
+savefig(p1, savepath*"Int_plots/"*"Int_mag_profile_window2"*".png")
+
+
+#Estimate height from wrapped interferometric phase
+
+if profile_flag == 1
+    int_wrapped_data        =  mean(Int_Phase_multilooked,dims=2)
+elseif profile_flag == 0
+    int_wrapped_data        = Int_Phase_multilooked[:,1]
+end
+plot_profile(Lon_vals_multilooked, int_wrapped_data[:], "", savepath*"Int_plots/", "Int_wrapped_data_profile", "Lon [deg]", "  ", "", "", "")
+
+int_unwrapped_data          = DSP.unwrap(int_wrapped_data[:]) .* -1
+plot_profile(Lon_vals_multilooked, int_unwrapped_data[:], "", savepath*"Int_plots/", "Int_unwrapped_data_profile", "Lon [deg]", "  ", "", "", "")
+
+int_unwrapped_data_2        = (int_unwrapped_data ./ (2 * pi )) 
+plot_profile(Lon_vals_multilooked, int_unwrapped_data_2[:], "", savepath*"Int_plots/", "Int_unwrapped_data_profile_2", "Lon [deg]", "  ", "", "", "")
+
+
+if profile_flag == 1
+    slant_range_profile         =  mean(s_geom_data[1:Looks_along_Lon:maxind_val_lon,:,1],dims=2)
+    look_angle_profile          =  mean(s_geom_data[1:Looks_along_Lon:maxind_val_lon,:,3],dims=2)
+    perp_baseline_profile       =  mean(s_geom_data[1:Looks_along_Lon:maxind_val_lon,:,7],dims=2)
+elseif profile_flag == 0
+    slant_range_profile         = s_geom_data[1:Looks_along_Lon:maxind_val_lon,1,1]
+    look_angle_profile          = s_geom_data[1:Looks_along_Lon:maxind_val_lon,1,3]
+    perp_baseline_profile       = s_geom_data[1:Looks_along_Lon:maxind_val_lon,1,7]
+end
+
+int_unwrapped_height_2      = int_unwrapped_data .* (0.23793052222222222/(4*pi)) .* (slant_range_profile .*sind.(look_angle_profile) ./perp_baseline_profile)
+plot_profile(Lon_vals_multilooked, int_unwrapped_height_2[:], "", savepath*"Int_plots/", "Int_unwrapped_height_profile", "Lon [deg]", "Height [m]", "", "", "")
+
+#=
+p2 = (plot(Lon_vals, Correlation_theo_P1_rangeprofile[:], label="Theory"))
+p2 = (plot!(Lon_vals_multilooked, (Lon_vals_multilooked .* CF_B).+CF_A, label="Sim"))
+
+AASR = 10 ^(-26/10)
+p2 = (plot!(Lon_vals_multilooked, ((Lon_vals_multilooked .* CF_B).+CF_A) * (1/1+(AASR)), label="Sim - AASR -26 dB", legend=:topleft, xlabel="Lon [deg]", ylabel="Correlation",
+topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
+savefig(p2, savepath*"Int_plots/"*"Correlation_comparison_1"*".png")
+
+AASR = 10 ^(-21.9/10)
+p2 = (plot!(Lon_vals_multilooked, ((Lon_vals_multilooked .* CF_B).+CF_A) * (1/1+(AASR)), label="Sim - AASR -22 dB", legend=:topleft, xlabel="Lon [deg]", ylabel="Correlation",
+topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
+savefig(p2, savepath*"Int_plots/"*"Correlation_comparison_2"*".png")
+=#
+
+
+
+
+
+
+
 
 
 
