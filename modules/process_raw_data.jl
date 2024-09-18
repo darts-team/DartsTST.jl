@@ -239,9 +239,14 @@ function main_SAR_tomo_3D_new(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, param
     return abs.(processed_image)
 end
 
-function SAR_processing(rawdata, s_xyz_grid, p_xyz_3D, t_rx, ref_range, params) # slow-time processing of rawdata with fast-time
+function SAR_processing(rawdata, s_xyz_grid, p_xyz_3D, t_rx, ref_range, params, Nsi_1::Int64=0, Nsi_2::Int64=0, Nsi_3::Int64=0) # slow-time processing of rawdata with fast-time
     @unpack Ns_1, Ns_2, Ns_3, mode, tx_el, fc, λ, processing_mode = params
 
+    if size(s_xyz_grid)[2] != (Ns_1*Ns_2*Ns_3)
+        Ns_1 = Nsi_1
+        Ns_2 = Nsi_2
+        Ns_3 = Nsi_3
+    end
     Nft=length(t_rx) # number of fast-time samples
     Nst=size(p_xyz_3D)[3] # number of slow-time samples
     s_xyz_3D=reshape(s_xyz_grid,3,Ns_3,Ns_2,Ns_1) # convert scene to 3D

@@ -1,7 +1,7 @@
 using Distributed
 if Sys.islinux()
-    addprocs(12) 
-    @everywhere DEPOT_PATH[1]="/u/epstein-z0/wblr/joshil/Julia/.julia" # for Epstein
+    addprocs(24) 
+    #@everywhere DEPOT_PATH[1]="/u/epstein-z0/wblr/joshil/Julia/.julia" # for Epstein
 else
     addprocs(2) 
 end
@@ -42,14 +42,15 @@ platform_look_angle     = 30.0
 
 lat_res                 = 0.000033
 lon_res                 = 0.000033
-lat_extent              = 0.000333*2 #0.0108 #0.000333 #0.0108 #0.000333
+lat_extent              = 0.000333*1 #0.0108 #0.000333 #0.0108 #0.000333
 lon_extent              = 0.02261*1 #0.05
 NB_lat                  = 1
 NB_lon                  = 1
 target_mode             = 2     # 1: target fixed in center, 2: Distributed target, 3: Distributed target with 1 dominant scatterer
 num_targ_vol            = 3     # number of targets in each voxel
-Sim_idx                 = 2     # For output file reference
-savepath                = "/u/epstein-z0/darts/joshil/Outputs/Geo_outputs_set1/"
+Sim_idx                 = 1     # For output file reference
+#savepath                = "/u/epstein-z0/darts/joshil/Outputs/Geo_outputs_set1/"
+savepath                = "/u/intrepid-z0/joshil/Outputs/TST_sims_geogrid_1/"
 
 
 ground_range_ini        = Scene.lookangle_to_range(platform_look_angle,platform_ref_point[3],0.0, earth_radius)[2]  
@@ -65,7 +66,7 @@ for B_idx = 1:length(trg_ref_lat_list)
         @timeit to "Block time " begin
         
         @timeit to "Get DEM and slopes " begin
-        #DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.read_interp_DEM_from_source("/home/mlavalle/dat/nisar-dem-copernicus/EPSG4326.vrt", trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res, 1)
+        #DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.read_interp_DEM_from_source("/u/intrepid-z0/joshil/data/nisar-dem-copernicus/EPSG4326.vrt", trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res, 1)
         DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.create_slope_DEM(trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res, 0.0, 0.0) # slope dem for testing
  
         slope_lat, slope_lon    = DEM.get_slopes_from_DEM(DEM_full, Geo_location_lon, Geo_location_lat)

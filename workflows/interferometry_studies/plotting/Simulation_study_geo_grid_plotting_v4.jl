@@ -438,6 +438,11 @@ function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, m
     plot_image(Lon_vals,Lat_vals,Critical_baseline[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Critical_baseline_P1", "")
     plot_profile(Lon_vals, Critical_baseline_rangeprofile[:], "", savepath, "Critical_baseline_profile", "Lon [deg]", "Critical baseline  [m]", "", "", "")
 
+    p1=(heatmap(Lon_vals,Lat_vals,Critical_baseline[1:maxind_val_lon,1:maxind_val_lat]',xlabel="Lon [deg]",ylabel="Lat [deg]", title="", clim=(0e3,40e3),
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #1200
+    savefig(p1, savepath*"Critical_baseline_P1_2"*".png")
+
+
     # Perp baseline
     Perp_baseline                       = ref_data[:,:,7]
     if profile_flag == 1
@@ -471,6 +476,10 @@ function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, m
     plot_image(Lon_vals,Lat_vals,Correlation_theo[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Correlation_theo_P1", "")
     plot_profile(Lon_vals, Correlation_theo_rangeprofile[:], "", savepath, "Correlation_theo_profile", "Lon [deg]", "Correlation theory  ", "", "", "")
 
+    p1=(heatmap(Lon_vals,Lat_vals,Correlation_theo[1:maxind_val_lon,1:maxind_val_lat]',xlabel="Lon [deg]",ylabel="Lat [deg]", title="", clim=(0,1),
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #1200
+    savefig(p1, savepath*"Correlation_theo_P1_2"*".png")
+
 end
 
 
@@ -486,20 +495,33 @@ end
 #------------------------------------------------------------------------------------------
 
 #Load the output file
-s_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/13/13_scene_geometry_1.tif" 
-t_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/13/13_target_geometry_1.tif" 
 
-opdata_filepath_s       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/13/13_sim_output_main_1.tif" 
-opdata_filepath_t       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/13/13_sim_output_main_1.tif" 
+s_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/50_scene_geometry_1.tif" 
+t_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/50_target_geometry_1.tif" 
 
-savepath                = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/13/"
+opdata_filepath_s       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/50_sim_output_main_scene_1.tif" 
+opdata_filepath_t       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/50_sim_output_main_target_1.tif" 
 
-process_plot_output_flag      = "T"
+savepath                = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/"
+#=
+s_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Intrepid_Geo_outputs_set1/1/1_scene_geometry_1.tif" 
+t_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Intrepid_Geo_outputs_set1/1/1_target_geometry_1.tif" 
+
+opdata_filepath_s       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Intrepid_Geo_outputs_set1/1/1_sim_output_main_1.tif" 
+opdata_filepath_t       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Intrepid_Geo_outputs_set1/1/1_sim_output_main_1.tif" 
+
+savepath                = "/Users/joshil/Documents/Outputs/InSAR Outputs/Intrepid_Geo_outputs_set1/1/"
+=#
+
+process_plot_output_flag      = "S"
 
 profile_flag            = 1
 
-Looks_along_Lat         = 2#2
-Looks_along_Lon         = 10 #15
+Looks_along_Lat         = 4#2#2
+Looks_along_Lon         = 12#4 #15
+
+oversampling_factor_looks = 1#2.58*2.18
+
 
 if process_plot_output_flag == "S"
 
@@ -514,10 +536,10 @@ if process_plot_output_flag == "S"
     coords_op                       = collect(GeoArrays.coords(s_geom_data))
 
     Lon_vals_all                    = [x[1] for x in coords_op]
-    Lon_vals                        = Lon_vals_all[:,1]
+    Lon_vals                        = (Lon_vals_all[:,1])
 
     Lat_vals_all                    = [x[2] for x in coords_op]
-    Lat_vals                        = (Lat_vals_all[1,:])
+    Lat_vals                        = reverse(Lat_vals_all[1,:])
 
     maxind_val_lon                  = get_max_ind_vec(length(Lon_vals),Looks_along_Lon)
     maxind_val_lat                  = get_max_ind_vec(length(Lat_vals),Looks_along_Lat)
@@ -545,7 +567,7 @@ elseif process_plot_output_flag == "T"
     Lon_vals                        = Lon_vals_all[:,1]
 
     Lat_vals_all                    = [x[2] for x in coords_op]
-    Lat_vals                        = (Lat_vals_all[1,:])
+    Lat_vals                        = reverse(Lat_vals_all[1,:])
 
     maxind_val_lon                  = get_max_ind_vec(length(Lon_vals),Looks_along_Lon)
     maxind_val_lat                  = get_max_ind_vec(length(Lat_vals),Looks_along_Lat)
@@ -561,8 +583,8 @@ elseif process_plot_output_flag == "T"
 end
 
 
-Data_1                          = ArchGDAL.getband(data_op, 3)
-Data_2                          = ArchGDAL.getband(data_op, 4)
+Data_1                          = ArchGDAL.getband(data_op, 1)
+Data_2                          = ArchGDAL.getband(data_op, 2)
 
 Data_1                          = Data_1[1:maxind_val_lon,1:maxind_val_lat]
 Data_2                          = Data_2[1:maxind_val_lon,1:maxind_val_lat]
@@ -727,6 +749,12 @@ for i=1:Int((length(Lat_vals))/Looks_along_Lat)
     k=k+Looks_along_Lat
 end
 
+replace_nan(v) = map(x -> isnan(x) ? zero(x) : x, v) 
+
+Int_Pow_multilooked = replace_nan(Int_Pow_multilooked)
+Int_Phase_multilooked= replace_nan(Int_Phase_multilooked)
+
+
 
 plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Int_Pow_multilooked',"log", savepath*"Int_plots/", "ML_Power_P12_log", "")
 plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Int_Pow_multilooked',"lin", savepath*"Int_plots/", "ML_Power_P12_lin", "")
@@ -748,10 +776,13 @@ plot_profile(Lon_vals_multilooked, Int_phase_rangeprofile[:], "", savepath*"Int_
 A = plot_histogram_only(Int_Pow_multilooked[:], "Magnitude ",savepath*"Int_plots/", "ML_Int_mag")
 A = plot_histogram_only(Int_Phase_multilooked[:], "Phase",savepath*"Int_plots/", "ML_Int_ph")
 
+if process_plot_output_flag == "S"
 #gamma_ip = mean(Int_Pow_multilooked[:])
 gamma_ip = mean(s_geom_data[:,:,12])
+elseif process_plot_output_flag == "T"
+    gamma_ip = mean(t_geom_data[:,:,12])
+end
 
-oversampling_factor_looks = 1# 2.58*2.18
 
 A = plot_interferogram_histogram_statistics_phase(Int_Phase_multilooked[:], gamma_ip, (Looks_along_Lat*Looks_along_Lon)/oversampling_factor_looks,0.0, (-0.5,0.5), savepath*"Int_plots/", "PDF_Phase_Han1")
 A = plot_interferogram_histogram_statistics_phase_han1(Int_Phase_multilooked[:], gamma_ip, (Looks_along_Lat*Looks_along_Lon)/oversampling_factor_looks, 0.0, (-0.5,0.5), savepath*"Int_plots/", "PDF_Phase_Han2")
@@ -773,6 +804,7 @@ topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13),
 savefig(p1, savepath*"Int_plots/"*"Int_mag_profile_window2"*".png")
 
 
+if process_plot_output_flag == "S"
 #Estimate height from wrapped interferometric phase
 
 if profile_flag == 1
@@ -784,10 +816,6 @@ plot_profile(Lon_vals_multilooked, int_wrapped_data[:], "", savepath*"Int_plots/
 
 int_unwrapped_data          = DSP.unwrap(int_wrapped_data[:]) .* -1
 plot_profile(Lon_vals_multilooked, int_unwrapped_data[:], "", savepath*"Int_plots/", "Int_unwrapped_data_profile", "Lon [deg]", "  ", "", "", "")
-
-int_unwrapped_data_2        = (int_unwrapped_data ./ (2 * pi )) 
-plot_profile(Lon_vals_multilooked, int_unwrapped_data_2[:], "", savepath*"Int_plots/", "Int_unwrapped_data_profile_2", "Lon [deg]", "  ", "", "", "")
-
 
 if profile_flag == 1
     slant_range_profile         =  mean(s_geom_data[1:Looks_along_Lon:maxind_val_lon,:,1],dims=2)
@@ -802,6 +830,8 @@ end
 int_unwrapped_height_2      = int_unwrapped_data .* (0.23793052222222222/(4*pi)) .* (slant_range_profile .*sind.(look_angle_profile) ./perp_baseline_profile)
 plot_profile(Lon_vals_multilooked, int_unwrapped_height_2[:], "", savepath*"Int_plots/", "Int_unwrapped_height_profile", "Lon [deg]", "Height [m]", "", "", "")
 
+
+end
 #=
 p2 = (plot(Lon_vals, Correlation_theo_P1_rangeprofile[:], label="Theory"))
 p2 = (plot!(Lon_vals_multilooked, (Lon_vals_multilooked .* CF_B).+CF_A, label="Sim"))
@@ -818,11 +848,67 @@ savefig(p2, savepath*"Int_plots/"*"Correlation_comparison_2"*".png")
 =#
 
 
+#=
+using JLD2
+using FFTW
+@load "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/56/Simulation_info_56_1.jld"
+
+F_Srx = fftshift(fft(Srx))
+freq_Axis = LinRange(-1/(2*params.Δt),1/(2*params.Δt),length(Srx))
+
+
+display(plot(freq_Axis./1e6,abs.(F_Srx), ylabel="FFT Magnitude", xlabel="Frequency [MHz]", label=:false))
+display(plot!(tickfont=font(12), ytickfont=font(12), legendfontsize=12, guidefont=font(12), titlefontsize=12, legend=:bottomright, leftmargin=2mm, bottommargin=2mm))
 
 
 
 
+F_rawdata = fftshift(fft(rawdata[1,1,:]))
+freq_Axis = LinRange(-1/(2*params.Δt),1/(2*params.Δt),length(rawdata[1,1,:]))
+
+
+display(plot(freq_Axis./1e6,abs.(F_rawdata), ylabel="FFT Magnitude", xlabel="Frequency [MHz]", label=:false, xlim=(-50,50)))
+display(plot!(tickfont=font(12), ytickfont=font(12), legendfontsize=12, guidefont=font(12), titlefontsize=12, legend=:bottomright, leftmargin=2mm, bottommargin=2mm))
+=#
+
+targets_ref_data                    = t_geom_data[:,:,13]
+targets_ref_corr_rangeprofile   = targets_ref_data[1:maxind_val_lon,1]
+
+Amp_1_rangeprofile          =  Amp_1[:,1]
+
+plot_profile(Lon_vals, (Amp_1_rangeprofile[:]), "", savepath, "Amp_profile1_comp", "Lon [deg]", "Amplitude", "", "", "")
+
+plot_profile(Lon_vals, (targets_ref_corr_rangeprofile[:]), "", savepath, "RCS_comp", "Lon [deg]", "RCS", "", "", "")
 
 
 
 
+if process_plot_output_flag == "S"
+    #Estimate height from wrapped interferometric phase
+
+    Int_unwrapped_data_new          = DSP.unwrap(Int_Phase_multilooked,dims=1) .* -1
+    plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Int_unwrapped_data_new',"lin", savepath*"Int_plots/", "Test_1", "")
+
+
+        slant_range_profile         = s_geom_data[1:Looks_along_Lon:maxind_val_lon,1:Looks_along_Lat:maxind_val_lat,1]
+        look_angle_profile          = s_geom_data[1:Looks_along_Lon:maxind_val_lon,1:Looks_along_Lat:maxind_val_lat,3]
+        perp_baseline_profile       = s_geom_data[1:Looks_along_Lon:maxind_val_lon,1:Looks_along_Lat:maxind_val_lat,7]
+
+    int_unwrapped_height_2      = Int_unwrapped_data_new .* (0.23793052222222222/(4*pi)) .* (slant_range_profile[:,:,1] .*sind.(look_angle_profile[:,:,1]) ./perp_baseline_profile[:,:,1])
+    plot_image(Lon_vals_multilooked,Lat_vals_multilooked,int_unwrapped_height_2',"lin", savepath*"Int_plots/", "Test_3", "")
+    
+    plot_image(Lon_vals_multilooked,Lat_vals_multilooked,int_unwrapped_height_2'.+2000,"lin", savepath*"Int_plots/", "Test_4", "")
+
+
+    ref_DEM = s_geom_data[1:Looks_along_Lon:maxind_val_lon,1:Looks_along_Lat:maxind_val_lat,14]
+
+    plot_image(Lon_vals_multilooked,Lat_vals_multilooked,ref_DEM[:,:,1]' .- (int_unwrapped_height_2'.+2000),"lin", savepath*"Int_plots/", "Test_5", "")
+
+end
+
+#using JLD2
+#@save "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/test_data.jld" Int_Phase_multilooked  Int_Pow_multilooked
+
+#
+#using PyCall
+#snaphu = pyimport("snaphu")
