@@ -53,7 +53,7 @@ target_mode             = 2     # 1: target fixed in center, 2: Distributed targ
 num_targ_vol            = 3     # number of targets in each voxel
 ref_scene_height        = 2000.0
 
-Sim_idx                 = 75   # For output file reference
+Sim_idx                 = 84   # For output file reference
 savepath                = "/u/intrepid-z0/joshil/Outputs/TST_sims_geogrid_1/"*string(Sim_idx)*"/"
 
 
@@ -191,10 +191,10 @@ for B_idx = 1:length(trg_ref_lat_list)
 
         # Generate range spread function (matched filter output)
         min_range, max_range = Geometry.find_min_max_range(t_xyz_3xN, p_xyz)
-        t_rx_tot            = 2*(max_range-min_range)/c + 2*params.pulse_length
+        t_rx_tot            = 2*(max_range-min_range)/c + (0.2*params.pulse_length)
         t_rx                = -(t_rx_tot/2):params.Δt:(t_rx_tot/2)
         
-        t_rsf_tot           = 0.1*params.pulse_length # s duration of RSF
+        t_rsf_tot           = 0.01*params.pulse_length # s duration of RSF
         S_rsf, t_rsf        = RSF.ideal_RSF_pulsewindow(t_rsf_tot, params) 
 
         # Generate TomoSAR raw data
@@ -202,32 +202,32 @@ for B_idx = 1:length(trg_ref_lat_list)
 
         @timeit to "rawdata new" begin # This takes major chunk of simulation time
         # Dist for rawdata
-        global Nt           = size(t_xyz_3xN,2) # number of targets
-        global Np           = size(p_xyz,2) # number of platforms
-        global Nft          = length(t_rx) # number of fast-time samples
-        global Nst          = size(p_xyz,3) # number of slow-time samples
-        global Nrsf         = length(t_rsf)
-        global Δt_ft        = t_rx[2]-t_rx[1] # fast-time resolution
-        global rawdata_const = 2*pi/params.λ #(0.23793052222222222) 
-        global rawdata      = SharedArray(zeros(ComplexF64, Nst,Np,Nft) )
-        global ref_delay    = 2*ref_range/c # reference delay
+        global Nt               = size(t_xyz_3xN,2) # number of targets
+        global Np               = size(p_xyz,2) # number of platforms
+        global Nft              = length(t_rx) # number of fast-time samples
+        global Nst              = size(p_xyz,3) # number of slow-time samples
+        global Nrsf             = length(t_rsf)
+        global Δt_ft            = t_rx[2]-t_rx[1] # fast-time resolution
+        global rawdata_const    = 2*pi/params.λ 
+        global rawdata          = SharedArray(zeros(ComplexF64, Nst,Np,Nft) )
+        global ref_delay        = 2*ref_range/c # reference delay
+        global ind_offset       = Int(floor(Nft/2)) + Int(-floor(Nrsf/2))
     
         @sync @distributed for s=1:Nst # slow-time (pulses)
-            temp_sum=zeros(ComplexF64,Nft)
+            temp_sum  = zeros(ComplexF64,Nft)
             for i=1:Np # RX platform
-                temp_sum.=0.0;
+                temp_sum .= 0.0;
                 for j=1:Nt # targets
-                    if targets_ref[j]!=0
+                    if t_targets_ref_corr[j]!=0
                         range_tx        = Geometry.distance(t_xyz_3xN[:,j],p_xyz[:,i,s])
                         range_rx        = Geometry.distance(t_xyz_3xN[:,j],p_xyz[:,i,s])
                         rel_delay       = (range_tx+range_rx)/c-ref_delay # relative delay wrt reference delay (positive means right-shift of RSF)
                         rel_delay_ind   = Int(round(rel_delay/Δt_ft))
-    
-                        start_idx       = Int(floor(Nft/2)) + (Int(-floor(Nrsf/2)) + rel_delay_ind) 
-                        end_idx         = start_idx + Nrsf -1
-    
-                        #rawdata[s,i,start_idx:end_idx] .= rawdata[s,i,start_idx:end_idx] .+  (targets_ref[j].*exp(-im*rawdata_const*(range_tx+range_rx)).*S_rsf)
-                        temp_sum[start_idx:end_idx] .+=  (targets_ref[j].*exp(-1im*rawdata_const*(range_tx+range_rx)).*S_rsf)
+
+                        start_idx       = ind_offset + rel_delay_ind # Start index for the RSF 
+                        end_idx         = start_idx + Nrsf - 1 # End index for the RSF 
+                        
+                        temp_sum[start_idx:end_idx] .+=  (t_targets_ref_corr[j].*exp(-1im*rawdata_const*(range_tx+range_rx)).*S_rsf)
                     end
                 end
                 rawdata[s,i,:].= temp_sum
@@ -305,8 +305,6 @@ for B_idx = 1:length(trg_ref_lat_list)
 
         @save savepath*"Simulation_info_"*string(Sim_idx)*"_"*string(B_idx)*".jld" params s_xyz_3xN t_xyz_3xN p_xyz N_all t_rx ref_range rawdata S_rsf
         
-        #@save savepath*"Output12_10km_30la_geo_la_"*string(Sim_idx)*"_"*string(B_idx)*".jld" SAR_images_3D stat_var_all_1p stat_var_all_2p rawdata params slant_range_all look_angle_all incidence_angle_all Critical_baseline_all Correlation_theo_all Perp_baseline_all Vert_wavnum_all local_incidence_angle range_slope_angle trg_slant_range_all trg_look_angle_all trg_incidence_angle_all trg_Critical_baseline_all trg_Correlation_theo_all trg_Perp_baseline_all trg_Vert_wavnum_all trg_local_incidence_angle trg_range_slope_angle trg_targets_ref_corr s_xyz_3xN t_xyz_3xN p_xyz DEM_region N_all t_rx ref_range trg_SAR_images_3D trg_stat_var_all_1p trg_stat_var_all_2p 
-
         end #timeit
 
 end 

@@ -69,7 +69,7 @@ function get_scene_geometry_values(p_xyz, v_xyz, s_xyz_3xN, N_all, ref_plat, sec
                                     cos(pegθ)*cos(pegϕ)   cos(pegθ)*sin(pegϕ)  sin(pegθ)]
 
         if grid == "Scene"
-            Nxyz                        = Menu_xyz * N_all[ti,:];
+            Nxyz                        = Menu_xyz * [0,0,1];
         elseif grid == "Target"
             Nxyz                        = Menu_xyz * N_all[ti2,:];
         end
@@ -78,8 +78,13 @@ function get_scene_geometry_values(p_xyz, v_xyz, s_xyz_3xN, N_all, ref_plat, sec
         local_incidence_angle_ref[ti] = Data_Processing.angle_2vec(look_vec_xyz_norm, Nxyz)
 
         look_direction_norm         = sqrt( look_vec_enu[1] * look_vec_enu[1]  + look_vec_enu[2] * look_vec_enu[2])
-        range_slope_angle_ref[ti]   = atand((0 * (look_vec_enu[1] / look_direction_norm)) + (0 * (look_vec_enu[2] / look_direction_norm)))    
-            
+
+        if grid == "Scene"
+            range_slope_angle_ref[ti]   = atand((0 * (look_vec_enu[1] / look_direction_norm)) + (0 * (look_vec_enu[2] / look_direction_norm)))    
+        elseif grid == "Target"
+            range_slope_angle_ref[ti]   = atand((N_all[ti2,1] * (look_vec_enu[1] / look_direction_norm)) + (N_all[ti2,2] * (look_vec_enu[2] / look_direction_norm)))    
+        end            
+        
         Critical_baseline_ref[ti]   = params.λ * ((2*params.bandwidth)/c) * slant_range_ref[ti] * tand(local_incidence_angle_ref[ti] - range_slope_angle_ref[ti]) / p_mode
         Correlation_theo_ref[ti]    = 1 - (Perp_baseline_ref[ti] ./ (Critical_baseline_ref[ti]))
 

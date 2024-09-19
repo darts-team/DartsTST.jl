@@ -234,13 +234,13 @@ function applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, t_xyz_3xN, params)
  end
 
 
-function segment_simulation_grid(trg_ref_lat, trg_ref_lon, lat_extent, lon_extent, NB_lat, NB_lon)
+ function segment_simulation_grid(trg_ref_lat, trg_ref_lon, lat_extent, lon_extent, NB_lat, NB_lon)
 
     B_lat_extent = lat_extent / NB_lat
     B_lon_extent = lon_extent / NB_lon
 
     Add_B_lat_extent = 0 #B_lat_extent*0.1 
-    Add_B_lon_extent = B_lon_extent*0.1 #10% additional region added 
+    Add_B_lon_extent = 0 #B_lon_extent*0.1 #10% additional region added 
 
 
     trg_ref_lat_list = zeros(NB_lat * NB_lon)
