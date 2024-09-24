@@ -496,31 +496,22 @@ end
 
 #Load the output file
 
-s_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/50_scene_geometry_1.tif" 
-t_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/50_target_geometry_1.tif" 
+s_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/91/91_scene_geometry_1.tif" 
+t_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/91/91_target_geometry_1.tif" 
 
-opdata_filepath_s       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/50_sim_output_main_scene_1.tif" 
-opdata_filepath_t       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/50_sim_output_main_target_1.tif" 
+opdata_filepath_s       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/91/91_sim_output_main_scene_1.tif" 
+opdata_filepath_t       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/91/91_sim_output_main_target_1.tif" 
 
-savepath                = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/"
-#=
-s_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Intrepid_Geo_outputs_set1/1/1_scene_geometry_1.tif" 
-t_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Intrepid_Geo_outputs_set1/1/1_target_geometry_1.tif" 
-
-opdata_filepath_s       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Intrepid_Geo_outputs_set1/1/1_sim_output_main_1.tif" 
-opdata_filepath_t       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Intrepid_Geo_outputs_set1/1/1_sim_output_main_1.tif" 
-
-savepath                = "/Users/joshil/Documents/Outputs/InSAR Outputs/Intrepid_Geo_outputs_set1/1/"
-=#
+savepath                = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/91/"
 
 process_plot_output_flag      = "S"
 
 profile_flag            = 1
 
-Looks_along_Lat         = 4#2#2
-Looks_along_Lon         = 12#4 #15
+Looks_along_Lat         = 4
+Looks_along_Lon         = 12
 
-oversampling_factor_looks = 1#2.58*2.18
+oversampling_factor_looks = 1
 
 
 if process_plot_output_flag == "S"
@@ -734,11 +725,14 @@ Correlation                     = zeros(Lon_length_ml,Lat_length_ml)
 Lat_vals_multilooked            = zeros(Lat_length_ml)
 Lon_vals_multilooked            = zeros(Lon_length_ml)
 
+complex_coherence_mat = zeros(ComplexF64,Lon_length_ml,Lat_length_ml)
+
 k=1
 for i=1:Int((length(Lat_vals))/Looks_along_Lat)
     l=1
     for j=1:Int((length(Lon_vals))/Looks_along_Lon)
         complex_coherence = mean(Data_12[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1])./ ((mean(Pow_1[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1]) .* mean(Pow_2[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1])).^0.5)
+        complex_coherence_mat[j,i] = complex_coherence
         Int_Pow_multilooked[j,i] = abs.(complex_coherence)
         Int_Phase_multilooked[j,i] = angle.(complex_coherence) 
 
@@ -883,6 +877,9 @@ plot_profile(Lon_vals, (targets_ref_corr_rangeprofile[:]), "", savepath, "RCS_co
 
 
 
+
+
+
 if process_plot_output_flag == "S"
     #Estimate height from wrapped interferometric phase
 
@@ -904,11 +901,30 @@ if process_plot_output_flag == "S"
 
     plot_image(Lon_vals_multilooked,Lat_vals_multilooked,ref_DEM[:,:,1]' .- (int_unwrapped_height_2'.+2000),"lin", savepath*"Int_plots/", "Test_5", "")
 
-end
+    end
 
-#using JLD2
-#@save "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/test_data.jld" Int_Phase_multilooked  Int_Pow_multilooked
 
+    #=
+using JLD2
+@save "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/test_data.jld" complex_coherence_mat Int_Phase_multilooked Int_Pow_multilooked
+
+@save "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/test_data2.jld" complex_coherence_mat Int_Phase_multilooked Int_Pow_multilooked
+
+
+
+@load "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/test_data.jld" 
+
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,conncomp',"phase", savepath*"Int_plots/", "SNAPHU_1", "")
+
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,(unw' .* -1) ,"phase", savepath*"Int_plots/", "SNAPHU_2", "")
+
+
+int_unwrapped_height_new2      = (unw .* -1) .* (0.23793052222222222/(4*pi)) .* (slant_range_profile[:,:,1] .*sind.(look_angle_profile[:,:,1]) ./perp_baseline_profile[:,:,1])
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,int_unwrapped_height_new2',"phase", savepath*"Int_plots/", "SNAPHU_3", "")
+
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,int_unwrapped_height_new2'.+2000,"phase", savepath*"Int_plots/", "SNAPHU_4", "")
+
+=#
 #
 #using PyCall
 #snaphu = pyimport("snaphu")

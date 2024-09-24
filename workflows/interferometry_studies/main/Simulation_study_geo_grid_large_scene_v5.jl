@@ -38,6 +38,7 @@ earth_radius            = 6378.137e3 # Earth semi-major axis at equator
 #platform_ref_point      = [34.8043;-117.8153;697.5e3]
 
 platform_ref_point      = [35.0223;-115.3725;697.5e3]
+#platform_ref_point      = [34.4234;-118.96;697.5e3]
 
 platform_heading        = 0.0
 platform_look_dir       = "right" 
@@ -51,17 +52,19 @@ NB_lat                  = 1
 NB_lon                  = 1
 target_mode             = 2     # 1: target fixed in center, 2: Distributed target, 3: Distributed target with 1 dominant scatterer
 num_targ_vol            = 3     # number of targets in each voxel
-ref_scene_height        = 2000.0
+ref_scene_height        = 450.0 #2000.0
 
-Sim_idx                 = 84   # For output file reference
+Sim_idx                 = 93   # For output file reference
 savepath                = "/u/intrepid-z0/joshil/Outputs/TST_sims_geogrid_1/"*string(Sim_idx)*"/"
 
 
 ground_range_ini        = Scene.lookangle_to_range(platform_look_angle,platform_ref_point[3],0.0, earth_radius)[2]  
 displacement_N          = ground_range_ini .* cosd(platform_heading + 90) 
 displacement_E          = ground_range_ini .* sind(platform_heading + 90)
-trg_ref_lat             = platform_ref_point[1] + (displacement_N/earth_radius*180/pi)
-trg_ref_lon             = platform_ref_point[2] + (displacement_E/(earth_radius+cosd(platform_ref_point[1]))*180/pi) 
+if platform_look_dir == "right"
+    trg_ref_lat             = platform_ref_point[1] + (displacement_N/earth_radius*180/pi)
+    trg_ref_lon             = platform_ref_point[2] + (displacement_E/(earth_radius+cosd(platform_ref_point[1]))*180/pi) 
+end 
 
 trg_ref_lat_list, trg_ref_lon_list, B_lat_extent, B_lon_extent = SimSetup.segment_simulation_grid(trg_ref_lat, trg_ref_lon, lat_extent, lon_extent, NB_lat, NB_lon)
 
@@ -121,7 +124,7 @@ for B_idx = 1:length(trg_ref_lat_list)
             t_ref               = t_ref_val',
             ts_coord_sys        = "LLH", #"LLH",
             #ROSE-L parameters
-            fp                  = 200, #1550, # Modified PRF based on scene length in along-track
+            fp                  = 400, #1550, # Modified PRF based on scene length in along-track
             p_t0_LLH            = platform_ref_point,
             pulse_length        = 40e-6,
             dt_orbits           = 0.05,
@@ -134,8 +137,8 @@ for B_idx = 1:length(trg_ref_lat_list)
         paramsIsValid = UserParameters.validateInputParams(params)
 
         ag_geotransform_s = ag_geotransform
-        ag_geotransform_s[1] = t_loc_2_range[1]-0.02
-        ag_geotransform_s[2] = lon_res
+        #ag_geotransform_s[1] = t_loc_2_range[1]-0.02
+        #ag_geotransform_s[2] = lon_res
 
         if params.mode == 1 # SAR
             global p_mode       = 2
