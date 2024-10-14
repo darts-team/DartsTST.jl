@@ -300,7 +300,8 @@ function get_terrain_norm(DEM, slope_lat, slope_lon)
     k = 1
     for i=1:size(DEM)[1]
         for j=1:size(DEM)[2]
-            N_all[k,:]          = [-1*slope_lat[i,j,1], -1*slope_lon[i,j,1], 1]
+            #N_all[k,:]          = [-1*slope_lat[i,j,1], -1*slope_lon[i,j,1], 1]
+            N_all[k,:]          = [-1*slope_lon[i,j,1], -1*slope_lat[i,j,1], 1]
             k = k + 1
         end
     end

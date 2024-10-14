@@ -10,6 +10,7 @@ using Distributions
 #local packages
 using ..Geometry
 using ..Antenna
+using ..DEM
 
 
 """
@@ -260,7 +261,12 @@ function applyAntennaPattern!(targets_ref, p_xyz, orbit_vel, t_xyz_3xN, params)
 end
 
 
-function define_target_pixels(t_loc_1_range, t_loc_2_range, t_loc_3_range, num_targ_vol, target_mode, var_1, var_2, var_3, DEM_region, DEM_flag)
+function uniform_random(a, b, n)
+    rand_nums = [(b - a) * rand() + a for _ in 1:n]
+    return rand_nums
+end
+
+function define_target_pixels(t_loc_1_range, t_loc_2_range, t_loc_3_range, DEM_region, num_targ_vol::Int=1, target_mode::Int=1, var_1::Float64=0.0, var_2::Float64=0.0, var_3::Float64=0.0)
     t_loc_1                 =  zeros(length(t_loc_1_range) * length(t_loc_2_range) * length(t_loc_3_range) * num_targ_vol)
     t_loc_2                 =  zeros(length(t_loc_1_range) * length(t_loc_2_range) * length(t_loc_3_range) * num_targ_vol)
     t_loc_3                 =  zeros(length(t_loc_1_range) * length(t_loc_2_range) * length(t_loc_3_range) * num_targ_vol)
@@ -273,35 +279,23 @@ function define_target_pixels(t_loc_1_range, t_loc_2_range, t_loc_3_range, num_t
                     if target_mode == 1
                         t_loc_1[m] = t_loc_1_range[i]
                         t_loc_2[m] = t_loc_2_range[j]
-                        if DEM_flag == 1
-                            t_loc_3[m] = DEM_region[i,j]
-                        else
-                            t_loc_3[m] = t_loc_3_range[k]
-                        end
+                        t_loc_3[m] = t_loc_3_range[k] + DEM_region[i,j]
                         m=m+1
                     elseif target_mode == 2
                         t_loc_1[m] = t_loc_1_range[i] + (rand(Uniform(-1,1)) .* var_1)
                         t_loc_2[m] = t_loc_2_range[j] + (rand(Uniform(-1,1)) .* var_2)
-                        if DEM_flag == 1
-                            t_loc_3[m] = DEM_region[i,j] + (rand(Uniform(-1,1)) .* var_3)
-                        else
-			                t_loc_3[m] = t_loc_3_range[k] + (rand(Uniform(-1,1)) .* var_3)
-                        end
+                        t_loc_3[m] = (t_loc_3_range[k] + DEM_region[i,j]) + (rand(Uniform(-1,1)) .* var_3)
                         m=m+1
                     elseif target_mode == 3
                         if l==1
                             t_loc_1[m] = t_loc_1_range[i]
                             t_loc_2[m] = t_loc_2_range[j]
-                            t_loc_3[m] = t_loc_3_range[k]
+                            t_loc_3[m] = t_loc_3_range[k] + DEM_region[i,j]
                             m=m+1
                         else
                             t_loc_1[m] = t_loc_1_range[i] + (rand(Uniform(-1,1)) .* var_1)
                             t_loc_2[m] = t_loc_2_range[j] + (rand(Uniform(-1,1)) .* var_2)
-                            if DEM_flag == 1
-                                t_loc_3[m] = DEM_region[i,j]  + (rand(Uniform(-1,1)) .* var_3)
-                            else
-                                t_loc_3[m] = t_loc_3_range[k] + (rand(Uniform(-1,1)) .* var_3)
-                            end
+                            t_loc_3[m] = (t_loc_3_range[k] + DEM_region[i,j])  + (rand(Uniform(-1,1)) .* var_3)
                             m=m+1
                         end
                     end
@@ -310,10 +304,76 @@ function define_target_pixels(t_loc_1_range, t_loc_2_range, t_loc_3_range, num_t
         end
     end
 
-    t_ref_val               =  ones(length(t_loc_1_range) * length(t_loc_2_range) * length(t_loc_3_range) * num_targ_vol)
-
-    return t_loc_1, t_loc_2, t_loc_3, t_ref_val
-
+    t_loc_3xN               = vcat(t_loc_1', t_loc_2', t_loc_3')
+    return t_loc_3xN
 end
+
+
+function define_target_pixels(t_loc_1_range, t_loc_2_range, t_loc_3_range, DEM_region,  slope_lat_region, slope_lon_region, num_targ_vol::Int=1, target_mode::Int=1, var_1::Float64=0.0, var_2::Float64=0.0, var_3::Float64=0.0)
+    t_loc_1                 =  zeros(length(t_loc_1_range) * length(t_loc_2_range) * length(t_loc_3_range) * num_targ_vol)
+    t_loc_2                 =  zeros(length(t_loc_1_range) * length(t_loc_2_range) * length(t_loc_3_range) * num_targ_vol)
+    t_loc_3                 =  zeros(length(t_loc_1_range) * length(t_loc_2_range) * length(t_loc_3_range) * num_targ_vol)
+    
+    m=1
+    for i=1:length(t_loc_1_range)
+        for j= 1:length(t_loc_2_range)
+            for k=1:length(t_loc_3_range)
+                for l=1:num_targ_vol
+                    if target_mode == 1
+                        t_loc_1[m] = t_loc_1_range[i]
+                        t_loc_2[m] = t_loc_2_range[j]
+                        t_loc_3[m] = t_loc_3_range[k] + DEM_region[i,j]
+                        m=m+1
+                    elseif target_mode == 2
+                        r_var_1 = (rand(Uniform(-1,1)) .* var_1)
+                        r_var_2 = (rand(Uniform(-1,1)) .* var_2)
+                        t_loc_1[m] = t_loc_1_range[i] + r_var_1
+                        t_loc_2[m] = t_loc_2_range[j] + r_var_2
+                        t_loc_3[m] = (t_loc_3_range[k] + DEM_region[i,j]) + ( (DEM.deg_to_m_lat(r_var_1) * tand(slope_lat_region[i,j])) + (DEM.deg_to_m_lon(r_var_2, t_loc_1_range[i]) * tand(slope_lon_region[i,j])) ) + (rand(Uniform(-1,1)) .* var_3)
+                        m=m+1
+                    elseif target_mode == 3
+                        if l==1
+                            t_loc_1[m] = t_loc_1_range[i]
+                            t_loc_2[m] = t_loc_2_range[j]
+                            t_loc_3[m] = t_loc_3_range[k] + DEM_region[i,j]
+                            m=m+1
+                        else
+                            t_loc_1[m] = t_loc_1_range[i] + (rand(Uniform(-1,1)) .* var_1)
+                            t_loc_2[m] = t_loc_2_range[j] + (rand(Uniform(-1,1)) .* var_2)
+                            t_loc_3[m] = (t_loc_3_range[k] + DEM_region[i,j])  + (rand(Uniform(-1,1)) .* var_3)
+                            m=m+1
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    t_loc_3xN               = vcat(t_loc_1', t_loc_2', t_loc_3')
+    return t_loc_3xN
+end
+
+
+function define_scene_pixels(s_loc_1_range, s_loc_2_range, s_loc_3_range, DEM_region)
+    s_loc_1                 =  zeros(length(s_loc_1_range) * length(s_loc_2_range) * length(s_loc_3_range) )
+    s_loc_2                 =  zeros(length(s_loc_1_range) * length(s_loc_2_range) * length(s_loc_3_range) )
+    s_loc_3                 =  zeros(length(s_loc_1_range) * length(s_loc_2_range) * length(s_loc_3_range) )
+    
+    m=1
+    for i=1:length(s_loc_1_range)
+        for j= 1:length(s_loc_2_range)
+            for k=1:length(s_loc_3_range)
+                    s_loc_1[m] = s_loc_1_range[i]
+                    s_loc_2[m] = s_loc_2_range[j]
+                    s_loc_3[m] = s_loc_3_range[k] + DEM_region[i,j]
+                    m=m+1               
+            end
+        end
+    end
+
+    s_loc_3xN               = vcat(s_loc_1', s_loc_2', s_loc_3')
+    return s_loc_3xN
+end
+
  
 end #end module
