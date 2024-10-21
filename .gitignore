@@ -10,3 +10,4 @@ workflows/.DS_Store
 *.nc
 *.xlsx
 sync data/.DS_Store
+inputs/ROSEL_Tx_Pattern.hdf5
