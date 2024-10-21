@@ -57,7 +57,16 @@ function construct_targets_str(params)
   elseif target_pos_mode=="CR" # target positions are defined as 3xN (useful for a few discrete targets)
     t_loc_3xN = vcat(t_loc_1, t_loc_2, t_loc_3)
     t_ref_1xN = t_ref
-  end
+
+  elseif target_pos_mode=="surface-grid" # calculating scattering from surface -- moving surface BRCS calcs to raw data calculation
+    @unpack ts_coord_sys, s_loc_1, s_loc_2, s_loc_3, t_loc_1 = params
+    # using the imaging points to find surface locations. Assuming 
+    @assert ts_coord_sys == "SCH" "Only SCH Coordinates currently compatible with the surface scattering mode"
+    
+    t_loc_3xN = Scene.form3Dgrid_for(s_loc_1, s_loc_2, 0) # generating a 2D surface at zero height
+    t_ref_1xN = ones(Int64,(1,length(s_loc_1)*length(s_loc_1)))
+    
+  end#elseif
 
 
 Nt = size(t_loc_3xN, 2) # number of targets
