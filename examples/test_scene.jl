@@ -78,5 +78,5 @@ p_θϕh=[0,0,500e3]
 rot_P=90
 γ=0 # deg track angle (heading), 0 deg is north, 90 deg is east
 peg=[p_θϕh[1],p_θϕh[2],γ] # deg peg point is the nadir point of platform at the center of SAR aperture
-t_xyz=Scene.chP_to_xyz_single(t_sch,rot_P,p_θϕh,peg,earth_radius,earth_eccentricity
+t_xyz=Scene.chP_to_xyz_single(t_sch,rot_P,p_θϕh,peg,earth_radius,earth_eccentricity)
 println(t_xyz)

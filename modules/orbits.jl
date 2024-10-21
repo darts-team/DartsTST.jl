@@ -33,32 +33,48 @@ end
 
 function computeTimePosVel(params)
     @unpack SAR_start_time, dt_orbits, SAR_duration, user_defined_orbit, pos_n,
-    Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename, left_right_look = params
+    Torbit, p_t0_LLH, p_heading, look_angle, display_custom_orbit, orbit_filename, left_right_look, orbit_file_coords = params
 
     ## PLATFORM LOCATIONS and HEADINGS
-    if left_right_look == "left";N_dir=1;elseif left_right_look == "right";N_dir=-1;end
+    #if left_right_look == "left";N_dir=1;elseif left_right_look == "right";N_dir=-1;end
+    if left_right_look == "left";C_dir=-1;elseif left_right_look == "right";C_dir=1;end
     if user_defined_orbit==1 # orbits from file
-        orbit_dataset=Dataset("inputs/"*orbit_filename) # Read orbits data in NetCDF format
+        orbit_dataset=Dataset("../inputs/"*orbit_filename) # Read orbits data in NetCDF format
         t12_orbits=orbit_dataset["time"][1:2] # first two time samples
         dt_orbits=t12_orbits[2]-t12_orbits[1] # time resolution of orbits (s)
         orbit_time_index=(Int(round(SAR_start_time/dt_orbits))+1:1:Int(ceil((SAR_start_time+SAR_duration)/dt_orbits))+1) # index range for orbit times for time interval of interest
         orbit_time=orbit_dataset["time"][orbit_time_index] # read in time data
+        if orbit_file_coords=="ECI"
         orbit_pos_ECI=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
         orbit_vel_ECI=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
-        try #does file have dcm already?
-            global dcm=orbit_dataset["dcm"];
-        catch #if not generate from Orbits
+        #try #does file have dcm already?
+        #    global dcm=orbit_dataset["dcm"];
+        #catch #if not generate from Orbits
             dv = orbit_dataset.attrib["epoch"];
+            if typeof(dv) == String
+                temp = dv
+                dv= []
+                dv = [parse(Int,temp[1:4]);parse(Int,temp[6:7]);parse(Int,temp[9:10]);parse(Int,temp[12:13]);parse(Int,temp[15:16]);parse(Int,temp[18:19])];
+            end
             local epoch = DateTime(dv[1], dv[2], dv[3], dv[4], dv[5], dv[6]);
             global dcm = Orbits.eci_dcm(orbit_time, epoch);
-        end
+        #end
         #orbit_pos=Orbits.ecef_orbitpos(orbit_pos_ECI,dcm)# convert ECI to ECEF
         orbit_pos,orbit_vel=Orbits.ecef_orbitpos(orbit_pos_ECI,orbit_vel_ECI,dcm) # ECI to ECEF
+        elseif orbit_file_coords=="ECEF"
+            orbit_pos=1e3*orbit_dataset["position"][:,:,orbit_time_index] # read in position data, 3 x Np x Nt
+            orbit_vel=1e3*orbit_dataset["velocity"][:,:,orbit_time_index] # read in velocity data, 3 x Np x Nt (used optionally in avg peg and heading calculation)
+        else
+            @error(raw"Unsupported orbit file coordinate system: Should be 'ECI' or 'ECEF'")
+        end
+
     elseif user_defined_orbit==2 # user defined, TCN option
-        pos_T = zeros(1,length(pos_n)) # no along-track spacings
-        pos_C = 1 * pos_n * cosd(look_angle)
-        pos_N = N_dir * pos_n * sind(look_angle)
-        pos_TCN = [pos_T;pos_C;pos_N]
+        #pos_T = zeros(1,length(pos_n)) # no along-track spacings
+        #pos_C =   C_dir * pos_n * cosd(look_angle)
+        #pos_N =  -1 * pos_n * sind(look_angle)
+        #pos_C = 1 * pos_n * cosd(look_angle)
+        #pos_N = N_dir * pos_n * sind(look_angle)
+        #pos_TCN = [pos_T;pos_C;pos_N]
         pos_XYZ=Geometry.geo_to_xyz(p_t0_LLH)
         orbit_time_all=-Torbit/2:dt_orbits:Torbit/2
         #orbit_pos_all,orbit_vel_all=Orbits.make_orbit(pos_XYZ,p_heading,pos_TCN,orbit_time_all)
@@ -241,14 +257,14 @@ function eci_dcm(time, epoch::DateTime, eop_data)
     dcm = zeros(3,3,length(time))
     for ii = 1:length(time)
           dt = unix2datetime(datetime2unix(epoch)+time[ii]);
-          dcm[:,:,ii] = convert(Array{Float64}, rECItoECEF(J2000(), ITRF(), date_to_jd(dt), eop_data));
+          dcm[:,:,ii] = convert(Array{Float64}, r_eci_to_ecef(J2000(), ITRF(), date_to_jd(dt), eop_data));
     end
     return dcm
 end
 
 "compute DCM to convert ECI to ECEF based on epoch, wrapper method that downloads EOP data"
 function eci_dcm(time, epoch::DateTime)
-    eop_data = get_iers_eop();
+    eop_data = fetch_iers_eop();
     return eci_dcm(time, epoch, eop_data)
 end
 
@@ -365,12 +381,10 @@ Updated helper function to create synthetic orbits.
 Arguments
     - `position::Array{3x1}`, ECEF xyz position (m,m,m)
     - `heading::Float64`, heading (deg)
-    - `baseline_pos::Array{1,Np}`, Baselines distance in n plane (from params)
+    - `baselines::Array{3,Np}`, TCN baselines for Np platforms
     - `tvec::Array{3x1}`, time vector
     - `θ::Float`: elevation angle (rad)
     - `ϕ::Float`: azimuth angle (rad)
-    - `left_right_look`: Left or right looking (from params)
-    - `mu`: mu value
    # Output
     - `platf_pos`
     - `platf_vel`
@@ -401,7 +415,9 @@ function make_orbit_new(pos, hdg, baseline_pos, tvec, theta, phi=0.0, left_right
     platf_vel           = repeat(platf_vel, 1, size(baseline_pos,2), length(tvec));
 
     for jj=1:length(tvec)  
-        platf_pos[:,:,jj] = ( pos .+ ( bhat .* baseline_pos) ) .+ (platf_vel[:,:,jj]*tvec[jj]);
+        #platf_pos[:,:,jj] = ( pos .+ ( bhat .* baseline_pos) ) .+ (platf_vel[:,:,jj]*tvec[jj]);
+        platf_pos[:,:,jj] = ( pos .+ ( nhat .* baseline_pos) ) .+ (platf_vel[:,:,jj]*tvec[jj]); # for platform spacing along vertical axis
+
     end
 
     return platf_pos, platf_vel
@@ -409,7 +425,7 @@ end
 
 "Updated helper function to compute perpendicular baselines.
 Inputs include 3D position vector (3xNpxNt) [m], velocity vector (3xNpxNt) [m/s]
-look/elevation angle (θ in degrees), azimuth angle, left or right look direction, and reference index"
+look angle (θ in degrees), and reference index"
 function get_perp_baselines_new(pos, vel, theta, phi=0.0, left_right_look="right", refind=1)
     @assert ndims(pos)==3 "POS needs to be 3 x Np x Nt"
     @assert ndims(vel)==3 "VEL needs to be 3 x Np x Nt"

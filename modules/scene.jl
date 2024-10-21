@@ -13,6 +13,9 @@ using Plots
 include("geometry.jl")
 using .Geometry
 
+c               = 299792458
+earth_radius    = 6378.137e3 # Earth semi-major axis at equator
+earth_eccentricity = sqrt(0.00669437999015) # Earth eccentricity
 
 mutable struct target_str
   #loc # target location
@@ -31,7 +34,16 @@ function construct_targets_str(params)
     t_ref_3d  = repeat( t_ref_interpolatedProfile, length(t_loc_1), length(t_loc_2), 1) # repeat the reflectivity in "horizontal S-C layers"
     t_ref_1xN = Scene.convert_3D_to_1xN(t_ref_3d)
     Nt = size(t_loc_3xN, 2) # number of targets
-    @info "Number of targets and interpolated profile" Nt, t_ref_interpolatedProfile
+    #@info "Number of targets and interpolated profile" Nt, t_ref_interpolatedProfile
+
+  elseif target_pos_mode=="layered-grid-GEDIL2"
+    t_loc_3xN = Scene.form3Dgrid_for(t_loc_1, t_loc_2, t_loc_3) # using 3 nested for loops
+
+    # create and flatten 3D grid of layered reflectivities from arbitrary t_ref profile
+    t_ref_3d  = repeat( t_ref, length(t_loc_1), length(t_loc_2), 1) # repeat the reflectivity in "horizontal S-C layers"
+    t_ref_1xN = Scene.convert_3D_to_1xN(t_ref_3d)
+    Nt = size(t_loc_3xN, 2) # number of targets
+    #@info "Number of targets and  profile" Nt, t_ref
 
   elseif target_pos_mode=="shaped-grid" # target positions are defined as a volumetric grid (useful for distributed target)
     @warn "Target position mode shaped-grid not implemented yet"
@@ -250,6 +262,25 @@ function groundrange_to_lookangle(ra,rg,p_h) # # target height is assumed 0 TODO
   return rs,θ_l*180/pi
 end
 
+
+"""
+Convert look angle to incidence angle
+## Inputs
+- θ_l: look angles (deg)
+- p_h: platform height (m)
+- ra: radius of spherical planet (m)
+- t_h: target heights vector (m)
+## Outputs
+- inc: incidence angles (deg)
+"""
+function lookangle_to_incangle(θ_l,p_h,t_h, ra)
+  ra=ra.+t_h
+  p_h=p_h.-t_h
+  inc=asind.(sind.(θ_l).*(ra+p_h)./ra) 
+  return inc
+end
+
+
 """
 Convert Azimuth/Elevation look angles and target heights to target xyz (spherical approximation)
 ## Arguments
@@ -349,7 +380,7 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
   function convert_3D_to_1xN(array_3D)
     N1,N2,N3=size(array_3D)
     N=N1*N2*N3
-    array_1xN=zeros(Float64,3,N)
+    array_1xN=zeros(Float64,1,N) ##?????
     for i=1:N1
       for j=1:N2
         for k=1:N3
@@ -364,7 +395,7 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
   #TODO add function definition
   function take_1D_cuts(image_3D, params)
     @unpack s_loc_1, s_loc_2, s_loc_3, t_loc_1, t_loc_2, t_loc_3, res_dB, PSF_image_point, PSF_cuts, PSF_direction, PSF_image_point, display_1D_cuts = params
-    target_location = [t_loc_1 t_loc_2 t_loc_3]
+    target_location = [t_loc_1 t_loc_2 t_loc_3[1]]
 
     if PSF_cuts == 1
       scene_axis11=s_loc_1;scene_axis22=s_loc_2;scene_axis33=s_loc_3
@@ -486,17 +517,17 @@ Converts 1D scene array of size 1xN to 3D scene array of size Ns1xNs2xNs3 which 
               image_slice=image_3D[:,slice_index2,slice_index3]
               image_1D_1=zeros(Float64,length(image_slice))
               image_1D_1[:]=image_slice
-          else;image_1D_1=NaN;println("PSF metrics along 1st dimension cannot be calculated since image has no 1st dimension.");end
+          else;image_1D_1=NaN;end #println("PSF metrics along 1st dimension cannot be calculated since image has no 1st dimension.");end
           if length(scene_axis2)>1
               image_slice=image_3D[slice_index1,:,slice_index3]
               image_1D_2=zeros(Float64,length(image_slice))
               image_1D_2[:]=image_slice
-          else;image_1D_2=NaN;println("PSF metrics along 2nd dimension cannot be calculated since image has no 2nd dimension.");end
+          else;image_1D_2=NaN;end #println("PSF metrics along 2nd dimension cannot be calculated since image has no 2nd dimension.");end
           if length(scene_axis3)>1
               image_slice=image_3D[slice_index1,slice_index2,:]
               image_1D_3=zeros(Float64,length(image_slice))
               image_1D_3[:]=image_slice
-          else;image_1D_3=NaN;println("PSF metrics along 3rd dimension cannot be calculated since image has no 3rd dimension.");end
+          else;image_1D_3=NaN;end #println("PSF metrics along 3rd dimension cannot be calculated since image has no 3rd dimension.");end
       end
       return image_1D_1,image_1D_2,image_1D_3
   end

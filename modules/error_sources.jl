@@ -41,10 +41,35 @@ function random_noise(rawdata, params)
     return rawdata
 end
 
+function random_noise_new(rawdata, params)
+    @unpack SNR,mode = params
+    
+    Noise = 30
+
+    Np_RX=size(rawdata)[2] # number of RX platforms
+    if mode==3;Np_TX=size(rawdata)[3];end # number of TX platforms
+    Nst=size(rawdata)[1] # number of slow-time samples
+    add_noise_amp=10^(Noise/10); # relative additive noise amplitude (set to 0 for no additive random noise)
+    Nft=size(rawdata)[end] # number of fast-time samples
+    add_rnd_noise=(add_noise_amp/2^0.5)*(randn(Nst,Np_RX,Nft)+im*randn(Nst,Np_RX,Nft)); # additive complex random noise, unique value for each platform,  fast-time sample, and slow-time sample
+    rawdata2 = zeros(ComplexF64, size(rawdata))
+
+    for s=1:Nst # slow-time (pulses)
+        for i=1:Np_RX # RX platform
+            if mode==1 || mode==2 # SAR (ping-pong) or SIMO
+                rawdata2[s,i,:]=rawdata[s,i,:]+add_rnd_noise[s,i,:] 
+            elseif mode==3 # MIMO
+                for k=1:Np_TX # TX platform for MIMO
+                    rawdata2[s,i,k,:]=rawdata[s,i,k,:]+add_rnd_noise[s,i,:]
+                end
+            end
+        end
+    end
+    return rawdata2, add_rnd_noise
+end
 
 """
 Calculates oscillator phase error and sychronization effects. Returns the raw data with phase errors.
-
 # Arguments
 - `rawdata::Num slow time points x Num platforms Array x Num fast time points`: complex valued raw data. Num slow time points x Num platforms Array if enable_fast_time = false
 - `orbit_pos_interp::3xNplatform x N time Array`: positions of platforms at pulse times
@@ -52,7 +77,6 @@ Calculates oscillator phase error and sychronization effects. Returns the raw da
 - `enable_fast_time::Boolean`: flag if fast time is used
 - `parameters::Parameters`: structure of simulation configuration parameters
 - `sync_PSD::Nplatform x Npulses x sync_clk_fs Array`: OPTIONAL INPUT, precalculated synchronization PSDs
-
 """
 function synchronization_errors!(rawdata,slow_time,orbit_pos_interp, t_xyz_3xN, osc_coeffs, params)
     @unpack mode, sync_master = params
