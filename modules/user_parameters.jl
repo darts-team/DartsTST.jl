@@ -25,11 +25,19 @@ end
     processing_mode = 1  #1: All-platforms for processing, 2: Platforms 2-end (Except master) for processing 
 
     # radar parameters
+    pulse_length::Float64 = 10e-6 # s pulse length
+    bandwidth::Float64 = 40e6 # bandwidth (Hz)
     fc::Float64  = 1.25e9 # center frequency (Hz) L-band; fc=3.2e9 # center frequency (Hz) S-band; fc=6e9 # center frequency (Hz) C-band
     fp::Float64  = 10 # pulse repetition frequency (Hz)
-    SNR::Float64 = 50 # SNR for single platform and single pulse before fast-time processing dB (for additive random noise only) TODO calculate based on sigma-zero (which depends on target type, wavelength, look angle, polarization) and NESZ (which depends on radar specs and processing)
     SAR_duration::Float64   = 5 #3 # synthetic aperture duration (s)
     SAR_start_time::Float64 = 0 #-1.5#0 # SAR imaging start time (s)
+    pow_tx = 3000 # transmit power (W)
+    T_noise = 900 # system noise temperature (including noise figure) (K)
+    L_sys = 4 # system losses (dB) (RF loss not included in noise figure, atmosphere/ionosphere, windowing/processing, etc.)
+    Rx_bw_factor = 1.2 # ratio of Rx to Tx bandwidth
+
+    # range spread function (RSF) parameters
+    Δt::Float64 = 1e-9 # s fast-time resolution (ADC sampling rate effect is excluded for now)
 
     # platform locations in xyz (including slow-time locations)
     user_defined_orbit::Int = 2 # 1: use orbits file; 2: user defined orbits in TCN
@@ -58,11 +66,6 @@ end
     s_loc_1 =  0#-20:0.2:20 #-20:0.25:20#-40:1:40 # deg latitude if LLH, along-track if SCH, X if XYZ
     s_loc_2 = -40:1:40 # -40:0.2:40 #-60:1:10 #-20:1:20 #-60:0.25:60 #-60:1:10 #-60:1:60 #-20:0.5:20 #-60:0.5:10 #-100:0.5:100 #-60:1:10 # deg longitude if LLH, cross-track if SCH, Y if XYZ
     s_loc_3 = -40:1:40# -40:0.2:40 #-5:1:50 #-20:1:20 #-60:0.25:60 #-5:1:50 #-60:1:60 #-20:0.5:20 #-5:0.5:50 #-100:0.5:100 #-5:1:50 # m  heights if LLH or SCH, Z if XYZ
-
-    # range spread function (RSF) parameters
-    pulse_length::Float64 = 10e-6 # s pulse length
-    Δt::Float64 = 1e-9 # s fast-time resolution (ADC sampling rate effect is excluded for now)
-    bandwidth::Float64 = 40e6 # bandwidth (Hz)
 
     # derived parameters (some are needed further below)
     λ::Float64 = c/fc # wavelength (m)
