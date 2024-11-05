@@ -72,7 +72,8 @@ function main_workflow(params::UserParameters.inputParameters)
         image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
     end
 
-    if params.enable_thermal_noise # adding random noise based on SNR after range (fast-time) processing
+    # Add random noise based on SNR to the image
+    if params.enable_thermal_noise
         # Note: image_3D must be a complex image! TODO remove abs() from process_raw_data functions
         # new inputs to calculate:
         # Lsa: synthetic aperture length
