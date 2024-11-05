@@ -4,7 +4,7 @@ using Parameters
 using JLD2, Plots
 
 
-function random_noise(rawdata, params)
+function random_noise_raw(rawdata, params) # based on SNR input (obsolete)
     @unpack SNR,enable_fast_time,mode = params
     
     Np_RX=size(rawdata)[2] # number of RX platforms
@@ -41,7 +41,7 @@ function random_noise(rawdata, params)
     return rawdata
 end
 
-function random_noise_new(rawdata, params)
+function random_noise_raw_new(rawdata, params) # obsolete
     @unpack SNR,mode = params
     
     Noise = 30
@@ -66,6 +66,31 @@ function random_noise_new(rawdata, params)
         end
     end
     return rawdata2, add_rnd_noise
+end
+
+function random_noise_image(image_3D, params, ref_pix_ind, Lsa, Nst, Gtx_ref, Grx_ref, sig0_ref, R_ref, θ_ref, α_ref)
+    @unpack pulse_length,bandwidth,T_noise,pow_tx,Rx_bw_factor,L_sys,fp,λ,c,kBolt = params
+    # Note: image_3D must be a complex image! TODO remove abs() from process_raw_data functions
+    # new inputs
+    # ref_pix_ind: image indices for the reference pixel
+    # Lsa: synthetic aperture length
+    # Nst: number of slow-time pulses in Lsa
+    # Gtx_ref & Grx_ref: Tx/Rx antenna gains for the reference scene pixel
+    # sig0_ref: sigma-0 for the reference scene pixel
+    # R_ref: slant range for the reference scene pixel
+    # θ_ref & α_ref: incidence angle and slope for the reference scene pixel
+    
+    # Calculate final SNR after processing for the reference scene pixel
+    NESZ_ref = (4^4 * pi^3 * kBolt * T_noise * bandwidth * Rx_bw_factor * L_sys * Lsa * R_ref^3 * sin((θ_ref-α_ref)*pi/180)) / (pow_tx * Nst * pulse_length * λ^3 * Gtx_ref * Grx_ref * c)
+    SNR_ref = sig0_ref / NESZ_ref # linear scale
+
+    # Calculate noise level for the reference scene pixel
+    ref_pix_sig =  image_3D[ref_pix_ind]
+    Npix=size(image_3D) # number of pixels
+    noise_lvl = (ref_pix_sig/2^0.5/SNR_ref^0.5)*(randn(Npix)+im*randn(Npix))
+
+    # Add noise to all image pixels
+    noisy_image = image_3D + noise_lvl
 end
 
 """

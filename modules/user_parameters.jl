@@ -11,6 +11,7 @@ export c
     c = 299792458 # speed of light (m/s)
     earth_radius = 6378.137e3 # Earth semi-major axis at equator
     earth_eccentricity = sqrt(0.00669437999015) # Earth eccentricity
+    kBolt = 1.38e-23 # Boltzmann constant (for SNR calculation)
 end
 
 # Input parameters structure with default values
