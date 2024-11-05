@@ -66,7 +66,7 @@ function main_workflow(params::UserParameters.inputParameters)
 
     # ADC sampling
     if params.enable_ADC
-        rawdata = Error_Sources.ADC_sampling(rawdata,params)
+        rawdata, Nft = Error_Sources.ADC_sampling(rawdata,params)
     end
 
     # Process raw data to generate image

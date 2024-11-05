@@ -96,7 +96,7 @@ end
 
 function ADC_sampling(rawdata,params)
     @unpack fs_ADC,Δt = Parameters
-    ds_rate = fs_ADC / Δt # downsampling rate (for now requires fs_ADC to be an integer multiple of Δt)
+    ds_rate = 1 / (fs_ADC * Δt) # downsampling rate (for now requires fs_ADC to be an integer multiple of Δt)
     if mode==1 || mode==2 # SAR (ping-pong) or SIMO
         rawdata_ds = rawdata[:,:,1:ds_rate:end]
         Nft_ds = size(rawdata_ds,3)
@@ -104,7 +104,7 @@ function ADC_sampling(rawdata,params)
         rawdata_ds = rawdata[:,:,:,1:ds_rate:end]
         Nft_ds = size(rawdata_ds,4)
     end
-    return rawdata_ds
+    return rawdata_ds, Nft_ds
 end
 
 """
