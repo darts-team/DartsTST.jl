@@ -118,6 +118,7 @@ end
     # terrain types are: soil, grass, short_veg, dry_snow, wet_snow, 
 
     # simulation options
+    enable_ADC::Bool              = true # whether to enable or disable ADC sampling
     enable_thermal_noise::Bool    = false # whether to enable or disable random additive noise (e.g. thermal noise)
     display_geometry::Bool        = false # whether to display geometry plots
     display_1D_cuts::Bool         = true # whether to 1D cuts from Scene module

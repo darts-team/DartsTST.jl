@@ -91,6 +91,20 @@ function random_noise_image(image_3D, params, ref_pix_ind, Lsa, Nst, Gtx_ref, Gr
 
     # Add noise to all image pixels
     noisy_image = image_3D + noise_lvl
+    return noisy_image
+end
+
+function ADC_sampling(rawdata,params)
+    @unpack fs_ADC,Δt = Parameters
+    ds_rate = fs_ADC / Δt # downsampling rate (for now requires fs_ADC to be an integer multiple of Δt)
+    if mode==1 || mode==2 # SAR (ping-pong) or SIMO
+        rawdata_ds = rawdata[:,:,1:ds_rate:end]
+        Nft_ds = size(rawdata_ds,3)
+    elseif mode==3 # MIMO
+        rawdata_ds = rawdata[:,:,:,1:ds_rate:end]
+        Nft_ds = size(rawdata_ds,4)
+    end
+    return rawdata_ds
 end
 
 """

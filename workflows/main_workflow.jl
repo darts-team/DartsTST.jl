@@ -64,6 +64,11 @@ function main_workflow(params::UserParameters.inputParameters)
         rawdata = Error_Sources.synchronization_errors!(rawdata, slow_time, p_xyz, t_xyz_3xN, sync_osc_coeffs, params)
     end
 
+    # ADC sampling
+    if params.enable_ADC
+        rawdata = Error_Sources.ADC_sampling(rawdata,params)
+    end
+
     # Process raw data to generate image
     if params.processing_steps === :bp3d # 1-step processing TODO do we need this option?
         image_3D = Process_Raw_Data.main_SAR_tomo_3D(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
@@ -84,7 +89,7 @@ function main_workflow(params::UserParameters.inputParameters)
         # sig0_ref: sigma-0 for the reference scene pixel
         # R_ref: slant range for the reference scene pixel
         # θ_ref & α_ref: incidence angle and slope for the reference scene pixel
-        image_3D_noisy = Error_Sources.random_noise_image(image_3D, params, ref_pix_ind, Lsa, Nst, Gtx_ref, Grx_ref, sig0_ref, R_ref, θ_ref, α_ref)        
+        image_3D = Error_Sources.random_noise_image(image_3D, params, ref_pix_ind, Lsa, Nst, Gtx_ref, Grx_ref, sig0_ref, R_ref, θ_ref, α_ref)        
     end
 
     # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
