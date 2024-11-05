@@ -34,7 +34,8 @@ end
     pow_tx = 3000 # transmit power (W)
     T_noise = 900 # system noise temperature (including noise figure) (K)
     L_sys = 4 # system losses (dB) (RF loss not included in noise figure, atmosphere/ionosphere, windowing/processing, etc.)
-    Rx_bw_factor = 1.2 # ratio of Rx to Tx bandwidth
+    Rx_bw_factor = 1.2 # ratio of Rx to Tx 
+    fs_ADC = 100e6 # ADC sampling rate (Hz or samples/s)
 
     # range spread function (RSF) parameters
     Δt::Float64 = 1e-9 # s fast-time resolution (ADC sampling rate effect is excluded for now)
