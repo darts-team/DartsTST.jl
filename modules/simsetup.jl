@@ -10,6 +10,7 @@ using Distributions
 #local packages
 using ..Geometry
 using ..Antenna
+using ..Scene
 using ..DEM
 
 
@@ -376,4 +377,43 @@ function define_scene_pixels(s_loc_1_range, s_loc_2_range, s_loc_3_range, DEM_re
 end
 
  
+function get_platform_ref_from_trg_ref(trg_ref, p_height, p_heading, p_la, p_look_dir, earth_radius=6378.137e3) # LLH coords
+
+    platform_ref_point      = [0.0;0.0;0.0]
+    ground_range            = Scene.lookangle_to_range(p_la, p_height, trg_ref[3], earth_radius)[2]  
+    displacement_N          = ground_range .* cosd(p_heading + 90) 
+    displacement_E          = ground_range .* sind(p_heading + 90)
+    if p_look_dir == "right"
+        platform_ref_point[1]             = trg_ref[1] - ((displacement_N/earth_radius)*180/pi)
+        platform_ref_point[2]             = trg_ref[2] - ((displacement_E/(earth_radius*cosd(platform_ref_point[1])))*180/pi) 
+    elseif p_look_dir == "left"
+        platform_ref_point[1]             = trg_ref[1] + ((displacement_N/earth_radius)*180/pi)
+        platform_ref_point[2]             = trg_ref[2] + ((displacement_E/(earth_radius*cosd(platform_ref_point[1])))*180/pi) 
+    end 
+    platform_ref_point[3]   = p_height
+
+    return platform_ref_point
+
+end
+
+function get_trg_ref_from_platform_ref(p_ref, trg_height, p_heading, p_la, p_look_dir, earth_radius=6378.137e3) # LLH coords
+
+    trg_ref_point           = [0.0;0.0;0.0]
+    ground_range            = Scene.lookangle_to_range(p_la,p_ref[3],trg_height, earth_radius)[2]  
+    displacement_N          = ground_range .* cosd(p_heading + 90) 
+    displacement_E          = ground_range .* sind(p_heading + 90)
+    if p_look_dir == "right"
+        trg_ref_point[1]             = p_ref[1] + ((displacement_N/earth_radius)*180/pi)
+        trg_ref_point[2]             = p_ref[2] + ((displacement_E/(earth_radius*cosd(p_ref[1])))*180/pi) 
+    elseif p_look_dir == "left"
+        trg_ref_point[1]             = p_ref[1] - ((displacement_N/earth_radius)*180/pi)
+        trg_ref_point[2]             = p_ref[2] - ((displacement_E/(earth_radius*cosd(p_ref[1])))*180/pi) 
+    end 
+    trg_ref_point[3]        = trg_height
+
+    return trg_ref_point
+
+end
+
+
 end #end module

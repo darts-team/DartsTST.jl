@@ -18,11 +18,12 @@ using DelimitedFiles
 using DSP
 
 include("../../../modules/interferometry.jl")
+include("../../../modules/dem.jl")
 
 
 function plot_image(x_axis,y_axis,Data,unit_flag, savepath, savename, figure_title)
 
-    fontsize = 18
+    fontsize = 13
 
     if ~ispath(savepath)
         mkdir(savepath)
@@ -35,16 +36,16 @@ function plot_image(x_axis,y_axis,Data,unit_flag, savepath, savename, figure_tit
         if (hlim-llim) > 30
             llim = hlim-30
         end
-        p1=(heatmap(x_axis,y_axis,plot_vals,clim=(llim, hlim),xlabel="Lon [deg]",ylabel="Lat [deg]",title=figure_title,xticks=round.(LinRange((minimum(x_axis)),(maximum(x_axis)),4),digits=2), yticks=round.(LinRange((minimum(y_axis)),(maximum(y_axis)),4),digits=2),
-        topmargin=6mm,bottommargin=16mm,leftmargin=10mm,rightmargin=15mm,tickfont=font(fontsize), xtickfont=font(fontsize), ytickfont=font(fontsize), guidefont=font(fontsize), titlefontsize=fontsize, size=(1200,500) )) #500,360
+        p1=(heatmap(x_axis,y_axis,plot_vals,clim=(llim, hlim),xlabel="Lon [deg]",ylabel="Lat [deg]",title=figure_title,xticks=round.(LinRange((minimum(x_axis)),(maximum(x_axis)),4),digits=3), yticks=round.(LinRange((minimum(y_axis)),(maximum(y_axis)),4),digits=3),
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(fontsize), xtickfont=font(fontsize), ytickfont=font(fontsize), guidefont=font(fontsize), titlefontsize=fontsize, size=(650,500) )) #500,360
         savefig(p1, savepath*savename*".png")
     elseif unit_flag == "lin"
-        p1=(heatmap(x_axis,y_axis,(abs.(Data)),xlabel="Lon [deg]",ylabel="Lat [deg]", title=figure_title, xticks=round.(LinRange((minimum(x_axis)),(maximum(x_axis)),4),digits=2), yticks=round.(LinRange((minimum(y_axis)),(maximum(y_axis)),4),digits=2),
-        topmargin=6mm,bottommargin=16mm,leftmargin=10mm,rightmargin=15mm,tickfont=font(fontsize), xtickfont=font(fontsize), ytickfont=font(fontsize), guidefont=font(fontsize), titlefontsize=fontsize, size=(1200,500) )) #1200
+        p1=(heatmap(x_axis,y_axis,((Data)),xlabel="Lon [deg]",ylabel="Lat [deg]", title=figure_title, xticks=round.(LinRange((minimum(x_axis)),(maximum(x_axis)),3),digits=3), yticks=round.(LinRange((minimum(y_axis)),(maximum(y_axis)),5),digits=3),
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(fontsize), xtickfont=font(fontsize), ytickfont=font(fontsize), guidefont=font(fontsize), titlefontsize=fontsize, size=(650,500) )) #1200
         savefig(p1, savepath*savename*".png")
     elseif unit_flag == "phase"
-        p1=(heatmap(x_axis,y_axis,(Data),xlabel="Lon [deg]",ylabel="Lat [deg]", title=figure_title, c=:twilight, xticks=round.(LinRange((minimum(x_axis)),(maximum(x_axis)),4),digits=2), yticks=round.(LinRange((minimum(y_axis)),(maximum(y_axis)),4),digits=2),
-        topmargin=6mm,bottommargin=16mm,leftmargin=10mm,rightmargin=15mm,tickfont=font(fontsize), xtickfont=font(fontsize), ytickfont=font(fontsize), guidefont=font(fontsize), titlefontsize=fontsize, size=(1200,500) )) #1200
+        p1=(heatmap(x_axis,y_axis,(Data),xlabel="Lon [deg]",ylabel="Lat [deg]", title=figure_title, c=:twilight, xticks=round.(LinRange((minimum(x_axis)),(maximum(x_axis)),4),digits=3), yticks=round.(LinRange((minimum(y_axis)),(maximum(y_axis)),4),digits=3),
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(fontsize), xtickfont=font(fontsize), ytickfont=font(fontsize), guidefont=font(fontsize), titlefontsize=fontsize, size=(650,500) )) #1200
         savefig(p1, savepath*savename*".png")
     end
 end
@@ -53,13 +54,13 @@ function plot_profile(x_axis, Data1, Data2, savepath, savename, xlabel, ylabel, 
 
     if Data2==""
         p1=(plot(x_axis, Data1,xlabel=xlabel,ylabel=ylabel,title=figure_title,legend=:topleft, lc=:black, label=label1,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #500,360
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500) )) #500,360
         savefig(p1, savepath*savename*".png")
     else
-        p1=(plot(x_axis, Data1,xlabel=xlabel,ylabel=ylabel,title=figure_title, legend=:topleft, lc=:black, label=label1,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #500,360
-        p1=(plot!(x_axis, Data2,xlabel=xlabel,ylabel=ylabel,title=figure_title, legend=:topleft,lc=:blue,label=label2,
-        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #500,360
+        p1=(plot(x_axis, Data1,xlabel=xlabel,ylabel=ylabel,title=figure_title, legend=:bottomright, lc=:black, label=label1,
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500) )) #500,360
+        p1=(plot!(x_axis, Data2,xlabel=xlabel,ylabel=ylabel,title=figure_title, legend=:bottomright,lc=:blue,label=label2,
+        topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500) )) #500,360
         savefig(p1, savepath*savename*".png")
     end
 
@@ -215,8 +216,8 @@ function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, m
     plot_image(Lon_vals,Lat_vals,Critical_baseline[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Critical_baseline_P1", "")
     plot_profile(Lon_vals, Critical_baseline_rangeprofile[:], "", savepath, "Critical_baseline_profile", "Lon [deg]", "Critical baseline  [m]", "", "", "")
 
-    p1=(heatmap(Lon_vals,Lat_vals,Critical_baseline[1:maxind_val_lon,1:maxind_val_lat]',xlabel="Lon [deg]",ylabel="Lat [deg]", title="", clim=(0e3,40e3),
-    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #1200
+    p1=(heatmap(Lon_vals,Lat_vals,Critical_baseline[1:maxind_val_lon,1:maxind_val_lat]',xlabel="Lon [deg]",ylabel="Lat [deg]", title="", clim=(0e3,40e3),xticks=round.(LinRange((minimum(Lon_vals)),(maximum(Lon_vals)),3),digits=3), yticks=round.(LinRange((minimum(Lat_vals)),(maximum(Lat_vals)),5),digits=3),
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500) )) #1200
     savefig(p1, savepath*"Critical_baseline_P1_2"*".png")
 
 
@@ -253,8 +254,8 @@ function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, m
     plot_image(Lon_vals,Lat_vals,Correlation_theo[1:maxind_val_lon,1:maxind_val_lat]',"lin", savepath, "Correlation_theo_P1", "")
     plot_profile(Lon_vals, Correlation_theo_rangeprofile[:], "", savepath, "Correlation_theo_profile", "Lon [deg]", "Correlation theory  ", "", "", "")
 
-    p1=(heatmap(Lon_vals,Lat_vals,Correlation_theo[1:maxind_val_lon,1:maxind_val_lat]',xlabel="Lon [deg]",ylabel="Lat [deg]", title="", clim=(0,1),
-    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,500) )) #1200
+    p1=(heatmap(Lon_vals,Lat_vals,Correlation_theo[1:maxind_val_lon,1:maxind_val_lat]',xlabel="Lon [deg]",ylabel="Lat [deg]", title="", clim=(0,1),xticks=round.(LinRange((minimum(Lon_vals)),(maximum(Lon_vals)),3),digits=3), yticks=round.(LinRange((minimum(Lat_vals)),(maximum(Lat_vals)),5),digits=3),
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500) )) #1200
     savefig(p1, savepath*"Correlation_theo_P1_2"*".png")
 
 end
@@ -306,8 +307,8 @@ end
 
 #Load the output file
 
-folder_path= "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set2/"
-folder_index = 202
+folder_path= "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set3/"
+folder_index = 1032
 
 s_geom_filepath             = folder_path*string(folder_index)*"/"*string(folder_index)*"_scene_geometry_1.tif" 
 t_geom_filepath             = folder_path*string(folder_index)*"/"*string(folder_index)*"_target_geometry_1.tif" 
@@ -317,14 +318,6 @@ opdata_filepath_t           = folder_path*string(folder_index)*"/"*string(folder
 
 savepath                    = folder_path*string(folder_index)*"/"
 
-
-#t_geom_filepath         = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/106/106_target_geometry_1.tif" 
-
-#opdata_filepath_s       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/106/106_sim_output_main_scene_1.tif" 
-#opdata_filepath_t       = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/106/106_sim_output_main_target_1.tif" 
-
-#savepath                = "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/106/"
-
 process_plot_output_flag      = "T"
 
 profile_flag            = 0
@@ -332,7 +325,17 @@ profile_flag            = 0
 Looks_along_Lat         = 4
 Looks_along_Lon         = 12
 
-oversampling_factor_looks = 2.78*1.8
+res_AT_radar = 10
+res_CT_radar = 5.5
+
+res_AT_sim  = DEM.deg_to_m_lat(0.000033*2) 
+res_CT_sim  = DEM.deg_to_m_lon(0.000033*1.5, 35)
+
+
+oversampling_factor_AT = res_AT_radar/res_AT_sim
+oversampling_factor_CT = res_CT_radar/res_CT_sim
+
+oversampling_factor_looks = (oversampling_factor_AT)*(oversampling_factor_CT)
 
 
 if process_plot_output_flag == "S"
@@ -376,8 +379,8 @@ elseif process_plot_output_flag == "T"
         mkdir(savepath)
     end  
 
-    t_geom_data                     = reverse(GeoArrays.read(t_geom_filepath),dims=2)
-    #t_geom_data                     = (GeoArrays.read(t_geom_filepath))
+    #t_geom_data                     = reverse(GeoArrays.read(t_geom_filepath),dims=2)
+    t_geom_data                     = (GeoArrays.read(t_geom_filepath))
 
     coords_op                       = collect(GeoArrays.coords(t_geom_data))
 
@@ -385,8 +388,8 @@ elseif process_plot_output_flag == "T"
     Lon_vals                        = Lon_vals_all[:,1]
 
     Lat_vals_all                    = [x[2] for x in coords_op]
-    #Lat_vals                        = (Lat_vals_all[1,:])
-    Lat_vals                        = reverse(Lat_vals_all[1,:])
+    Lat_vals                        = (Lat_vals_all[1,:])
+    #Lat_vals                        = reverse(Lat_vals_all[1,:])
 
 
     maxind_val_lon                  = get_max_ind_vec(length(Lon_vals),Looks_along_Lon)
@@ -504,6 +507,25 @@ for i=1:Lat_length_ml
     k=k+Looks_along_Lat
 end
 
+
+t_geom_data_ml = zeros(Lon_length_ml,Lat_length_ml,size(t_geom_data)[3])
+
+k=1
+for i=1:Lat_length_ml
+    l=1
+    for j=1:Lon_length_ml
+        for bi = 1:14
+        t_geom_data_ml[j,i,bi]  = mean(t_geom_data[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1,bi]) 
+        end
+        l=l+Looks_along_Lon
+    end
+    k=k+Looks_along_Lat
+end
+
+geom_savepath2                   = savepath*"Geom_plots_t_ml/"
+plot_geometry_variables(t_geom_data_ml, Lon_vals_multilooked, Lat_vals_multilooked, length(Lon_vals_multilooked), length(Lat_vals_multilooked), profile_flag, geom_savepath2)
+
+
 plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Pow_1_multilooked',"log", savepath*"Power_plots/", "ML_Power_P1_log", "")
 plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Pow_2_multilooked',"log", savepath*"Power_plots/", "ML_Power_P2_log", "")
         
@@ -578,6 +600,10 @@ plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Int_Pow_multilooked',"lin",
 plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Int_Phase_multilooked',"phase", savepath*"Int_plots/", "ML_Phase_P12_lin", "")
 #plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Correlation,"lin", savepath*"Int_plots/", "ML_Correlation_lin", "")
 
+p1=(heatmap(Lon_vals_multilooked,Lat_vals_multilooked,Int_Pow_multilooked',xlabel="Lon [deg]",ylabel="Lat [deg]", title="", clim=(0,1),xticks=round.(LinRange((minimum(Lon_vals_multilooked)),(maximum(Lon_vals_multilooked)),3),digits=3), yticks=round.(LinRange((minimum(Lat_vals_multilooked)),(maximum(Lat_vals_multilooked)),5),digits=3),
+topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500) )) #1200
+savefig(p1, savepath*"Int_plots/"*"ML_Power_P12_lin_2"*".png")
+
 if profile_flag == 1
     Correlation_rangeprofile    =  mean(Int_Pow_multilooked,dims=2)
     Int_phase_rangeprofile      =  mean(Int_Phase_multilooked,dims=2)
@@ -586,8 +612,11 @@ elseif profile_flag == 0
     Int_phase_rangeprofile      = Int_Phase_multilooked[:,1] 
 end
 
-plot_profile(Lon_vals_multilooked, Correlation_rangeprofile[:], "", savepath*"Int_plots/", "Int_mag_profile", "Lon [deg]", "Magnitude  ", "", "", "")
+plot_profile(Lon_vals_multilooked, Correlation_rangeprofile[:], "", savepath*"Int_plots/", "Int_mag_profile", "Lon [deg]", "  ", "", "", "")
 plot_profile(Lon_vals_multilooked, Int_phase_rangeprofile[:], "", savepath*"Int_plots/", "Int_phase__profile", "Lon [deg]", "Phase [rad]  ", "", "", "")
+
+plot_profile(Lon_vals_multilooked, Correlation_rangeprofile[:], t_geom_data_ml[:,1,12], savepath*"Int_plots/", "Int_mag_profile_comp", "Lon [deg]", "  ", "", "Simulations", "Theory")
+
 
 A = plot_histogram_only(Int_Pow_multilooked[:], "Magnitude ",savepath*"Int_plots/", "ML_Int_mag")
 A = plot_histogram_only(Int_Phase_multilooked[:], "Phase",savepath*"Int_plots/", "ML_Int_ph")
@@ -615,10 +644,55 @@ plot_profile(Lon_vals_multilooked, Int_phase_rangeprofile_window[:], "", savepat
 CF_A, CF_B = linear_fit(Lon_vals_multilooked,Correlation_rangeprofile_window)
 
 p1=(plot(Lon_vals_multilooked, Correlation_rangeprofile_window[:],xlabel="Lon [deg]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:black, label="",
-topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
+topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,360) )) #500,360
 p1=(plot!(Lon_vals_multilooked, (Lon_vals_multilooked .* CF_B).+CF_A,xlabel="Lon [deg]",ylabel="Magnitude  ",title="",legend=:topleft, lc=:red, label="Linear Fit",
-topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
+topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,360) )) #500,360
 savefig(p1, savepath*"Int_plots/"*"Int_mag_profile_window2"*".png")
+
+Nominal_looks_ml                            = zeros(Lon_length_ml,Lat_length_ml)
+Effective_looks_ml                          = zeros(Lon_length_ml,Lat_length_ml)
+Effective_looks_ml_flat                     = zeros(Lon_length_ml,Lat_length_ml)
+
+la_all = t_geom_data[:,:,9]
+la_ml             = zeros(Lon_length_ml,Lat_length_ml)
+
+k=1
+for i=1:Int((length(Lat_vals))/Looks_along_Lat)
+    l=1
+    for j=1:Int((length(Lon_vals))/Looks_along_Lon)
+        la_ml[j,i] = mean(la_all[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1])
+        l=l+Looks_along_Lon
+    end
+    k=k+Looks_along_Lat
+end
+
+#TEST
+res_AT_radar = 10
+res_CT_radar = 6.38
+
+res_AT_sim  = DEM.deg_to_m_lat(0.000033*1) 
+res_CT_sim  = DEM.deg_to_m_lon(0.000033*1, 34.42)
+
+c                    = 299792458
+oversampling_factor_AT = res_AT_radar/res_AT_sim
+oversampling_factor_CT_all = res_CT_radar./(c./(2*54e6)./sind.(la_ml))
+
+#oversampling_factor_looks = (2.78)*(2.18)
+oversampling_factor_looks = (oversampling_factor_AT)*(oversampling_factor_CT_all)
+
+Nominal_looks_ml                            .= Looks_along_Lat .* Looks_along_Lon
+Effective_looks_ml_flat                     .=  Nominal_looks_ml ./ oversampling_factor_looks
+Effective_looks_ml                          .= Nominal_looks_ml .* sind.(la_ml)
+
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Nominal_looks_ml',"lin", savepath*"Int_plots/", "looks_1", "")
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Effective_looks_ml_flat',"lin", savepath*"Int_plots/", "looks_2", "")
+plot_image(Lon_vals_multilooked,Lat_vals_multilooked,Effective_looks_ml',"lin", savepath*"Int_plots/", "looks_3", "")
+
+
+p1=(heatmap(Lon_vals_multilooked,Lat_vals_multilooked,Effective_looks_ml_flat',xlabel="Lon [deg]",ylabel="Lat [deg]", title="", clim=(10,30),xticks=round.(LinRange((minimum(Lon_vals)),(maximum(Lon_vals)),3),digits=3), yticks=round.(LinRange((minimum(Lat_vals)),(maximum(Lat_vals)),5),digits=3),
+topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500) )) #1200
+savefig(p1, savepath*"Int_plots/"*"looks_2"*".png")
+
 
 #=
 p2 = (plot(Lon_vals, Correlation_theo_P1_rangeprofile[:], label="Theory"))
@@ -658,13 +732,22 @@ plot_image(Lon_vals_multilooked,Lat_vals_multilooked,int_unwrapped_height_new2'.
 =#
 
 
-#=
+savepath_stat = savepath*"statistics/"
+if ~ispath(savepath_stat)
+    mkdir(savepath_stat)
+end    
 if process_plot_output_flag == "T"
 
     include("../../../modules/scattering.jl")
 
+    pixel_area = 13.49
+    num_targets = 30
+
+
     LocalIncangle_ml             = zeros(Lon_length_ml,Lat_length_ml)
-    targets_ref_data_ml             = zeros(Lon_length_ml,Lat_length_ml)
+    targets_ref_data_ml          = zeros(Lon_length_ml,Lat_length_ml)
+    rng_slope_ml             = zeros(Lon_length_ml,Lat_length_ml)
+
 
     k=1
     for i=1:Int((length(Lat_vals))/Looks_along_Lat)
@@ -672,34 +755,45 @@ if process_plot_output_flag == "T"
         for j=1:Int((length(Lon_vals))/Looks_along_Lon)
             LocalIncangle_ml[j,i] = mean(LocalIncangle[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1])
             targets_ref_data_ml[j,i] = mean(targets_ref_data[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1])
+            rng_slope_ml[j,i]       = mean(range_slope[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1])
+
             l=l+Looks_along_Lon
         end
         k=k+Looks_along_Lat
     end
 
 
-
-    rcs_model_ip = collect(0:60)
-    rcs_model = zeros(61)
-    for i=1:61
+    rcs_model_ip = LinRange(minimum(LocalIncangle[:]),maximum(LocalIncangle[:]),100)
+    rcs_model   = zeros(length(rcs_model_ip))
+    for i=1:length(rcs_model_ip)
         rcs_model[i] = Scattering.TST_surface_brcs(2,0.23793052222222222,rcs_model_ip[i],0.0,rcs_model_ip[i],180.0-0.0,3,1.0)
     end
-    rcs_constant  = 4.5
+    rcs_constant  = pixel_area / num_targets
     rcs_model = (rcs_model .* rcs_constant)
 
     plot_var = (targets_ref_data[:])
     
-    (histogram2d(LocalIncangle[:],plot_var.-maximum(plot_var),colorbar_scale=:log10,xlabel="Local incidence angle",ylabel="RCS", 
-    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(700,500), )) #1200
-    
-    display(plot!(rcs_model_ip,rcs_model.-maximum(rcs_model), lw=2, color=:black, label="Model",))
+    p1 = (histogram2d(LocalIncangle[:],plot_var.-maximum(plot_var),colorbar_scale=:log10,xlabel="Local incidence angle [deg]",ylabel="sigma0", 
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500), )) #1200
+    p1 = (plot!(rcs_model_ip,rcs_model.-maximum(rcs_model), lw=2, color=:black, label="Model"))
+    savefig(p1, savepath_stat*"LA_ref_1.png")
+
+    plot_var = 10 .* log10.(targets_ref_data[:])
+    plot_var2 = 10 .* log10.(rcs_model[:])
+    p1 = (histogram2d(LocalIncangle[:],plot_var.-maximum(plot_var),colorbar_scale=:log10,xlabel="Local incidence angle [deg]",ylabel="sigma0 [dB]", 
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500), )) #1200
+    p1 = (plot!(rcs_model_ip,plot_var2.-maximum(plot_var2), lw=2, color=:black, label="Model"))
+    savefig(p1, savepath_stat*"LA_ref_1_2.png")
+
+
     
     pow_var = 10 .* log10.((Pow_1_multilooked)')
-    pow_var = pow_var .- maximum(pow_var[:])
+    pow_var = pow_var .- mean(pow_var[:])
     la_var = LocalIncangle_ml'
 
-    display(histogram2d(la_var[:],(pow_var[:]), colorbar_scale=:log10,xlabel="Local incidence angle",ylabel="Pr",
-    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(700,500))) 
+    p2 = (histogram2d(la_var[:],(pow_var[:]), colorbar_scale=:log10,xlabel="Local incidence angle [deg]",ylabel="Power [dB]",
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500))) 
+    savefig(p2, savepath_stat*"LA_ref_2.png")
 
 
 
@@ -728,52 +822,63 @@ if process_plot_output_flag == "T"
 
 
     pow_var = 10 .* log10.(Amp_1_multilooked')
-    pow_var = pow_var .- maximum(pow_var[:])
+    pow_var = pow_var .- mean(pow_var[:])
     la_var = LocalIncangle_ml'
 
-    display(histogram2d(la_var[:],pow_var[:], colorbar_scale=:log10,xlabel="Local incidence angle",ylabel="Amp",
-    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(700,500))) 
+    p3=(histogram2d(la_var[:],pow_var[:], colorbar_scale=:log10,xlabel="Local incidence angle [deg]",ylabel="Amplitude [dB]",
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500))) 
+    savefig(p3, savepath_stat*"LA_ref_3.png")
 
 
 
     Correlation_theo[:] = clamp.(Correlation_theo[:],0,1)
-    display(histogram2d(LocalIncangle[:],Correlation_theo[:],xlabel="Local incidence angle",ylabel="Theo Corr", 
-    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(700,500),xlim=(10,40),ylim=(0.8,1) )) #1200
+    p4=(histogram2d(LocalIncangle[:],Correlation_theo[:],xlabel="Local incidence angle [deg]",ylabel="Corrleation - Theory", 
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500) )) #1200
+    savefig(p4, savepath_stat*"LA_Corr_1.png")
 
 
 
-    display(histogram2d(LocalIncangle_ml[:],Int_Pow_multilooked[:],xlabel="Local incidence angle",ylabel="Corr", 
-    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(700,500),xlim=(10,40),ylim=(0.8,1) )) #1200
+    p5 = (histogram2d(LocalIncangle_ml[:],Int_Pow_multilooked[:],xlabel="Local incidence angle [deg]",ylabel="Corrleation - Simulations", 
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500))) #1200
+    savefig(p5, savepath_stat*"LA_Corr_2.png")
 
 
-    display(histogram2d(Correlation_theo_multilooked[:],Int_Pow_multilooked[:],xlabel="Corr Theory",ylabel="Corr Sim", 
-    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(700,500), xlim=(0.9,1),ylim=(0.9,1))) #1200
-
-    display(plot!(0:0.01:1,0:0.01:1,lw=2,color=:red, legend=:false))
-
-
-
-
-    A_vals = 10 .* log10.((targets_ref_data[1:maxind_val_lon,1:maxind_val_lat].^2)').+128
-
-    B_vals = 10 .* log10.(Pow_1')
-
-    (histogram2d(A_vals[:],B_vals[:],colorbar_scale=:log10,xlabel="RCS input adjusted [dB]",ylabel="Power [dB]", 
-    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(700,500), xlim=(40,160),ylim=(40,160) )) #1200
-    
-    display(plot!(40:160,40:160,lw=2,color=:red, legend=:false))
+    p7 = (histogram2d(Correlation_theo_multilooked[:],Int_Pow_multilooked[:],xlabel="Corrleation - Theory",ylabel="Corrleation - Simulations", bins=100,
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500))) #1200
+    p7 = (plot!(0:0.01:1,0:0.01:1,lw=2,color=:red, legend=:false, xlim=(0.7,1),ylim=(0.7,1)))
+    savefig(p7, savepath_stat*"Corr_Corr_1.png")
 
 
 
-    A_vals = 10 .* log10.(targets_ref_data[1:maxind_val_lon,1:maxind_val_lat]').+64
+    Gain_offset =  10 .* log10.(2160*260*sqrt(pixel_area)) # RC gain * Num pulses * sqrt(Area)
 
+    A_vals = 10 .* log10.(targets_ref_data[1:maxind_val_lon,1:maxind_val_lat]').+(Gain_offset)
     B_vals = 10 .* log10.(Amp_1')
 
-    (histogram2d(A_vals[:],B_vals[:],colorbar_scale=:log10,xlabel="RCS input adjusted [dB]",ylabel="Amplitude [dB]", 
-    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(700,500), xlim=(20,80),ylim=(20,80) )) #1200
-    
-    display(plot!(20:80,20:80,lw=2,color=:red, legend=:false))
+    p8 = (histogram2d(A_vals[:],B_vals[:],colorbar_scale=:log10,xlabel="Amplitude - Expected (from Sigma0) [dB]",ylabel="Amplitude - Simulations [dB]", 
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500), xlim=(50,80),ylim=(50,80) )) #1200
+    p8 = (plot!(0:200,0:200,lw=2,color=:red, legend=:false))
+    savefig(p8, savepath_stat*"Ip_op_1.png")
 
+
+
+
+    A_vals = 10 .* log10.((targets_ref_data[1:maxind_val_lon,1:maxind_val_lat].^2)').+(2*Gain_offset)
+    B_vals = 10 .* log10.(Pow_1')
+
+    p9 = (histogram2d(A_vals[:],B_vals[:],colorbar_scale=:log10,xlabel="Power - Expected (from Sigma0) [dB]",ylabel="Power - Simulations [dB]", 
+    topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(650,500), xlim=(100,160),ylim=(100,160) )) #1200
+    p9 = (plot!(0:200,0:200,lw=2,color=:red, legend=:false))
+    savefig(p9, savepath_stat*"Ip_op_2.png")
+
+    #=
+    Correlation_theo_multilooked_select = Correlation_theo_multilooked[10:26,:]
+    Int_Pow_multilooked_select = Int_Pow_multilooked[10:26,:]
+    rng_slope_ml_select = rng_slope_ml[10:26,:]
+
+    println(mean(rng_slope_ml_select))
+    println(mean(Correlation_theo_multilooked_select))
+    println(mean(Int_Pow_multilooked_select))
+    =#
 end
 
-=#

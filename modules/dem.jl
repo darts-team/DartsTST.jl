@@ -100,6 +100,158 @@ function custom_DEM2(ref_lat, ref_lon, lat_extent, lon_extent, lat_res, lon_res)
 end
 
 
+function custom_DEM3(ref_lat, ref_lon, lat_extent, lon_extent, lat_res, lon_res)
+
+    lat_range               = ref_lat:lat_res:(ref_lat+lat_extent)-lat_res   
+    lon_range               = ref_lon:lon_res:(ref_lon+lon_extent)-lon_res 
+
+    if iseven(length(lat_range))
+        lat_range               = ref_lat:lat_res:(ref_lat+lat_extent+lat_res)-lat_res 
+    end  
+    if iseven(length(lon_range))
+        lon_range               = ref_lon:lon_res:(ref_lon+lon_extent+lon_res)-lon_res  
+    end 
+
+    DEM_lat                 = zeros(length(lat_range))
+    DEM_lon                 = zeros(length(lon_range))
+
+    lon_res_dist            = deg_to_m_lon(lon_res, ref_lat)
+    ij = 1
+    for i=1:length(lon_range)
+        if i < ceil(length(lon_range)*1/6)
+            DEM_lon[i] = 0.0
+        elseif i < ceil(length(lon_range)*5/6)
+            DEM_lon[i] = 1 * ((ij * lon_res_dist) .* tand(39.0))
+            ij = ij +1
+        else
+            DEM_lon[i] = DEM_lon[i-1]
+        end
+    end
+
+    DEM_full_lat            = repeat(DEM_lat',length(DEM_lon),1)
+    DEM_full_lon            = repeat(DEM_lon,1,length(DEM_lat))
+
+    DEM_full                = DEM_full_lat + DEM_full_lon
+
+    Geo_location_lat_mat    = repeat(collect(lat_range)',length(lon_range),1)
+    Geo_location_lon_mat    = repeat(collect(lon_range),1,length(lat_range))
+
+    ag_geotransform = [ref_lon-(lon_res)/2;lon_res;0.0;ref_lat-(lat_res/2);0.0;lat_res]
+    ag_ref = "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4326\"]]"
+
+    return DEM_full, Geo_location_lat_mat, Geo_location_lon_mat, ag_geotransform, ag_ref 
+
+end
+
+
+function custom_DEM4(ref_lat, ref_lon, lat_extent, lon_extent, lat_res, lon_res)
+
+    lat_range               = ref_lat:lat_res:(ref_lat+lat_extent)-lat_res   
+    lon_range               = ref_lon:lon_res:(ref_lon+lon_extent)-lon_res 
+
+    if iseven(length(lat_range))
+        lat_range               = ref_lat:lat_res:(ref_lat+lat_extent+lat_res)-lat_res 
+    end  
+    if iseven(length(lon_range))
+        lon_range               = ref_lon:lon_res:(ref_lon+lon_extent+lon_res)-lon_res  
+    end 
+
+    DEM_lat                 = zeros(length(lat_range))
+    DEM_lon                 = zeros(length(lon_range))
+
+    lon_res_dist            = deg_to_m_lon(lon_res, ref_lat)
+    ij = 1
+    for i=1:length(lon_range)
+        if i < ceil(length(lon_range)/4)
+            DEM_lon[i] = 0.0
+        elseif i < ceil(length(lon_range)*2/4)
+            DEM_lon[i] = 1 * ((ij * lon_res_dist) .* tand(10))
+            ij = ij +1
+        elseif i < ceil(length(lon_range)*3/4)
+            DEM_lon[i] = DEM_lon[i-1] + (-1 * ((lon_res_dist) .* tand(10)))
+        else
+            DEM_lon[i] = DEM_lon[i-1]
+        end
+    end
+
+    DEM_full_lat            = repeat(DEM_lat',length(DEM_lon),1)
+    DEM_full_lon            = repeat(DEM_lon,1,length(DEM_lat))
+
+    DEM_full                = DEM_full_lat + DEM_full_lon
+
+    Geo_location_lat_mat    = repeat(collect(lat_range)',length(lon_range),1)
+    Geo_location_lon_mat    = repeat(collect(lon_range),1,length(lat_range))
+
+    ag_geotransform = [ref_lon-(lon_res)/2;lon_res;0.0;ref_lat-(lat_res/2);0.0;lat_res]
+    ag_ref = "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4326\"]]"
+
+    return DEM_full, Geo_location_lat_mat, Geo_location_lon_mat, ag_geotransform, ag_ref 
+
+end
+
+
+function custom_DEM5(ref_lat, ref_lon, lat_extent, lon_extent, lat_res, lon_res)
+
+    lat_range               = ref_lat:lat_res:(ref_lat+lat_extent)-lat_res   
+    lon_range               = ref_lon:lon_res:(ref_lon+lon_extent)-lon_res 
+
+    if iseven(length(lat_range))
+        lat_range               = ref_lat:lat_res:(ref_lat+lat_extent+lat_res)-lat_res 
+    end  
+    if iseven(length(lon_range))
+        lon_range               = ref_lon:lon_res:(ref_lon+lon_extent+lon_res)-lon_res  
+    end 
+
+    DEM_lat                 = zeros(length(lat_range))
+    DEM_lon                 = zeros(length(lon_range))
+
+    lon_res_dist            = deg_to_m_lon(lon_res, ref_lat)
+
+    ij = 1
+    ik = 1
+    for i=1:length(lon_range)
+        if i < ceil(length(lon_range)/2)
+                if i < ceil(length(lon_range)/8)
+                    DEM_lon[i] = 0.0
+                elseif i < ceil(length(lon_range)*2/8)
+                    DEM_lon[i] = 0.0    
+                elseif i < ceil(length(lon_range)*3/8)
+                    DEM_lon[i] = 1 * ((ij * lon_res_dist) .* tand(10))
+                    ij = ij +1
+                else
+                    DEM_lon[i] = DEM_lon[i-1] + (-1 * ((lon_res_dist) .* tand(10)))
+                end
+        else
+            
+                if i < ceil(length(lon_range)*5/8)
+                    DEM_lon[i] = 1 * ((ik * lon_res_dist) .* tand(30))
+                    ik = ik +1
+                elseif i < ceil(length(lon_range)*6/8)
+                    DEM_lon[i] = DEM_lon[i-1] + (-1 * ((lon_res_dist) .* tand(30)))
+                elseif i < ceil(length(lon_range)* 7/8)
+                    DEM_lon[i] = DEM_lon[i-1]
+                else
+                    DEM_lon[i] = DEM_lon[i-1]
+                end
+        end
+    end
+
+    DEM_full_lat            = repeat(DEM_lat',length(DEM_lon),1)
+    DEM_full_lon            = repeat(DEM_lon,1,length(DEM_lat))
+
+    DEM_full                = DEM_full_lat + DEM_full_lon
+
+    Geo_location_lat_mat    = repeat(collect(lat_range)',length(lon_range),1)
+    Geo_location_lon_mat    = repeat(collect(lon_range),1,length(lat_range))
+
+    ag_geotransform = [ref_lon-(lon_res)/2;lon_res;0.0;ref_lat-(lat_res/2);0.0;lat_res]
+    ag_ref = "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4326\"]]"
+
+    return DEM_full, Geo_location_lat_mat, Geo_location_lon_mat, ag_geotransform, ag_ref 
+
+end
+
+
 function create_slope_DEM(ref_lat, ref_lon, lat_extent, lon_extent, lat_res, lon_res, slope_lat, slope_lon) 
 
     lat_range               = ref_lat:lat_res:(ref_lat+lat_extent)-lat_res   
@@ -138,6 +290,7 @@ function create_slope_DEM(ref_lat, ref_lon, lat_extent, lon_extent, lat_res, lon
     Geo_location_lon_mat    = repeat(collect(lon_range),1,length(lat_range))
 
     ag_geotransform = [ref_lon-(lon_res)/2;lon_res;0.0;ref_lat-(lat_res/2);0.0;lat_res]
+    #ag_geotransform = [lon_range[1]-(lon_res)/2;lon_res;0.0;lat_range[1]-(lat_res/2);0.0;lat_res]
     ag_ref = "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4326\"]]"
 
     return DEM_full, Geo_location_lat_mat, Geo_location_lon_mat, ag_geotransform, ag_ref 
@@ -166,6 +319,56 @@ function read_DEM_from_source(dem_source)
     end
 
     return DEM, Geo_location_lat, Geo_location_lon, gt, ref
+
+end
+
+function read_DEM_from_source(dem_source, lat_lims, lon_lims, check_size_flag)
+
+    dataset                     = AG.read(dem_source)
+    DEM                         = AG.getband(dataset,1)
+    ref                         = AG.getproj(dataset)
+    gt                          = AG.getgeotransform(dataset)
+    ulx, uly                    = gt[1], gt[4]
+    x_pixel_size, y_pixel_size  = gt[2], gt[6]
+    num_cols                    = AG.width(DEM)
+    num_rows                    = AG.height(DEM)
+    
+    Geo_location_lat            = zeros(num_rows,1);
+    Geo_location_lon            = zeros(num_cols,1);
+    for i=1:num_rows
+        Geo_location_lat[i]     = uly + i * y_pixel_size;
+    end
+    for i=1:num_cols
+        Geo_location_lon[i]     = ulx + i * x_pixel_size;
+    end
+
+    min_diff_lat1, lat_ind1 = findmin(abs.(Geo_location_lat .- lat_lims[1]))
+    min_diff_lat2, lat_ind2 = findmin(abs.(Geo_location_lat .- lat_lims[2]))
+
+    min_diff_lon1, lon_ind1 = findmin(abs.(Geo_location_lon .- lon_lims[1]))
+    min_diff_lon2, lon_ind2 = findmin(abs.(Geo_location_lon .- lon_lims[2]))
+
+    DEM_reg = DEM[lon_ind1[1]:lon_ind2[1],lat_ind1[1]:lat_ind2[1]]    
+    Geo_location_lat_reg = Geo_location_lat[lat_ind1[1]:lat_ind2[1]]
+    Geo_location_lon_reg = Geo_location_lon[lon_ind1[1]:lon_ind2[1]]
+
+    if check_size_flag == 1
+        lat_ind2_new = lat_ind2[1]
+        lon_ind2_new = lon_ind2[1]
+        if iseven(size(DEM_reg)[2]) || iseven(size(DEM_reg)[1])
+            if iseven(size(DEM_reg)[2])
+                lat_ind2_new = lat_ind2[1] + 1
+            end
+            if iseven(size(DEM_reg)[1])
+                lon_ind2_new = lon_ind2[1] + 1
+            end
+        end
+        DEM_reg = DEM[lon_ind1[1]:lon_ind2_new,lat_ind1[1]:lat_ind2_new]    
+        Geo_location_lat_reg = Geo_location_lat[lat_ind1[1]:lat_ind2_new]
+        Geo_location_lon_reg = Geo_location_lon[lon_ind1[1]:lon_ind2_new]
+    end
+
+    return DEM_reg, Geo_location_lat_reg, Geo_location_lon_reg, gt, ref
 
 end
 
