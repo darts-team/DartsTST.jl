@@ -11,6 +11,7 @@ include("../modules/antenna.jl")
 include("../modules/simsetup.jl")
 include("../modules/plotting.jl")
 include("../modules/user_parameters.jl")
+include("../modules/scattering.jl")
 using NCDatasets
 using Statistics
 using Parameters
@@ -19,6 +20,7 @@ using StaticArrays
 using .UserParameters
 
 function main_workflow(params::UserParameters.inputParameters)
+    c = 299792458
     # Define user parameters
     #include("../inputs/predefined-input-parameters.jl") TODO gives errors    params = UserParameters.inputParameters()
 
@@ -53,20 +55,15 @@ function main_workflow(params::UserParameters.inputParameters)
 
     # Generate TomoSAR raw data
     ref_range = Geometry.distance(mean(t_xyz_3xN, dims=2), mean(mean(p_xyz,dims=2), dims=3)) # reference range (equal to slant_range in sch?)
-    rawdata = Generate_Raw_Data.main_RSF_slowtime(t_xyz_3xN, p_xyz, Srx, t_rx, ref_range, targets_ref, params) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
-    #if params.enable_thermal_noise # adding random noise based on SNR after range (fast-time) processing OBSOLETE
-    #    rawdata = Error_Sources.random_noise_raw(rawdata, params)
-    #end
+    rawdata = Generate_Raw_Data.main_RSF_slowtime_surfaceBRCS(t_xyz_3xN, p_xyz, Srx, t_rx, ref_range, targets_ref, params) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
+    if params.enable_thermal_noise # adding random noise based on SNR after range (fast-time) processing
+        rawdata = Error_Sources.random_noise(rawdata, params)
+    end
 
     # Add phase error
     sync_osc_coeffs = repeat(params.sync_a_coeff_dB, Np)
     if params.enable_sync_phase_error
         rawdata = Error_Sources.synchronization_errors!(rawdata, slow_time, p_xyz, t_xyz_3xN, sync_osc_coeffs, params)
-    end
-
-    # ADC sampling
-    if params.enable_ADC
-        rawdata, Nft = Error_Sources.ADC_sampling(rawdata,params)
     end
 
     # Process raw data to generate image
@@ -75,21 +72,6 @@ function main_workflow(params::UserParameters.inputParameters)
     elseif params.processing_steps === :bp2d3d # 2-step processing, first SAR (along-track), then tomographic
         SAR_images_3D = Process_Raw_Data.SAR_processing(rawdata, s_xyz_3xN, p_xyz, t_rx, ref_range, params)
         image_3D = Process_Raw_Data.tomo_processing_afterSAR(SAR_images_3D)
-    end
-
-    # Add random noise based on SNR to the image
-    if params.enable_thermal_noise
-        # Note: image_3D must be a complex image! TODO remove abs() from process_raw_data functions
-        # new inputs to calculate:
-        # Lsa: synthetic aperture length
-        # Nst: number of slow-time pulses in Lsa
-        Nst=size(rawdata)[1]
-        # ref_pix_ind: image indices for the reference pixel
-        # Gtx_ref & Grx_ref: Tx/Rx antenna gains for the reference scene pixel
-        # sig0_ref: sigma-0 for the reference scene pixel
-        # R_ref: slant range for the reference scene pixel
-        # θ_ref & α_ref: incidence angle and slope for the reference scene pixel
-        image_3D = Error_Sources.random_noise_image(image_3D, params, ref_pix_ind, Lsa, Nst, Gtx_ref, Grx_ref, sig0_ref, R_ref, θ_ref, α_ref)        
     end
 
     # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
@@ -131,4 +113,4 @@ function main_workflow(params::UserParameters.inputParameters)
     end
 
 end
-main_workflow() = main_workflow(UserParameters.inputParameters())
+main_workflow() = main_workflow(UserParameters.inputParameters(s_loc_1 = -30:1:30,s_loc_2 = -30:1:30, s_loc_3 = -30:1:30, target_pos_mode="surface-grid"))

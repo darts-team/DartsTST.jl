@@ -648,5 +648,117 @@ function cart2sph(x,y,z)
     az = atand(y,x)
     return az,elev,r
 end#function
+"""
+Compute ENU basis vectors from LLH with an origin based on new location
+# Usage
+    - e,n,u = geo_to_enu_new_org(lat, lon, orgllh)
+
+# Arguments
+    - `lat::N-element Array`: geodetic latitude (deg)
+    - `lon::N-element Array`: geodetic longitude (deg)
+    - `height::N-element Array`: height (m)
+    - `orgllh::3 x 1 Array`: new origin of ENU in LLH (m)
+
+# Return
+- `E::N-element Array`: Easting axis in ECEF (m) w.r.t org_ece
+- `N::N-element Array`: Northing axis in ECEF (m) w.r.t org_ece
+- `U::N-element Array`: Up axis in ECEF (m) w.r.t org_ece
+"""
+function llh_to_enu_new_org(lat, lon, height, orgllh,earth_radius::Float64=6.378137e6,earth_eccentricity::Float64=0.08181919084267456)
+   
+    ESQ = earth_eccentricity^2
+    orgece = geo_to_xyz(orgllh);
+    numEntries = length(lat)
+    enu = zeros(3,numEntries)
+    for i = 1:numEntries
+        ecef = zeros(3,1) 
+        
+        SP = sind(lat[i])
+        CP = cosd(lat[i])
+        SL = sind(lon[i])
+        CL = cosd(lon[i])
+        GSQ = 1.0 - (ESQ*SP*SP);
+        EN = earth_radius / sqrt(GSQ);
+        Z = (EN + height[i]) * CP;
+        ecef[1,1] = Z * CL;
+        ecef[2,1] = Z * SL;
+        EN = EN - (ESQ * EN);
+        ecef[3,1] = (EN + height[i]) * SP;
+        
+        difece = ecef - orgece;   # difference between coordinate origins
+        
+        #Rotate the difference vector into ENU coordinates
+        
+        sla = sind(orgllh[1,1]); cla = cosd(orgllh[1,1]);
+        slo = sind(orgllh[2,1]); clo = cosd(orgllh[2,1]);
+        
+        enu[:,i] = [  -slo      clo      0 ; 
+            -sla*clo  -sla*slo  cla;
+                cla*clo   cla*slo  sla] * difece;       
+    end#for
+
+    # E = enu[1,:]; N = enu[2,:]; U = enu[3,:];
+    return enu
+end#function
+
+
+"""
+Compute Spherical Coordinates from ENU base system
+# Usage
+    - theta,phi,r = geo_to_enu_new_org(e,n,u)
+
+# Arguments
+    - `east::N-element Array`: Easting axis in ECEF (m)
+    - `north::N-element Array`: Northing axis in ECEF (m)
+    - `up::N-element Array`: Up axis in ECEF (m)
+
+# Return
+- `sph::3xN-element Array`: spherical coordinates with [1,:] = range, [2,:] = elevation, [3,:] = azimuth
+- `elev::N-element Array`: elev angle (deg)
+- `phi::N-element Array`: azimuth angle (deg)
+- `range::N-element Array`: range from origin to spherical point
+"""
+function enu_to_sph(east, north, up)
+    numEntries = length(east);
+    sph = zeros(3,numEntries)
+    for i = 1:numEntries
+        
+        az,elev,range = cart2sph(east[i],north[i],up[i])
+            
+        sph[1,i] = range#radius
+        sph[2,i] = elev#elevation
+        sph[3,i] = az#azimuth
+
+        # println("range: $range")
+        # println("elev: $elev")
+        # println("az: $az")
+        @assert  ((elev >= -90) & (elev <= 90) & (az >= -180) & (az <= 180) & (range >= 0)) "Invalid Range"
+    end
+   
+    return sph
+end#function
+
+"""
+Compute Spherical Coordinates from cartesian
+# Usage
+    - theta,phi,r = cart2sph(x,y,z)
+
+# Arguments
+    - `x::Float32`: x coord (m)
+    - `y::Float32`: y coord (m)
+    - `z::Float32`: z coord (m)
+
+# Return
+- `elev::N-element Array`: elev angle (deg)
+- `az::N-element Array`: azimuth angle (deg)
+- `r::N-element Array`: range (m)
+"""
+function cart2sph(x,y,z)
+    hypotxy = sqrt(x^2+y^2)
+    r = sqrt(hypotxy^2+z^2)
+    elev = atand(z,hypotxy)
+    az = atand(y,x)
+    return az,elev,r
+end#function
 
 end #end module
