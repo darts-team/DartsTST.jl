@@ -203,13 +203,13 @@ for B_idx = 1:length(trg_ref_lat_list)
             rawdata = Generate_Raw_Data.main_gen_rawdata_method1_distributed(t_xyz_3xN, p_xyz, S_rsf, t_rsf, t_rx, ref_range, t_targets_ref_corr, params, 24) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
         end
     
-        
+        #=
         @timeit to "processdata data - scene grid" begin
             s_SAR_processed_3D = Process_Raw_Data.SAR_processing(rawdata, scene2_xyz_3xN, p_xyz, t_rx, ref_range, params, dims_s_1, dims_s_2, dims_s_3)
         end
         s_SAR_processed_2D_1p = s_SAR_processed_3D[1,:,:,1]'
         s_SAR_processed_2D_2p = s_SAR_processed_3D[2,:,:,1]'
-        
+        =#
 
         @timeit to "processdata data - target grid" begin 
             t_SAR_processed_3D = Process_Raw_Data.SAR_processing(rawdata, scene1_xyz_3xN, p_xyz, t_rx, ref_range, params, dims_s_1, dims_s_2, dims_s_3)
@@ -222,7 +222,7 @@ for B_idx = 1:length(trg_ref_lat_list)
             mkdir(savepath)
         end
 
-        
+        #=
         # Write Scene geometry parameters to file
         output_data                 = zeros(dims_s_2, dims_s_1,14)
         output_data[:,:,1]          = reshape(s_slant_range_p1, dims_s_2, dims_s_1)
@@ -245,7 +245,7 @@ for B_idx = 1:length(trg_ref_lat_list)
         output_data[:,:,1]          = reshape(s_SAR_processed_2D_1p, dims_s_2, dims_s_1)
         output_data[:,:,2]          = reshape(s_SAR_processed_2D_2p, dims_s_2, dims_s_1)
         file_flag                   = Export_Output.export_tif_file(savepath*string(Sim_idx)*"_sim_output_main_scene_"*string(B_idx)*".tif", output_data, ComplexF64, ag_geotransform, ag_ref)
-        
+        =#
 
         # Write Target geometry parameters to file
         output_data                 = zeros(dims_s_2, dims_s_1,14)
