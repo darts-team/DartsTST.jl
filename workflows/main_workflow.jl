@@ -8,7 +8,9 @@ include("../modules/sync.jl")
 include("../modules/error_sources.jl")
 include("../modules/performance_metrics.jl")
 include("../modules/antenna.jl")
+include("../modules/dem.jl")
 include("../modules/simsetup.jl")
+include("../modules/scattering.jl")
 include("../modules/plotting.jl")
 include("../modules/user_parameters.jl")
 using NCDatasets
@@ -66,7 +68,7 @@ function main_workflow(params::UserParameters.inputParameters)
 
     # ADC sampling
     if params.enable_ADC
-        rawdata, Nft = Error_Sources.ADC_sampling(rawdata,params)
+        rawdata, t_rx, Nft  = Error_Sources.ADC_sampling(rawdata, t_rx, params)
     end
 
     # Process raw data to generate image
@@ -89,8 +91,18 @@ function main_workflow(params::UserParameters.inputParameters)
         # sig0_ref: sigma-0 for the reference scene pixel
         # R_ref: slant range for the reference scene pixel
         # θ_ref & α_ref: incidence angle and slope for the reference scene pixel
+        ref_pix_ind = 1
+        sc_speed = sqrt(3.986004418e14./(mean(Geometry.xyz_to_geo(p_xyz[:,1,:])[3,:])+6378.137e3)); #sqrt(GM/R)->https://en.wikipedia.org/wiki/Orbital_speed
+        Lsa = sc_speed*params.SAR_duration + sc_speed/params.fp
+        Gtx_ref = Grx_ref = 2000
+        R_ref =  Geometry.distance(s_xyz_3xN[:,1], mean(mean(p_xyz,dims=2), dims=3))
+        θ_ref = 30.0
+        α_ref = 0.0
+        pixel_area = 1.0
+        sig0_ref =  Scattering.TST_surface_brcs(2,params.λ,θ_ref,0.0,θ_ref,180.0-0.0,3,pixel_area)
         image_3D = Error_Sources.random_noise_image(image_3D, params, ref_pix_ind, Lsa, Nst, Gtx_ref, Grx_ref, sig0_ref, R_ref, θ_ref, α_ref)        
     end
+    image_3D = abs.(image_3D)
 
     # Take 1D cuts from the 3D tomogram and plot the cuts (for multiple targets cuts are taken from the center of the scene)
     if params.left_right_look == "left";PSFcutdir=-1;elseif params.left_right_look == "right";PSFcutdir=1;end
@@ -131,4 +143,4 @@ function main_workflow(params::UserParameters.inputParameters)
     end
 
 end
-main_workflow() = main_workflow(UserParameters.inputParameters())
+main_workflow() = main_workflow(UserParameters.inputParameters()) 

@@ -69,7 +69,9 @@ function random_noise_raw_new(rawdata, params) # obsolete
 end
 
 function random_noise_image(image_3D, params, ref_pix_ind, Lsa, Nst, Gtx_ref, Grx_ref, sig0_ref, R_ref, θ_ref, α_ref)
-    @unpack pulse_length,bandwidth,T_noise,pow_tx,Rx_bw_factor,L_sys,fp,λ,c,kBolt = params
+    @unpack pulse_length,bandwidth,T_noise,pow_tx,Rx_bw_factor,L_sys,fp,λ = params
+    c = 299792458 # speed of light (m/s)
+    kBolt = 1.38e-23 
     # Note: image_3D must be a complex image! TODO remove abs() from process_raw_data functions
     # new inputs
     # ref_pix_ind: image indices for the reference pixel
@@ -94,9 +96,10 @@ function random_noise_image(image_3D, params, ref_pix_ind, Lsa, Nst, Gtx_ref, Gr
     return noisy_image
 end
 
-function ADC_sampling(rawdata,params)
-    @unpack fs_ADC,Δt = Parameters
-    ds_rate = 1 / (fs_ADC * Δt) # downsampling rate (for now requires fs_ADC to be an integer multiple of Δt)
+function ADC_sampling(rawdata,t_rx,params)
+    @unpack fs_ADC,Δt,mode = params
+    ds_rate = Int32(1 / (fs_ADC * Δt)) # downsampling rate (for now requires fs_ADC to be an integer multiple of Δt)
+    t_rx_ds = t_rx[1:ds_rate:end]
     if mode==1 || mode==2 # SAR (ping-pong) or SIMO
         rawdata_ds = rawdata[:,:,1:ds_rate:end]
         Nft_ds = size(rawdata_ds,3)
@@ -104,7 +107,7 @@ function ADC_sampling(rawdata,params)
         rawdata_ds = rawdata[:,:,:,1:ds_rate:end]
         Nft_ds = size(rawdata_ds,4)
     end
-    return rawdata_ds, Nft_ds
+    return rawdata_ds, t_rx_ds, Nft_ds
 end
 
 """

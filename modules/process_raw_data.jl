@@ -35,7 +35,7 @@ function main_RSF(rawdata,s_xyz_grid,p_xyz_grid,mode,tx_el,fc,t_rx,ref_range) # 
             end
         end
     end
-    return abs.(processed_image) # square for power?
+    return processed_image # square for power?
 end
 
 function main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz_3D, params, t_rx, ref_range) # with RSF and slow-time
@@ -96,7 +96,7 @@ function main_RSF_slowtime(rawdata,s_xyz_grid,p_xyz_3D, params, t_rx, ref_range)
             processed_image[j] = pixel_sum
         end
     end
-    return abs.(processed_image) # square for power?
+    return processed_image # square for power?
 end
 
 function main_SAR_tomo_3D(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, params) # with fast-time, slow-time, and tomographic processing; pixels in 3D
@@ -172,7 +172,7 @@ function main_SAR_tomo_3D(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, params) #
             end
         end
     end
-    return abs.(processed_image)
+    return processed_image
 end
 
 function main_SAR_tomo_3D_new(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, params) # with fast-time, slow-time, and tomographic processing; pixels in 3D
@@ -236,7 +236,7 @@ function main_SAR_tomo_3D_new(rawdata,s_xyz_grid,p_xyz_3D,t_rx, ref_range, param
             end
         end
     end
-    return abs.(processed_image)
+    return processed_image
 end
 
 function SAR_processing(rawdata, s_xyz_grid, p_xyz_3D, t_rx, ref_range, params, Nsi_1::Int64=0, Nsi_2::Int64=0, Nsi_3::Int64=0) # slow-time processing of rawdata with fast-time
@@ -353,20 +353,7 @@ function tomo_processing_afterSAR(SAR_images_3D) # tomographic processing of slo
         Ns_1=size(SAR_images_3D,3);Ns_2=size(SAR_images_3D,4);Ns_3=size(SAR_images_3D,5)
         image_3D=reshape(image_3D,Ns_1,Ns_2,Ns_3)
     end
-    return abs.(image_3D)
-end
-
-function tomo_processing_afterSAR_full(SAR_images_3D) # tomographic processing of slow-time processed data
-    if ndims(SAR_images_3D)==4
-        image_3D=sum(SAR_images_3D,dims=1)
-        Ns_1=size(SAR_images_3D,2);Ns_2=size(SAR_images_3D,3);Ns_3=size(SAR_images_3D,4)
-        image_3D=reshape(image_3D,Ns_1,Ns_2,Ns_3)
-    elseif ndims(SAR_images_3D)==5
-        image_3D=sum(sum(SAR_images_3D,dims=1),dims=2)
-        Ns_1=size(SAR_images_3D,3);Ns_2=size(SAR_images_3D,4);Ns_3=size(SAR_images_3D,5)
-        image_3D=reshape(image_3D,Ns_1,Ns_2,Ns_3)
-    end
-    return (image_3D)
+    return image_3D
 end
 
 function distance(xyz1,xyz2)

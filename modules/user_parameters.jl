@@ -119,7 +119,7 @@ end
 
     # simulation options
     enable_ADC::Bool              = true # whether to enable or disable ADC sampling
-    enable_thermal_noise::Bool    = false # whether to enable or disable random additive noise (e.g. thermal noise)
+    enable_thermal_noise::Bool    = true # whether to enable or disable random additive noise (e.g. thermal noise)
     display_geometry::Bool        = false # whether to display geometry plots
     display_1D_cuts::Bool         = true # whether to 1D cuts from Scene module
     display_custom_orbit::Bool    = false # whether to show custom orbit on Earth sphere (for a duration of Torbit)

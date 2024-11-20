@@ -13,7 +13,6 @@ using ..Antenna
 using ..Scene
 using ..DEM
 
-
 """
 Antenna structure. Contains pattern, rotation and origin wrt to SC
 # Usage example

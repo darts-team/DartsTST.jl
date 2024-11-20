@@ -31,15 +31,15 @@ global earth_radius         = 6378.137e3 # Earth semi-major axis at equator1
 
 ##-------------------------------------------------------------------------
 #Simulation setup parameters
-Sim_idx                 = 1067   # For output file reference
+Sim_idx                 = 1107   # For output file reference
 savepath                = "/u/intrepid-z0/joshil/Outputs/TST_sims_geogrid_1/"*string(Sim_idx)*"/"
 #savepath2               = "/u/intrepid-z0/joshil/Outputs/TST_sims_geogrid_1/Outputs_sims_all/"
 
 #Target_scene_setup based on scene and look angle
-lat_res                 = 0.000033*2
-lon_res                 = 0.000033*1.5
-lat_lims                = [35.030 35.031] # [35.030 35.042] #[34.431 34.443]
-lon_lims                =  [-111.9 -111.68] #[-111.9 -110.6] # #[-115.2450 -115.2300]
+lat_res                 = 0.000033*1
+lon_res                 = 0.000033*1
+lat_lims                = [34.431 34.443] #[35.030 35.031] # [35.030 35.042] #[34.431 34.443]
+lon_lims                =  [-115.2450 -115.2300] #[-111.9 -111.68] #[-111.9 -110.6] # #[-115.2450 -115.2300]
 #lon_lims                = [-111.685 -111.670] # #[-115.2450 -115.2300]
 
 lat_extent              = abs.(lat_lims[2] - lat_lims[1])
@@ -47,12 +47,12 @@ lon_extent              = abs.(lon_lims[2] - lon_lims[1])
 NB_lat                  = 1
 NB_lon                  = 1
 target_mode             = 2     # 1: target fixed in center, 2: Distributed target, 3: Distributed target with 1 dominant scatterer
-num_targ_vol            = 10    # number of targets in each voxel
+num_targ_vol            = 30    # number of targets in each voxel
 ref_scene_height        = 0.0 #550.0 #0.0 #450.0 #2000.0
 
 platform_heading        = 0.0
 platform_look_dir       = "right"
-platform_look_angle     = 30.0 
+platform_look_angle     = 35.0 
 platform_height         = 697.5e3
 
 # Setup scene based on reference target location
@@ -78,8 +78,8 @@ for B_idx = 1:length(trg_ref_lat_list)
     @timeit to "Block time " begin
         
         @timeit to "Get DEM and slopes " begin
-        #DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.read_interp_DEM_from_source("/u/intrepid-z0/joshil/data/nisar-dem-copernicus/EPSG4326.vrt", trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res, 1)
-        DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.create_slope_DEM(trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res, 0.0, 60.0) # slope dem for testing
+        DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.read_interp_DEM_from_source("/u/intrepid-z0/joshil/data/nisar-dem-copernicus/EPSG4326.vrt", trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res, 1)
+        #DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.create_slope_DEM(trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res, 0.0, 60.0) # slope dem for testing
 
         #DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.custom_DEM3(trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res)
         #DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.custom_DEM4(trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res)
@@ -160,7 +160,7 @@ for B_idx = 1:length(trg_ref_lat_list)
 
         # Get target reflectivities
         t_targets_ref_corr      = zeros(size(t_xyz_3xN,2),1)
-        pixel_area              = (lat_res*pi/180*earth_radius) * (lon_res*pi/180*(earth_radius+cosd(params.p_heading)))
+        pixel_area              = (lat_res*pi/180*earth_radius) * (lon_res*pi/180*(earth_radius*cosd(lat_lims[1])))
 
         # Get local incidence angle in 2D target grid
         t_local_incidence_angle_all = zeros(size(t_xyz_3xN,2),1)
@@ -174,7 +174,7 @@ for B_idx = 1:length(trg_ref_lat_list)
 
         #Get sigma0 from scattering module
         for ti=1:size(t_xyz_3xN,2)
-            t_targets_ref_corr[ti]    =   ( (pixel_area/num_targ_vol) .*  Scattering.TST_surface_brcs(2,params.λ,t_local_incidence_angle_all[ti],0.0,t_local_incidence_angle_all[ti],180.0-0.0,3,1.0) )
+            t_targets_ref_corr[ti]    =   ( (pixel_area/num_targ_vol) .*  Scattering.TST_surface_brcs(3,params.λ,t_local_incidence_angle_all[ti],0.0,t_local_incidence_angle_all[ti],180.0-0.0,3,1.0) )
         end
 
         #Matrix dimensions
