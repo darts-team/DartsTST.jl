@@ -31,15 +31,15 @@ global earth_radius         = 6378.137e3 # Earth semi-major axis at equator1
 
 ##-------------------------------------------------------------------------
 #Simulation setup parameters
-Sim_idx                 = 1107   # For output file reference
+Sim_idx                 = 1134   # For output file reference
 savepath                = "/u/intrepid-z0/joshil/Outputs/TST_sims_geogrid_1/"*string(Sim_idx)*"/"
 #savepath2               = "/u/intrepid-z0/joshil/Outputs/TST_sims_geogrid_1/Outputs_sims_all/"
 
 #Target_scene_setup based on scene and look angle
-lat_res                 = 0.000033*1
-lon_res                 = 0.000033*1
-lat_lims                = [34.431 34.443] #[35.030 35.031] # [35.030 35.042] #[34.431 34.443]
-lon_lims                =  [-115.2450 -115.2300] #[-111.9 -111.68] #[-111.9 -110.6] # #[-115.2450 -115.2300]
+lat_res                 = 0.000033*2
+lon_res                 = 0.000033*1.5
+lat_lims                =  [35.022 35.042] #[34.425 34.445]# # # #[34.431 34.443]  #[35.030 35.031] ## # [35.030 35.042] #[34.431 34.443]
+lon_lims                = [-111.685 -111.62] #[-115.27 -115.205]#  ##  #[-115.2450 -115.2300] #[-111.9 -111.68] # # #[-111.9 -110.6] # #[-115.2450 -115.2300]
 #lon_lims                = [-111.685 -111.670] # #[-115.2450 -115.2300]
 
 lat_extent              = abs.(lat_lims[2] - lat_lims[1])
@@ -47,12 +47,12 @@ lon_extent              = abs.(lon_lims[2] - lon_lims[1])
 NB_lat                  = 1
 NB_lon                  = 1
 target_mode             = 2     # 1: target fixed in center, 2: Distributed target, 3: Distributed target with 1 dominant scatterer
-num_targ_vol            = 30    # number of targets in each voxel
-ref_scene_height        = 0.0 #550.0 #0.0 #450.0 #2000.0
+num_targ_vol            = 10    # number of targets in each voxel
+ref_scene_height        = 2000.0 # 2000.0 #550.0 #0.0 #450.0 #2000.0
 
 platform_heading        = 0.0
 platform_look_dir       = "right"
-platform_look_angle     = 35.0 
+platform_look_angle     = 30.0 
 platform_height         = 697.5e3
 
 # Setup scene based on reference target location
@@ -79,7 +79,9 @@ for B_idx = 1:length(trg_ref_lat_list)
         
         @timeit to "Get DEM and slopes " begin
         DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.read_interp_DEM_from_source("/u/intrepid-z0/joshil/data/nisar-dem-copernicus/EPSG4326.vrt", trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res, 1)
-        #DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.create_slope_DEM(trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res, 0.0, 60.0) # slope dem for testing
+        #DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.create_slope_DEM(trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res, 0.0, 10.0) # slope dem for testing
+
+        #DEM_full = movmean(DEM_full,20)
 
         #DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.custom_DEM3(trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res)
         #DEM_full, Geo_location_lat, Geo_location_lon, ag_geotransform, ag_ref = DEM.custom_DEM4(trg_ref_lat_list[B_idx], trg_ref_lon_list[B_idx], B_lat_extent, B_lon_extent, lat_res, lon_res)
@@ -120,7 +122,7 @@ for B_idx = 1:length(trg_ref_lat_list)
             p_heading           = platform_heading, 
             ts_coord_sys        = "LLH", #"LLH",
             #ROSE-L parameters
-            fp                  = 200, #1550, # Modified PRF based on scene length in along-track
+            fp                  = 400, #1550, # Modified PRF based on scene length in along-track
             p_t0_LLH            = platform_ref_point,
             pulse_length        = 40e-6,
             dt_orbits           = 0.05,
@@ -128,6 +130,7 @@ for B_idx = 1:length(trg_ref_lat_list)
             user_defined_orbit  = 2,
             fc                  = 1.26e9,
             Δt                  = 0.1e-9,
+            polarization        = 4,
         )
         # Check consistency of input parameters
         paramsIsValid = UserParameters.validateInputParams(params)
@@ -172,9 +175,14 @@ for B_idx = 1:length(trg_ref_lat_list)
             end
         end
 
+        #LIA_list    = 0:5:90
+        #RCS_dB      = LinRange(0,-100,length(LIA_list))
+        #RCS_itp     = LinearInterpolation(LIA_list, 10 .^(RCS_dB./10))
+
         #Get sigma0 from scattering module
         for ti=1:size(t_xyz_3xN,2)
-            t_targets_ref_corr[ti]    =   ( (pixel_area/num_targ_vol) .*  Scattering.TST_surface_brcs(3,params.λ,t_local_incidence_angle_all[ti],0.0,t_local_incidence_angle_all[ti],180.0-0.0,3,1.0) )
+            #t_targets_ref_corr[ti]    =   ( (pixel_area/num_targ_vol) .*  RCS_itp.(t_local_incidence_angle_all[ti]))
+            t_targets_ref_corr[ti]    =   ( (pixel_area/num_targ_vol) .*  Scattering.TST_surface_brcs(3,params.λ,t_local_incidence_angle_all[ti],0.0,t_local_incidence_angle_all[ti],180.0-0.0,params.polarization,1.0) )
         end
 
         #Matrix dimensions
@@ -196,20 +204,23 @@ for B_idx = 1:length(trg_ref_lat_list)
         t_rsf_tot           = 0.01*params.pulse_length # s duration of RSF #0.01 #0.00064
         S_rsf, t_rsf        = RSF.ideal_RSF_pulsewindow(t_rsf_tot, params) 
 
+        #window              = DSP.Windows.kaiser(length(S_rsf),20)
+        #S_rsf               = S_rsf .* window
+
         # Generate TomoSAR raw data
         ref_range                       = Geometry.distance(mean(t_xyz_3xN, dims=2), mean(mean(p_xyz,dims=2), dims=3)) # reference range (equal to slant_range in sch?)
 
         @timeit to "rawdata new2" begin # This takes major chunk of simulation time
-            rawdata = Generate_Raw_Data.main_gen_rawdata_method1_distributed(t_xyz_3xN, p_xyz, S_rsf, t_rsf, t_rx, ref_range, t_targets_ref_corr, params, 24) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
+            rawdata = Generate_Raw_Data.main_gen_rawdata_method1_distributed(t_xyz_3xN, p_xyz, S_rsf, t_rsf, t_rx, ref_range, t_targets_ref_corr, params, 12) # rawdata is a: 3D array of size Nst x Np x Nft (SAR/SIMO), 4D array of size Nst x Np(RX) x Np(TX) x Nft (MIMO)
         end
     
-        #=
+        
         @timeit to "processdata data - scene grid" begin
             s_SAR_processed_3D = Process_Raw_Data.SAR_processing(rawdata, scene2_xyz_3xN, p_xyz, t_rx, ref_range, params, dims_s_1, dims_s_2, dims_s_3)
         end
         s_SAR_processed_2D_1p = s_SAR_processed_3D[1,:,:,1]'
         s_SAR_processed_2D_2p = s_SAR_processed_3D[2,:,:,1]'
-        =#
+        
 
         @timeit to "processdata data - target grid" begin 
             t_SAR_processed_3D = Process_Raw_Data.SAR_processing(rawdata, scene1_xyz_3xN, p_xyz, t_rx, ref_range, params, dims_s_1, dims_s_2, dims_s_3)
@@ -222,7 +233,7 @@ for B_idx = 1:length(trg_ref_lat_list)
             mkdir(savepath)
         end
 
-        #=
+        
         # Write Scene geometry parameters to file
         output_data                 = zeros(dims_s_2, dims_s_1,14)
         output_data[:,:,1]          = reshape(s_slant_range_p1, dims_s_2, dims_s_1)
@@ -245,7 +256,7 @@ for B_idx = 1:length(trg_ref_lat_list)
         output_data[:,:,1]          = reshape(s_SAR_processed_2D_1p, dims_s_2, dims_s_1)
         output_data[:,:,2]          = reshape(s_SAR_processed_2D_2p, dims_s_2, dims_s_1)
         file_flag                   = Export_Output.export_tif_file(savepath*string(Sim_idx)*"_sim_output_main_scene_"*string(B_idx)*".tif", output_data, ComplexF64, ag_geotransform, ag_ref)
-        =#
+        
 
         # Write Target geometry parameters to file
         output_data                 = zeros(dims_s_2, dims_s_1,14)

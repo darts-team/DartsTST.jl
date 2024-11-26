@@ -52,7 +52,19 @@ function plot_image(x_axis,y_axis,Data,unit_flag, savepath, savename, figure_tit
     end
 end
 
-function plot_profile(x_axis, Data1, Data2, savepath, savename, xlabel, ylabel, figure_title, label1, label2)
+function plot_profile(x_axis, Data1, Data2, savepath, savename, xlabel, ylabel, figure_title, label1, label2, profile_flag=0)
+
+    if profile_flag == 1
+        Data1          = mean(Data1,dims=2)
+        if ~(Data2=="")
+            Data2          = mean(Data2,dims=2)
+        end
+    elseif profile_flag == 0
+        Data1          =  Data1[:,1] 
+        if ~(Data2=="")
+            Data2          =  Data2[:,1] 
+        end
+    end 
 
     if Data2==""
         p1=(plot(x_axis, Data1,xlabel=xlabel,ylabel=ylabel,title=figure_title,legend=:topleft, lc=:black, label=label1,
@@ -263,6 +275,7 @@ function plot_geometry_variables(ref_data, Lon_vals, Lat_vals, maxind_val_lon, m
 end
 
 
+
 function get_geometry_variables(ref_data)
 
     #DEM
@@ -306,6 +319,8 @@ function get_max_ind_vec(data_len,looks)
     return 0
 end
 #------------------------------------------------------------------------------------------
+
+
 
 #Load the output file
 
@@ -420,23 +435,17 @@ Data_2                          = reverse(Data_2[1:maxind_val_lon,1:maxind_val_l
 # Amplitude, phase and power plots and statistics
 Amp_1                           = abs.(Data_1)
 Amp_2                           = abs.(Data_2)
-
 Pow_1                           = abs.(Amp_1 .* conj(Amp_1))
 Pow_2                           = abs.(Amp_2 .* conj(Amp_2))
-
 Phase_1                         = angle.(Data_1)
 Phase_2                         = angle.(Data_2)
 
 gr()
-
 plot_image(Lon_vals,Lat_vals,Pow_1',"log", savepath*"Power_plots/", "Power_P1_log", "")
 plot_image(Lon_vals,Lat_vals,Pow_2',"log", savepath*"Power_plots/", "Power_P2_log", "")
 
-plot_image(Lon_vals,Lat_vals,Pow_1',"lin", savepath*"Power_plots/", "Power_P1_lin", "")
-plot_image(Lon_vals,Lat_vals,Pow_2',"lin", savepath*"Power_plots/", "Power_P2_lin", "")
-
-plot_image(Lon_vals,Lat_vals,(Pow_1./mean(Pow_1))',"lin", savepath*"Power_plots/", "Power_P1_lin_norm", "")
-plot_image(Lon_vals,Lat_vals,(Pow_2./mean(Pow_2))',"lin", savepath*"Power_plots/", "Power_P2_lin_norm", "")
+plot_image(Lon_vals,Lat_vals,(Pow_1./mean(Pow_1))',"log", savepath*"Power_plots/", "Power_P1_log_norm", "")
+plot_image(Lon_vals,Lat_vals,(Pow_2./mean(Pow_2))',"log", savepath*"Power_plots/", "Power_P2_log_norm", "")
 
 if profile_flag == 1
     Pow_1_rangeprofile          = mean(Pow_1[1:maxind_val_lon,:],dims=2)
@@ -446,18 +455,15 @@ elseif profile_flag == 0
     Pow_2_rangeprofile          =  Pow_2[:,1] 
 end 
 
-plot_profile(Lon_vals, 10 .* log10.(Pow_1_rangeprofile[:]), "", savepath*"Power_plots/", "Pow_1_profile", "Lon [deg]", "Power [dB] ", "", "", "")
-plot_profile(Lon_vals, 10 .* log10.(Pow_2_rangeprofile[:]), "", savepath*"Power_plots/", "Pow_2_profile", "Lon [deg]", "Power [dB]", "", "", "")
+plot_profile(Lon_vals, 10 .* log10.(Pow_1), "", savepath*"Power_plots/", "Pow_1_profile", "Lon [deg]", "Power [dB] ", "", "", "", 1)
+plot_profile(Lon_vals, 10 .* log10.(Pow_2_rangeprofile[:]), "", savepath*"Power_plots/", "Pow_2_profile", "Lon [deg]", "Power [dB]", "", "", "", profile_flag)
 
 
 plot_image(Lon_vals,Lat_vals,Amp_1',"log", savepath*"Amplitude_plots/", "Amp_P1_log", "")
 plot_image(Lon_vals,Lat_vals,Amp_2',"log", savepath*"Amplitude_plots/", "Amp_P2_log", "")
 
-plot_image(Lon_vals,Lat_vals,Amp_1',"lin", savepath*"Amplitude_plots/", "Amp_P1_lin", "")
-plot_image(Lon_vals,Lat_vals,Amp_2',"lin", savepath*"Amplitude_plots/", "Amp_P2_lin", "")
-
-plot_image(Lon_vals,Lat_vals,(Amp_1./mean(Amp_1))',"lin", savepath*"Amplitude_plots/", "Amp_P1_lin_norm", "")
-plot_image(Lon_vals,Lat_vals,(Amp_2./mean(Amp_2))',"lin", savepath*"Amplitude_plots/", "Amp_P2_lin_norm", "")
+plot_image(Lon_vals,Lat_vals,(Amp_1./mean(Amp_1))',"log", savepath*"Amplitude_plots/", "Amp_P1_log_norm", "")
+plot_image(Lon_vals,Lat_vals,(Amp_2./mean(Amp_2))',"log", savepath*"Amplitude_plots/", "Amp_P2_log_norm", "")
 
 if profile_flag == 1
     Amp_1_rangeprofile          = mean(Amp_1[1:maxind_val_lon,:],dims=2)
@@ -484,51 +490,18 @@ A, B, C, D                      = Interferometry.sar_geogrid_phase_statistics(Ph
 A, B, C, D                      = Interferometry.sar_geogrid_phase_statistics(Phase_2[:], savepath*"Phase_plots/", "P2_phase", 1)
 
 # Multi looking power stat and plot
-Lat_length_ml                   = Int(maxind_val_lat/Looks_along_Lat)
-Lon_length_ml                   = Int(maxind_val_lon/Looks_along_Lon)
+Pow_1_multilooked               = Interferometry.multilook_2D_data(Pow_1./maximum(Pow_1), Looks_along_Lon, Looks_along_Lat )
+Pow_2_multilooked               = Interferometry.multilook_2D_data(Pow_2./maximum(Pow_2), Looks_along_Lon, Looks_along_Lat )
+Amp_1_multilooked               = Interferometry.multilook_2D_data(Amp_1, Looks_along_Lon, Looks_along_Lat )
+Amp_2_multilooked               = Interferometry.multilook_2D_data(Amp_2, Looks_along_Lon, Looks_along_Lat )
 
-Amp_1_multilooked               = zeros(Lon_length_ml,Lat_length_ml)
-Amp_2_multilooked               = zeros(Lon_length_ml,Lat_length_ml)
+Lat_vals_multilooked            = Interferometry.multilook_1D_data(Lat_vals, Looks_along_Lat)
+Lon_vals_multilooked            = Interferometry.multilook_1D_data(Lon_vals, Looks_along_Lon)
 
-Pow_1_multilooked               = zeros(Lon_length_ml,Lat_length_ml)
-Pow_2_multilooked               = zeros(Lon_length_ml,Lat_length_ml)
+t_geom_data_trunc               = t_geom_data[1:maxind_val_lon,1:maxind_val_lat,:]
+t_geom_data_ml                  = Interferometry.multilook_2D_data(t_geom_data_trunc, Looks_along_Lon, Looks_along_Lat )
 
-
-Lat_vals_multilooked            = zeros(Lat_length_ml)
-Lon_vals_multilooked            = zeros(Lon_length_ml)
-
-norm_mean_pow1                  = maximum(Pow_1)
-norm_mean_pow2                  = maximum(Pow_1)
-
-k=1
-for i=1:Lat_length_ml
-    l=1
-    for j=1:Lon_length_ml
-        Pow_1_multilooked[j,i]  = mean(Pow_1[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1]) ./norm_mean_pow1
-        Pow_2_multilooked[j,i]  = mean(Pow_2[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1]) ./norm_mean_pow2
-        Amp_1_multilooked[j,i]  = mean(Amp_1[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1]) 
-        Amp_2_multilooked[j,i]  = mean(Amp_2[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1])
-        Lat_vals_multilooked[i] = mean(Lat_vals[k:k+Looks_along_Lat-1])
-        Lon_vals_multilooked[j] = mean(Lon_vals[l:l+Looks_along_Lon-1])
-        l=l+Looks_along_Lon
-    end
-    k=k+Looks_along_Lat
-end
-
-
-t_geom_data_ml = zeros(Lon_length_ml,Lat_length_ml,size(t_geom_data)[3])
-
-k=1
-for i=1:Lat_length_ml
-    l=1
-    for j=1:Lon_length_ml
-        for bi = 1:14
-        t_geom_data_ml[j,i,bi]  = mean(t_geom_data[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1,bi]) 
-        end
-        l=l+Looks_along_Lon
-    end
-    k=k+Looks_along_Lat
-end
+DEM_data_ML, targets_ref_data_ML, Lookangle_P1_ML, Lookangle_P2_ML, Incangle_P1_ML, Incangle_P2_ML, LocalIncangle_ML, range_slope_ML, Slantrange_P1_ML, Slantrange_P2_ML, Critical_baseline_ML, Perp_baseline_ML, Vert_wavnum_ML, Correlation_theo_ML = get_geometry_variables(t_geom_data_ml)
 
 geom_savepath2                   = savepath*"Geom_plots_t_ml/"
 plot_geometry_variables(t_geom_data_ml, Lon_vals_multilooked, Lat_vals_multilooked, length(Lon_vals_multilooked), length(Lat_vals_multilooked), profile_flag, geom_savepath2)
@@ -582,9 +555,6 @@ Int_Pow_multilooked             = zeros(Lon_length_ml,Lat_length_ml)
 Int_Phase_multilooked           = zeros(Lon_length_ml,Lat_length_ml)
 Correlation                     = zeros(Lon_length_ml,Lat_length_ml)
 
-Lat_vals_multilooked            = zeros(Lat_length_ml)
-Lon_vals_multilooked            = zeros(Lon_length_ml)
-
 complex_coherence_mat = zeros(ComplexF64,Lon_length_ml,Lat_length_ml)
 
 k=1
@@ -596,8 +566,6 @@ for i=1:Int((length(Lat_vals))/Looks_along_Lat)
         Int_Pow_multilooked[j,i] = abs.(complex_coherence)
         Int_Phase_multilooked[j,i] = angle.(complex_coherence) 
 
-        Lat_vals_multilooked[i] = mean(Lat_vals[k:k+Looks_along_Lat-1])
-        Lon_vals_multilooked[j] = mean(Lon_vals[l:l+Looks_along_Lon-1])
         l=l+Looks_along_Lon
     end
     k=k+Looks_along_Lat
@@ -665,32 +633,13 @@ p1=(plot!(Lon_vals_multilooked, (Lon_vals_multilooked .* CF_B).+CF_A,xlabel="Lon
 topmargin=6mm,bottommargin=6mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(fontsize), xtickfont=font(fontsize), ytickfont=font(fontsize), guidefont=font(fontsize), titlefontsize=fontsize, size=(figuresizeX,figuresizeY) )) #500,360
 savefig(p1, savepath*"Int_plots/"*"Int_mag_profile_window2"*".png")
 
+
+#--------------------------------------------
+#TEST
 Nominal_looks_ml                            = zeros(Lon_length_ml,Lat_length_ml)
 Effective_looks_ml                          = zeros(Lon_length_ml,Lat_length_ml)
 Effective_looks_ml_flat                     = zeros(Lon_length_ml,Lat_length_ml)
 
-la_all = t_geom_data[:,:,9]
-la_ml             = zeros(Lon_length_ml,Lat_length_ml)
-slntrng1_ml             = zeros(Lon_length_ml,Lat_length_ml)
-perpb_ml             = zeros(Lon_length_ml,Lat_length_ml)
-lia_ml             = zeros(Lon_length_ml,Lat_length_ml)
-
-
-k=1
-for i=1:Int((length(Lat_vals))/Looks_along_Lat)
-    l=1
-    for j=1:Int((length(Lon_vals))/Looks_along_Lon)
-        la_ml[j,i] = mean(la_all[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1])
-        slntrng1_ml[j,i] = mean(Slantrange_P1[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1])
-        perpb_ml[j,i] = mean(Perp_baseline[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1])
-        lia_ml[j,i] = mean(Incangle_P1[l:l+Looks_along_Lon-1,k:k+Looks_along_Lat-1])
-
-        l=l+Looks_along_Lon
-    end
-    k=k+Looks_along_Lat
-end
-
-#TEST
 res_AT_radar = 10
 res_CT_radar = 6.38
 
@@ -717,41 +666,22 @@ p1=(heatmap(Lon_vals_multilooked,Lat_vals_multilooked,Effective_looks_ml_flat',x
 topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(fontsize), ytickfont=font(fontsize), guidefont=font(fontsize), titlefontsize=fontsize, size=(figuresizeX,figuresizeY) )) #1200
 savefig(p1, savepath*"Int_plots/"*"looks_2"*".png")
 
-
-#=
-p2 = (plot(Lon_vals, Correlation_theo_P1_rangeprofile[:], label="Theory"))
-p2 = (plot!(Lon_vals_multilooked, (Lon_vals_multilooked .* CF_B).+CF_A, label="Sim"))
-
-AASR = 10 ^(-26/10)
-p2 = (plot!(Lon_vals_multilooked, ((Lon_vals_multilooked .* CF_B).+CF_A) * (1/1+(AASR)), label="Sim - AASR -26 dB", legend=:topleft, xlabel="Lon [deg]", ylabel="Correlation",
-topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
-savefig(p2, savepath*"Int_plots/"*"Correlation_comparison_1"*".png")
-
-AASR = 10 ^(-21.9/10)
-p2 = (plot!(Lon_vals_multilooked, ((Lon_vals_multilooked .* CF_B).+CF_A) * (1/1+(AASR)), label="Sim - AASR -22 dB", legend=:topleft, xlabel="Lon [deg]", ylabel="Correlation",
-topmargin=6mm,bottommargin=10mm,leftmargin=6mm,rightmargin=6mm,tickfont=font(13), xtickfont=font(13), ytickfont=font(13), guidefont=font(13), titlefontsize=13, size=(1200,360) )) #500,360
-savefig(p2, savepath*"Int_plots/"*"Correlation_comparison_2"*".png")
-=#
-
+#--------------------------------------------
+# Phase unwrapping and Height estimation
 if process_plot_output_flag == "S"
-    # Phase unwrapping and Height estimation
-    #using JLD2
-    #@save "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/test_data.jld" complex_coherence_mat Int_Phase_multilooked Int_Pow_multilooked
-    #@load "/Users/joshil/Documents/Outputs/InSAR Outputs/Geo_outputs_set1/50/test_data.jld" 
-
-    using PyCall
-    shu = pyimport("snaphu")
-    unw, conncomp = shu.unwrap(complex_coherence_mat, Int_Pow_multilooked, nlooks=48.0, cost="smooth", init="mcf")
+    
+    unw, conncomp = unwrap_phase_snaphu(complex_coherence_mat, Int_Pow_multilooked, Looks_along_Lon*Looks_along_Lat)
 
     plot_image(Lon_vals_multilooked,Lat_vals_multilooked,conncomp',"phase", savepath*"Int_plots/", "SNAPHU_1", "")
     plot_image(Lon_vals_multilooked,Lat_vals_multilooked,(unw' .* -1) ,"phase", savepath*"Int_plots/", "SNAPHU_2", "")
 
-    int_unwrapped_height_new2      = (unw .* -1) .* ((c/1.26e9)/(4*pi)) .* (slntrng1_ml[:,1] .*sind.(lia_ml[:,1]) ./perpb_ml[:,1])
-    plot_image(Lon_vals_multilooked,Lat_vals_multilooked,int_unwrapped_height_new2',"phase", savepath*"Int_plots/", "SNAPHU_3", "")
-    plot_image(Lon_vals_multilooked,Lat_vals_multilooked,int_unwrapped_height_new2'.+450,"lin", savepath*"Int_plots/", "SNAPHU_4", "")
+    DEM_est = get_height_from_phase(unwrapped_phase, slant_range, local_inc_angle, perp_baseline, lambda)
+
+    plot_image(Lon_vals_multilooked,Lat_vals_multilooked,DEM_est',"lin", savepath*"Int_plots/", "SNAPHU_3", "")
+    plot_image(Lon_vals_multilooked,Lat_vals_multilooked,DEM_est'.+450,"lin", savepath*"Int_plots/", "SNAPHU_4", "")
 
 end
-
+#--------------------------------------------
 
 savepath_stat = savepath*"statistics/"
 if ~ispath(savepath_stat)
